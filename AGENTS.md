@@ -1,0 +1,209 @@
+# BizzDeal Backend – AI Coding Rules
+
+These rules apply to the NestJS backend only.
+
+## Stack
+
+- NestJS
+- TypeScript
+- TypeORM
+- Zod validation
+- PostgreSQL
+
+## Backend Structure
+
+Use a modular NestJS structure.
+
+Recommended structure:
+
+```txt
+bizzdeal-be/
+├── src/
+│   ├── config/
+│   ├── common/
+│   │   ├── decorators/
+│   │   ├── filters/
+│   │   ├── guards/
+│   │   ├── interceptors/
+│   │   └── utils/
+│   ├── database/
+│   │   ├── migrations/
+│   │   └── seeds/
+│   ├── modules/
+│   │   ├── auth/
+│   │   ├── users/
+│   │   ├── businesses/
+│   │   ├── services/
+│   │   ├── bookings/
+│   │   ├── orders/
+│   │   ├── payments/
+│   │   ├── reviews/
+│   │   ├── chat/
+│   │   ├── meetings/
+│   │   └── notifications/
+│   ├── app.module.ts
+│   └── main.ts
+│
+├── test/
+├── .env
+├── .env.example
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+Simple rule:
+
+```txt
+modules/ = main business features
+common/ = reusable backend helpers
+config/ = env and app config
+database/ = migrations, seeds, DB setup
+test/ = backend tests
+```
+
+
+## Module Rules
+
+- Keep each feature inside its own module.
+- Each module should have clear responsibility.
+- Use controller only for HTTP request/response handling.
+- Use service for business logic.
+- Use repository/data-access layer when TypeORM logic becomes large.
+- Do not put TypeORM queries directly inside controllers.
+- Do not mix unrelated feature logic.
+
+## File Rules
+
+- Keep files small and focused.
+- Do not put DTOs, schemas, services, and models in one file.
+- Place reusable interfaces/types in `src/models/`.
+- Place Zod schemas in `src/schemas/` or inside the related module if feature-specific.
+- Place shared helpers in `src/common/utils/`.
+- Do not create new folders if an existing folder already fits.
+
+## TypeScript Rules
+
+- Use strict TypeScript.
+- **Strict Typing**: Do not use `any` type in BE and FE. Always use strict types. In entities, always use DTOs for reference and check the FE interfaces when creating DTOs so you don't miss anything.
+- Prefer explicit return types for services and public methods.
+- Use `unknown` instead of `any` when handling uncertain input.
+- Keep request/response types clearly defined.
+
+## Validation Rules
+
+- Use Zod for request validation.
+- Do not use `class-validator` or `class-transformer` unless already used in the project.
+- Keep validation schemas reusable.
+- Validate input before business logic.
+- Return clear validation errors.
+
+## TypeORM Rules
+
+- Keep TypeORM entities cleanly defined in models/entities.
+- Use TypeORM through a dedicated database module/service or repository pattern.
+- Keep DB access out of controllers.
+- Use transactions where multiple related writes must succeed together.
+- Avoid raw SQL unless necessary.
+- Never expose internal database fields directly if not needed by the frontend.
+
+## API Rules
+
+- Use RESTful endpoints.
+- Keep route names clear and consistent.
+- Use proper HTTP status codes.
+- Do not leak internal errors to the client.
+- Return predictable response shapes.
+- Use pagination for list endpoints.
+- Use guards/interceptors where cross-cutting behavior is needed.
+
+## Auth Rules
+
+- Keep auth logic separate from feature modules.
+- Use guards for protected routes.
+- Do not trust user IDs from request body.
+- Get authenticated user from token/session context.
+- Never hardcode secrets.
+
+## AI Module Rules
+
+- Keep AI provider logic isolated.
+- Do not call OpenAI/LLM APIs directly from unrelated services.
+- Use provider abstraction if multiple AI providers may be supported.
+- Keep prompts in separate files or prompt utilities.
+- Avoid sending unnecessary resume data to LLMs.
+- Log token usage/cost where possible.
+- Never log sensitive user resume data in production.
+
+## PDF Rules
+
+- Keep PDF generation in the backend.
+- Keep template logic separate from resume business logic.
+- Do not store generated PDFs unless explicitly required.
+- Keep fonts/assets paths configurable.
+- Ensure PDF generation is deterministic from resume JSON.
+
+## Credits / Billing Rules
+
+- Keep credit deduction logic server-side only.
+- Never trust frontend credit values.
+- Use transactions for credit deduction and AI action creation.
+- Store credit history for auditability.
+- Do not deduct credits if the paid action fails.
+
+## Caching Rules
+
+- Prefer Redis for shared cache.
+- Do not use in-memory cache for important cross-instance logic.
+- Use safe cache keys.
+- Never cache sensitive data unless encrypted or clearly safe.
+- Set TTLs for all cache entries.
+
+## Error Handling Rules
+
+- Use NestJS exceptions.
+- Use global exception filter if needed.
+- Log server-side details safely.
+- Return clean client-friendly error messages.
+- Do not expose stack traces in production.
+
+## Environment Rules
+
+- Use environment variables for secrets and config.
+- Validate required environment variables on startup.
+- Do not commit `.env` files.
+- Keep `.env.example` updated when adding new variables.
+
+## Testing Rules
+
+- Add tests for important services and utility logic.
+- Mock external APIs like OpenAI, Redis, and email providers.
+- Keep tests close to the feature when practical.
+- Do not rely on real paid APIs in tests.
+
+## Logging Rules
+
+- Use a proper logger.
+- Do not log passwords, tokens, API keys, or full resume data.
+- Log useful IDs, action names, timings, and error summaries.
+- Keep production logs safe.
+
+## Code Change Rules
+
+Before changing backend code:
+
+1. Read this file.
+2. Read the root `AGENTS.md`.
+3. Follow existing backend folder patterns.
+4. Reuse existing models, schemas, services, and utilities.
+5. After changes, summarize changed files and reason.
+
+## Output Rule for AI Coding Assistants
+
+After completing changes, always provide:
+
+- Files changed
+- What changed
+- Why it changed
+- Any commands to run
+- Any environment variables added
