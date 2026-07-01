@@ -10,6 +10,10 @@ These rules apply to the NestJS backend only.
 - Zod validation
 - PostgreSQL
 
+## Project Requirements
+
+- Always consult and strictly follow `REQUIREMENTS.md` for any detailed information about project requirements, business logic, and feature specifications while implementing features and writing code.
+
 ## Backend Structure
 
 Use a modular NestJS structure.
@@ -97,6 +101,7 @@ test/ = backend tests
 - Keep validation schemas reusable.
 - Validate input before business logic.
 - Return clear validation errors.
+- **Entity Field Naming Consistency**: Always strictly follow the exact field names defined in the TypeORM entities when defining API request payloads, DTOs, and Zod schemas (e.g., use `phone` if the entity defines `phone`, rather than `phoneNumber`).
 
 ## TypeORM Rules
 
@@ -116,6 +121,7 @@ test/ = backend tests
 - Return predictable response shapes.
 - Use pagination for list endpoints.
 - Use guards/interceptors where cross-cutting behavior is needed.
+- **Swagger Documentation**: Always ensure Swagger documentation is kept completely up-to-date. When implementing new features or making changes to existing endpoints (such as modifying query params, request bodies, response models, or auth requirements), corresponding Swagger decorators (e.g., `@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiProperty`, `@ApiBearerAuth`) must be added or updated with detailed descriptions of fields and APIs.
 
 ## Auth Rules
 
@@ -173,6 +179,7 @@ test/ = backend tests
 - Validate required environment variables on startup.
 - Do not commit `.env` files.
 - Keep `.env.example` updated when adding new variables.
+- **Strict Environment & Configuration Validation**: Always enforce strict validation of critical third-party API configurations (e.g., MSG91 API keys, template IDs). If any required configuration or API key is missing or invalid, throw an explicit error with a descriptive message immediately instead of using silent fallbacks, mock data, or development bypasses.
 
 ## Testing Rules
 
@@ -194,9 +201,10 @@ Before changing backend code:
 
 1. Read this file.
 2. Read the root `AGENTS.md`.
-3. Follow existing backend folder patterns.
-4. Reuse existing models, schemas, services, and utilities.
-5. After changes, summarize changed files and reason.
+3. Consult `REQUIREMENTS.md` for detailed requirements and specifications before implementing features or writing code.
+4. Follow existing backend folder patterns.
+5. Reuse existing models, schemas, services, and utilities.
+6. After changes, summarize changed files and reason.
 
 ## Output Rule for AI Coding Assistants
 
