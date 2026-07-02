@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Auth - Test Token Generator</title>
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --success-hover: #059669;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 40px 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      margin: 5px 0 0 0;
+      font-size: 14px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-success {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background-color: var(--success-hover);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: #475569;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .phone-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .phone-number {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+    }
+
+    .otp-badge {
+      background: #334155;
+      color: #cbd5e1;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .token-box {
+      margin-top: 16px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: none;
+    }
+
+    .token-box.active {
+      display: block;
+    }
+
+    .token-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .token-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-copy {
+      background: #334155;
+      color: #f8fafc;
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    .btn-copy:hover {
+      background: #475569;
+    }
+
+    .token-textarea {
+      width: 100%;
+      height: 80px;
+      background: transparent;
+      border: none;
+      color: #a5b4fc;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      resize: none;
+      outline: none;
+      word-break: break-all;
+    }
+
+    /* Spinner animation */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="recaptcha-container"></div>
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Firebase Auth Test Tokens</h1>
+        <p>Instant 1-click token generation for registered test phone numbers</p>
+      </div>
+    </div>
+
+    <div class="cards-grid" id="cardsGrid">
+      <!-- Cards injected dynamically -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import {
+      getAuth,
+      RecaptchaVerifier,
+      signInWithPhoneNumber
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBp9WgJDnBHZfrV0wLn117cAFqu-SiOyFo",
+      authDomain: "bizzdeal.firebaseapp.com",
+      projectId: "bizzdeal",
+      storageBucket: "bizzdeal.firebasestorage.app",
+      messagingSenderId: "733354093584",
+      appId: "1:733354093584:web:7c509cd64322de17422e95",
+      measurementId: "G-5EFJPYW1HD"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    auth.settings.appVerificationDisabledForTesting = true;
+
+    const testAccounts = [
+      { id: "1", phone: "+919876543211", displayPhone: "+91 98765 43211", otp: "123456" },
+      { id: "2", phone: "+919876543210", displayPhone: "+91 98765 43210", otp: "123456" },
+      { id: "3", phone: "+917382772384", displayPhone: "+91 73827 72384", otp: "123456" },
+      { id: "4", phone: "+911234567890", displayPhone: "+91 1234 567 890", otp: "123456" },
+      { id: "5", phone: "+917981347949", displayPhone: "+91 79813 47949", otp: "123456" }
+    ];
+
+    let recaptchaVerifier = null;
+
+    let isGenerating = false;
+
+    async function setupRecaptcha() {
+      if (recaptchaVerifier) {
+        try {
+          recaptchaVerifier.clear();
+        } catch (e) {
+          console.warn("Recaptcha clear:", e);
+        }
+        recaptchaVerifier = null;
+      }
+      const container = document.getElementById("recaptcha-container");
+      if (container) container.innerHTML = "";
+
+      recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        { size: "invisible" }
+      );
+    }
+
+    function renderCards() {
+      const grid = document.getElementById("cardsGrid");
+      grid.innerHTML = testAccounts.map(acc => `
+        <div class="card" id="card-${acc.id}">
+          <div class="card-header">
+            <div class="phone-info">
+              <span class="phone-number">${acc.displayPhone}</span>
+              <span class="otp-badge">OTP: ${acc.otp}</span>
+            </div>
+            <button class="btn btn-primary gen-btn" id="btn-${acc.id}" onclick="window.generateSingleToken('${acc.id}')">
+              Generate Token
+            </button>
+          </div>
+          <div class="token-box" id="box-${acc.id}">
+            <div class="token-header">
+              <span class="token-title">Generated ID Token</span>
+              <button class="btn btn-copy" id="copy-${acc.id}" onclick="window.copyToken('${acc.id}')">Copy Token</button>
+            </div>
+            <textarea class="token-textarea" id="textarea-${acc.id}" readonly></textarea>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    window.generateSingleToken = async function (id) {
+      if (isGenerating) return;
+      const acc = testAccounts.find(a => a.id === id);
+      if (!acc) return;
+
+      isGenerating = true;
+
+      // Close all active token boxes and reset button labels across cards
+      document.querySelectorAll(".token-box").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".token-textarea").forEach(t => t.value = "");
+      document.querySelectorAll(".gen-btn").forEach(b => {
+        b.disabled = true;
+        b.innerHTML = "Generate Token";
+      });
+
+      const btn = document.getElementById(`btn-${id}`);
+      const box = document.getElementById(`box-${id}`);
+      const textarea = document.getElementById(`textarea-${id}`);
+      const copyBtn = document.getElementById(`copy-${id}`);
+
+      btn.innerHTML = `<span class="spinner"></span> Generating...`;
+
+      try {
+        await setupRecaptcha();
+        const confirmationResult = await signInWithPhoneNumber(auth, acc.phone, recaptchaVerifier);
+        const result = await confirmationResult.confirm(acc.otp);
+        const token = await result.user.getIdToken(true);
+
+        textarea.value = token;
+        box.classList.add("active");
+
+        btn.innerHTML = `Regenerate Token`;
+        copyBtn.textContent = "Copy Token";
+      } catch (error) {
+        console.error(`Failed for ${acc.phone}:`, error);
+        alert(`Error generating token for ${acc.phone}: ` + error.message);
+        btn.innerHTML = `Generate Token`;
+      } finally {
+        isGenerating = false;
+        document.querySelectorAll(".gen-btn").forEach(b => b.disabled = false);
+      }
+    };
+
+    window.copyToken = function (id) {
+      const textarea = document.getElementById(`textarea-${id}`);
+      const copyBtn = document.getElementById(`copy-${id}`);
+      if (!textarea.value) return;
+
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        copyBtn.textContent = "✓ Copied!";
+        setTimeout(() => {
+          copyBtn.textContent = "Copy Token";
+        }, 2000);
+      });
+    };
+
+    renderCards();
+  </script>
+</body>
+
+</html>

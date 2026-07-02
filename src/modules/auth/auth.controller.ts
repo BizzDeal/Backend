@@ -5,13 +5,18 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFiles,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -21,16 +26,12 @@ import {
   loginSchema,
   registerMemberSchema,
   registerCustomerSchema,
-  sendOtpSchema,
-  verifyOtpSchema,
   forgotPinSchema,
   resetPinSchema,
   refreshTokenSchema,
   LoginDto,
   RegisterMemberDto,
   RegisterCustomerDto,
-  SendOtpDto,
-  VerifyOtpDto,
   ForgotPinDto,
   ResetPinDto,
   RefreshTokenDto,
@@ -45,11 +46,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'User Login',
-    description: 'Authenticates a user via phone and security PIN, returning access/refresh tokens.',
+    description:
+      'Authenticates a user via phone and security PIN, returning access/refresh tokens.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Authentication successful. Returns access token, refresh token, and user profile details.',
+    description:
+      'Authentication successful. Returns access token, refresh token, and user profile details.',
   })
   @ApiResponse({
     status: 401,
@@ -60,98 +63,84 @@ export class AuthController {
   }
 
   @Post('register-member')
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Register Member / Entrepreneur',
-    description: 'Registers a new member account. Requires pre-verification of the phone number via OTP. Status is set to PENDING until approved by an admin.',
+    description:
+      'Registers a new member account with optional profile_pic and mandatory payment_receipt file uploads. Requires client-side verification of the phone number via Firebase Phone Auth (firebaseToken). Status is set to PENDING until approved by an admin.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Member registered successfully. Returns initial session tokens and profile.',
+    description:
+      'Member registered successfully. Returns initial session tokens and profile.',
   })
   @ApiResponse({
     status: 400,
-    description: 'Validation failed or phone number is not pre-verified via OTP.',
+    description: 'Validation failed or Firebase token verification failed.',
   })
   @ApiResponse({
     status: 409,
     description: 'Phone number already registered.',
   })
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'profile_pic', maxCount: 1 },
+      { name: 'payment_receipt', maxCount: 1 },
+      { name: 'business_logo', maxCount: 1 },
+    ]),
+  )
   async registerMember(
     @Body(new ZodValidationPipe(registerMemberSchema)) dto: RegisterMemberDto,
+    @UploadedFiles()
+    files?: {
+      profile_pic?: Express.Multer.File[];
+      payment_receipt?: Express.Multer.File[];
+      business_logo?: Express.Multer.File[];
+    },
   ) {
-    return this.authService.registerMember(dto);
+    return this.authService.registerMember(dto, files);
   }
 
   @Post('register-customer')
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Register Customer',
-    description: 'Registers a new customer account. Requires pre-verification of the phone number via OTP. Customer is immediately active.',
+    description:
+      'Registers a new customer account with optional profile_image upload and profile details. Requires client-side verification of the phone number via Firebase Phone Auth (firebaseToken). Customer is immediately active.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Customer registered successfully. Returns initial session tokens and profile.',
+    description:
+      'Customer registered successfully. Returns initial session tokens and profile.',
   })
   @ApiResponse({
     status: 400,
-    description: 'Validation failed or phone number is not pre-verified via OTP.',
+    description: 'Validation failed or Firebase token verification failed.',
   })
   @ApiResponse({
     status: 409,
     description: 'Phone number already registered.',
   })
+  @UseInterceptors(FileInterceptor('profile_image'))
   async registerCustomer(
-    @Body(new ZodValidationPipe(registerCustomerSchema)) dto: RegisterCustomerDto,
+    @Body(new ZodValidationPipe(registerCustomerSchema))
+    dto: RegisterCustomerDto,
+    @UploadedFile() profile_image?: Express.Multer.File,
   ) {
-    return this.authService.registerCustomer(dto);
-  }
-
-  @Post('send-otp')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Send OTP',
-    description: 'Generates and sends a 6-digit OTP code to the destination phone number via MSG91.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'OTP code generated and sent successfully.',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid input or MSG91 transmission failed.',
-  })
-  async sendOtp(@Body(new ZodValidationPipe(sendOtpSchema)) dto: SendOtpDto) {
-    return this.authService.sendOtp(dto);
-  }
-
-  @Post('verify-otp')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Verify OTP',
-    description: 'Verifies the OTP code received by the user against the latest requested OTP for the phone and purpose.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'OTP verified successfully.',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'OTP has expired, is invalid, or no matching request was found.',
-  })
-  async verifyOtp(
-    @Body(new ZodValidationPipe(verifyOtpSchema)) dto: VerifyOtpDto,
-  ) {
-    return this.authService.verifyOtp(dto);
+    return this.authService.registerCustomer(dto, profile_image);
   }
 
   @Post('forgot-pin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Forgot PIN',
-    description: 'Triggers the recovery flow for a forgotten PIN by sending an OTP to the registered phone number.',
+    description:
+      'Validates that a user exists with the given phone number before the client initiates Firebase Phone Auth SMS verification.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Recovery OTP sent successfully.',
+    description:
+      'User verified successfully. Client should proceed with Firebase SMS verification.',
   })
   @ApiResponse({
     status: 404,
@@ -167,7 +156,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Reset PIN',
-    description: 'Resets the security PIN of a user after verifying the recovery OTP.',
+    description:
+      'Resets the security PIN of a user after verifying ownership of the phone via Firebase ID token.',
   })
   @ApiResponse({
     status: 200,
@@ -175,7 +165,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid OTP or invalid input.',
+    description: 'Invalid Firebase ID token or invalid input.',
   })
   @ApiResponse({
     status: 404,
@@ -193,7 +183,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Logout User',
-    description: 'Logs out the user by revoking refresh tokens in the database. Optionally accepts a specific refresh token to revoke.',
+    description:
+      'Logs out the user by revoking refresh tokens in the database. Optionally accepts a specific refresh token to revoke.',
   })
   @ApiBody({
     required: false,
@@ -202,7 +193,8 @@ export class AuthController {
       properties: {
         refreshToken: {
           type: 'string',
-          description: 'The specific refresh token to revoke. If omitted, all active refresh tokens for the user will be revoked.',
+          description:
+            'The specific refresh token to revoke. If omitted, all active refresh tokens for the user will be revoked.',
         },
       },
     },
@@ -226,7 +218,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Refresh Access Token',
-    description: 'Uses an active refresh token to issue a new access/refresh token pair.',
+    description:
+      'Uses an active refresh token to issue a new access/refresh token pair.',
   })
   @ApiResponse({
     status: 200,

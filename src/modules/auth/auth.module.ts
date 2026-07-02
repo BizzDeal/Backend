@@ -3,30 +3,34 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
-import { OtpRequest } from './entities/otp-request.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { User } from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { Msg91Service } from './services/msg91.service';
 import { UsersModule } from '../users/users.module';
+import { BusinessesModule } from '../businesses/businesses.module';
+import { FirebaseModule } from '../../common/firebase/firebase.module';
+import { MediaModule } from '../media/media.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([OtpRequest, RefreshToken, User]),
+    TypeOrmModule.forFeature([RefreshToken, User]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_ACCESS_SECRET') || 'bizz_deal_access_secret',
         signOptions: {
-          expiresIn: (config.get<string>('JWT_ACCESS_EXPIRES_IN') as any) || '1h',
+          expiresIn: (config.get<string>('JWT_ACCESS_EXPIRES_IN') || '1h') as unknown as number,
         },
       }),
     }),
     UsersModule,
+    BusinessesModule,
+    FirebaseModule,
+    MediaModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, Msg91Service],
-  exports: [AuthService, Msg91Service, JwtModule],
+  providers: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

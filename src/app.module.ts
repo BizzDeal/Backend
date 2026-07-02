@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { MediaModule } from './modules/media/media.module';
+import { FirebaseModule } from './common/firebase/firebase.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { OffersModule } from './modules/offers/offers.module';
 import { VouchersModule } from './modules/vouchers/vouchers.module';
@@ -24,6 +25,7 @@ import { MeetingsModule } from './modules/meetings/meetings.module';
       load: [databaseConfig],
     }),
     DatabaseModule,
+    FirebaseModule,
     UsersModule,
     AuthModule,
     MediaModule,

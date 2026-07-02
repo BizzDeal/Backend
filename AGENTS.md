@@ -122,6 +122,7 @@ test/ = backend tests
 - Use pagination for list endpoints.
 - Use guards/interceptors where cross-cutting behavior is needed.
 - **Swagger Documentation**: Always ensure Swagger documentation is kept completely up-to-date. When implementing new features or making changes to existing endpoints (such as modifying query params, request bodies, response models, or auth requirements), corresponding Swagger decorators (e.g., `@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiProperty`, `@ApiBearerAuth`) must be added or updated with detailed descriptions of fields and APIs.
+- **No Unrequested API Additions**: Do not add additional APIs, endpoints, or alternate HTTP methods (e.g., adding a GET alongside a requested POST) without explicit permission and direction from the user.
 
 ## Auth Rules
 
@@ -148,6 +149,10 @@ test/ = backend tests
 - Do not store generated PDFs unless explicitly required.
 - Keep fonts/assets paths configurable.
 - Ensure PDF generation is deterministic from resume JSON.
+
+## File Upload Rules
+
+- **Clean Up Stale Files**: When uploading a replacement file for a specific entity or purpose (such as updating a profile picture, business logo, or document), always delete or remove the stale/previous file record from the database and storage to prevent orphaned files and data accumulation.
 
 ## Credits / Billing Rules
 

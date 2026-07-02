@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { MediaType } from '../../../common/enums';
+import { MediaType, MediaPurpose } from '../../../common/enums';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('media_files')
@@ -33,6 +33,13 @@ export class MediaFile {
     enum: MediaType,
   })
   file_type: MediaType;
+
+  @Column({
+    type: 'enum',
+    enum: MediaPurpose,
+    default: MediaPurpose.GENERAL,
+  })
+  purpose: MediaPurpose;
 
   @Column({ type: 'varchar', length: 100 })
   mime_type: string;

@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { OtpPurpose } from '../../../common/enums';
 
 export const loginSchema = z.object({
   phone: z.string().min(10, 'Valid phone number is required'),
@@ -25,7 +24,15 @@ export const registerMemberSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
   phone: z.string().min(10, 'Valid phone number is required'),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
-  email: z.string().email('Invalid email address').optional(),
+  whatsapp: z.string().min(10, 'Valid WhatsApp number is required'),
+  email: z.string().email('Invalid email address'),
+  address: z.string().min(5, 'Address is required'),
+  business_name: z.string().min(2, 'Business name is required'),
+  category_id: z.string().uuid('Valid business category UUID is required'),
+  business_description: z.string().min(5, 'Business description is required'),
+  website: z.string().min(3, 'Website is required'),
+  gst_number: z.string().min(5, 'GST number is required'),
+  firebaseToken: z.string().min(1, 'Firebase authentication token is required'),
 });
 
 export class RegisterMemberDto {
@@ -47,18 +54,91 @@ export class RegisterMemberDto {
   })
   pin: string;
 
-  @ApiPropertyOptional({
-    description: 'The optional email address of the member',
+  @ApiProperty({
+    description: 'WhatsApp number of the member',
+    example: '9876543210',
+  })
+  whatsapp: string;
+
+  @ApiProperty({
+    description: 'Mandatory email address of the member',
     example: 'john.doe@example.com',
   })
-  email?: string;
+  email: string;
+
+  @ApiProperty({
+    description: 'Complete address of the member or business',
+    example: '123 Business Street, Tech Park, Hyderabad',
+  })
+  address: string;
+
+  @ApiProperty({
+    description: 'Name of the business being registered',
+    example: 'Tech Solutions India Pvt Ltd',
+  })
+  business_name: string;
+
+  @ApiProperty({
+    description: 'UUID of the selected business category',
+    example: 'c0a80121-8888-4e89-a111-222222222222',
+  })
+  category_id: string;
+
+  @ApiProperty({
+    description: 'Detailed description of the business and its offerings',
+    example: 'Providing top-notch IT consulting and cloud solutions.',
+  })
+  business_description: string;
+
+  @ApiProperty({
+    description: 'Official website or social media URL of the business',
+    example: 'https://techsolutions.in',
+  })
+  website: string;
+
+  @ApiProperty({
+    description: 'GST Number of the business',
+    example: '36AAAAA0000A1Z5',
+  })
+  gst_number: string;
+
+  @ApiProperty({
+    description:
+      'Firebase ID token received after client-side phone verification',
+    example: 'eyJhbGciOiJSUzI1NiIs...',
+  })
+  firebaseToken: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Profile picture image upload',
+  })
+  profile_pic?: any;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Mandatory payment receipt image/document upload',
+  })
+  payment_receipt: any;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Optional business logo image upload',
+  })
+  business_logo?: any;
 }
 
 export const registerCustomerSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
   phone: z.string().min(10, 'Valid phone number is required'),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
-  email: z.string().email('Invalid email address').optional(),
+  whatsapp: z.string().min(10, 'Valid WhatsApp number is required'),
+  email: z.string().email('Invalid email address'),
+  address: z.string().min(5, 'Address is required'),
+  firebaseToken: z.string().min(1, 'Firebase authentication token is required'),
 });
 
 export class RegisterCustomerDto {
@@ -80,58 +160,37 @@ export class RegisterCustomerDto {
   })
   pin: string;
 
-  @ApiPropertyOptional({
-    description: 'The optional email address of the customer',
+  @ApiProperty({
+    description: 'The WhatsApp number of the customer',
+    example: '9876543211',
+  })
+  whatsapp: string;
+
+  @ApiProperty({
+    description: 'The mandatory email address of the customer',
     example: 'jane.smith@example.com',
   })
-  email?: string;
-}
-
-export const sendOtpSchema = z.object({
-  phone: z.string().min(10, 'Valid phone number is required'),
-  purpose: z.nativeEnum(OtpPurpose),
-});
-
-export class SendOtpDto {
-  @ApiProperty({
-    description: 'The destination phone number to receive the OTP',
-    example: '9876543210',
-  })
-  phone: string;
+  email: string;
 
   @ApiProperty({
-    description: 'The purpose of generating this OTP',
-    enum: OtpPurpose,
-    example: OtpPurpose.REGISTER,
+    description: 'The physical address of the customer',
+    example: '456 Customer Lane, Hyderabad',
   })
-  purpose: OtpPurpose;
-}
-
-export const verifyOtpSchema = z.object({
-  phone: z.string().min(10, 'Valid phone number is required'),
-  otp: z.string().min(4, 'OTP must be at least 4 characters'),
-  purpose: z.nativeEnum(OtpPurpose),
-});
-
-export class VerifyOtpDto {
-  @ApiProperty({
-    description: 'The phone number linked with the OTP request',
-    example: '9876543210',
-  })
-  phone: string;
+  address: string;
 
   @ApiProperty({
-    description: 'The OTP code received by the user',
-    example: '123456',
+    description:
+      'Firebase ID token received after client-side phone verification',
+    example: 'eyJhbGciOiJSUzI1NiIs...',
   })
-  otp: string;
+  firebaseToken: string;
 
-  @ApiProperty({
-    description: 'The purpose for which the OTP was requested',
-    enum: OtpPurpose,
-    example: OtpPurpose.REGISTER,
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Customer profile image upload',
   })
-  purpose: OtpPurpose;
+  profile_image?: any;
 }
 
 export const forgotPinSchema = z.object({
@@ -148,7 +207,7 @@ export class ForgotPinDto {
 
 export const resetPinSchema = z.object({
   phone: z.string().min(10, 'Valid phone number is required'),
-  otp: z.string().min(4, 'OTP must be at least 4 characters'),
+  firebaseToken: z.string().min(1, 'Firebase authentication token is required'),
   newPin: z.string().min(4, 'New PIN must be at least 4 characters'),
 });
 
@@ -160,10 +219,11 @@ export class ResetPinDto {
   phone: string;
 
   @ApiProperty({
-    description: 'The OTP code received for verification',
-    example: '123456',
+    description:
+      'Firebase ID token received after client-side phone verification',
+    example: 'eyJhbGciOiJSUzI1NiIs...',
   })
-  otp: string;
+  firebaseToken: string;
 
   @ApiProperty({
     description: 'The new secure 4+ digit numeric PIN',

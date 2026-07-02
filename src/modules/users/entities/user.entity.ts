@@ -8,7 +8,6 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { UserRole, UserStatus } from '../../../common/enums';
-import { MediaFile } from '../../media/entities/media-file.entity';
 
 @Entity('users')
 export class User {
@@ -21,8 +20,14 @@ export class User {
   @Column({ type: 'varchar', length: 50, unique: true })
   phone: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  whatsapp: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   email: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  address: string | null;
 
   @Column({ type: 'varchar', length: 255 })
   pin_hash: string;
@@ -40,13 +45,6 @@ export class User {
     default: UserStatus.PENDING,
   })
   status: UserStatus;
-
-  @Column({ type: 'uuid', nullable: true })
-  profile_image_id: string | null;
-
-  @ManyToOne(() => MediaFile, { nullable: true })
-  @JoinColumn({ name: 'profile_image_id' })
-  profile_image: MediaFile | null;
 
   @Column({ type: 'uuid', nullable: true })
   approved_by_id: string | null;

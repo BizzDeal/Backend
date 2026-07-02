@@ -9,7 +9,11 @@ export class AppController {
 
   @Get()
   @ApiOperation({ summary: 'Get API service status and info' })
-  @ApiResponse({ status: 200, description: 'Returns service health check status and Swagger documentation link' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Returns service health check status and Swagger documentation link',
+  })
   getApiInfo() {
     return this.appService.getApiInfo();
   }

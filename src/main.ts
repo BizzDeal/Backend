@@ -22,10 +22,12 @@ async function bootstrap() {
   // Expose Swagger UI at /bizzdeal/swagger/api with custom CSS to hide the default Authorize button
   SwaggerModule.setup('bizzdeal/swagger/api', app, document, {
     customCss: '.swagger-ui .auth-wrapper { display: none !important; }',
-    customJs: 'data:text/javascript;base64,' + Buffer.from(SWAGGER_AUTH_SCRIPT).toString('base64'),
+    customJs:
+      'data:text/javascript;base64,' +
+      Buffer.from(SWAGGER_AUTH_SCRIPT).toString('base64'),
     customJsStr: SWAGGER_AUTH_SCRIPT,
   });
 
-  await app.listen(process.env.PORT ?? 3000, "0.0.0.0");
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();

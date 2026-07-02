@@ -11,18 +11,6 @@ export enum UserStatus {
   SUSPENDED = 'SUSPENDED',
 }
 
-export enum OtpPurpose {
-  REGISTER = 'REGISTER',
-  LOGIN = 'LOGIN',
-  FORGOT_PIN = 'FORGOT_PIN',
-  RESET_PIN = 'RESET_PIN',
-}
-
-export enum OtpProvider {
-  MSG91 = 'MSG91',
-  TWILIO = 'TWILIO',
-}
-
 export enum DeviceType {
   ANDROID = 'ANDROID',
   IOS = 'IOS',
@@ -94,6 +82,14 @@ export enum MediaType {
   VIDEO = 'VIDEO',
   AUDIO = 'AUDIO',
   DOCUMENT = 'DOCUMENT',
+}
+
+export enum MediaPurpose {
+  PROFILE_PIC = 'PROFILE_PIC',
+  PAYMENT_RECEIPT = 'PAYMENT_RECEIPT',
+  BUSINESS_LOGO = 'BUSINESS_LOGO',
+  OFFER_IMAGE = 'OFFER_IMAGE',
+  GENERAL = 'GENERAL',
 }
 
 export enum MessageType {

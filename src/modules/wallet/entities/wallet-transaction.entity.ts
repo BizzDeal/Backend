@@ -7,7 +7,10 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { WalletTransactionType, WalletReferenceType } from '../../../common/enums';
+import {
+  WalletTransactionType,
+  WalletReferenceType,
+} from '../../../common/enums';
 import { Wallet } from './wallet.entity';
 import { User } from '../../users/entities/user.entity';
 
