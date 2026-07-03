@@ -105,4 +105,28 @@ export class MediaService {
 
     return this.saveFile(file, userId, purpose);
   }
+
+  /**
+   * Deletes a specific media file record and its corresponding Firebase storage object.
+   */
+  async deleteFileById(mediaId: string): Promise<void> {
+    const mediaFile = await this.mediaRepository.findOne({
+      where: { id: mediaId },
+    });
+
+    if (!mediaFile) return;
+
+    if (mediaFile.public_id) {
+      try {
+        const bucket = this.firebaseService.getBucket();
+        await bucket.file(mediaFile.public_id).delete();
+      } catch (err) {
+        this.logger.warn(
+          `Could not delete storage file (${mediaFile.public_id}): ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
+
+    await this.mediaRepository.remove(mediaFile);
+  }
 }

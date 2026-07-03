@@ -17,6 +17,7 @@ describe('UsersController (e2e)', () => {
   const testPhones = ['9888000001', '9888000002'];
 
   async function cleanup() {
+    if (!userRepository) return;
     for (const phone of testPhones) {
       const user = await userRepository.findOne({ where: { phone } });
       if (user) {

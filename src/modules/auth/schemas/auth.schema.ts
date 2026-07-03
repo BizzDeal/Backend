@@ -37,72 +37,84 @@ export const registerMemberSchema = z.object({
 
 export class RegisterMemberDto {
   @ApiProperty({
+    type: String,
     description: 'The full name of the member/entrepreneur',
     example: 'John Doe',
   })
   full_name: string;
 
   @ApiProperty({
+    type: String,
     description: 'The unique phone number of the member',
     example: '9876543210',
   })
   phone: string;
 
   @ApiProperty({
+    type: String,
     description: 'The secure 4+ digit numeric PIN for the new member account',
     example: '1234',
   })
   pin: string;
 
   @ApiProperty({
+    type: String,
     description: 'WhatsApp number of the member',
     example: '9876543210',
   })
   whatsapp: string;
 
   @ApiProperty({
+    type: String,
     description: 'Mandatory email address of the member',
     example: 'john.doe@example.com',
   })
   email: string;
 
   @ApiProperty({
+    type: String,
     description: 'Complete address of the member or business',
     example: '123 Business Street, Tech Park, Hyderabad',
   })
   address: string;
 
   @ApiProperty({
+    type: String,
     description: 'Name of the business being registered',
     example: 'Tech Solutions India Pvt Ltd',
   })
   business_name: string;
 
   @ApiProperty({
+    type: String,
     description: 'UUID of the selected business category',
     example: 'c0a80121-8888-4e89-a111-222222222222',
   })
   category_id: string;
 
   @ApiProperty({
+    type: String,
     description: 'Detailed description of the business and its offerings',
     example: 'Providing top-notch IT consulting and cloud solutions.',
   })
   business_description: string;
 
   @ApiProperty({
+    type: String,
     description: 'Official website or social media URL of the business',
     example: 'https://techsolutions.in',
   })
   website: string;
 
   @ApiProperty({
+    type: String,
     description: 'GST Number of the business',
     example: '36AAAAA0000A1Z5',
   })
   gst_number: string;
 
   @ApiProperty({
+    type: String,
     description:
       'Firebase ID token received after client-side phone verification',
     example: 'eyJhbGciOiJSUzI1NiIs...',

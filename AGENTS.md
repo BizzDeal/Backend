@@ -119,9 +119,9 @@ test/ = backend tests
 - Use proper HTTP status codes.
 - Do not leak internal errors to the client.
 - Return predictable response shapes.
-- Use pagination for list endpoints.
+- **No Unrequested Pagination**: Do not apply pagination (`page`, `limit`, `skip`, `take`) to list endpoints or database queries unless explicitly requested by the user.
 - Use guards/interceptors where cross-cutting behavior is needed.
-- **Swagger Documentation**: Always ensure Swagger documentation is kept completely up-to-date. When implementing new features or making changes to existing endpoints (such as modifying query params, request bodies, response models, or auth requirements), corresponding Swagger decorators (e.g., `@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiProperty`, `@ApiBearerAuth`) must be added or updated with detailed descriptions of fields and APIs.
+- **Swagger Documentation**: Always ensure Swagger documentation is kept completely up-to-date. When implementing new features or making changes to existing endpoints (such as modifying query params, request bodies, response models, or auth requirements), corresponding Swagger decorators (e.g., `@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiProperty`, `@ApiBearerAuth`) must be added or updated with detailed descriptions of fields and APIs. Always specify explicit primitive data types (e.g., `type: String`, `type: Number`, `type: Boolean`) and appropriate formats (such as `format: 'date-time'`) in `@ApiProperty` and `@ApiPropertyOptional` decorators on DTOs—especially when using union types (`number | null`, `Date | string`) or `multipart/form-data` request bodies—to ensure Swagger UI renders proper, suitable single-line input controls (`<input>`) instead of unnecessary multiline text areas (`<textarea>`).
 - **No Unrequested API Additions**: Do not add additional APIs, endpoints, or alternate HTTP methods (e.g., adding a GET alongside a requested POST) without explicit permission and direction from the user.
 
 ## Auth Rules

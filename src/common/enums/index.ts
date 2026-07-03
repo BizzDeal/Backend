@@ -40,6 +40,7 @@ export enum OfferStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   EXPIRED = 'EXPIRED',
+  INACTIVE = 'INACTIVE',
 }
 
 export enum VoucherStatus {

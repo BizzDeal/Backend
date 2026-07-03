@@ -26,8 +26,6 @@ import {
   UpdateProfileDto,
   memberActionSchema,
   MemberActionDto,
-  userPaginationSchema,
-  UserPaginationDto,
   getProfileSchema,
   GetProfileDto,
 } from './schemas/users.schema';

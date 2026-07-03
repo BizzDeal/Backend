@@ -49,6 +49,7 @@ describe('AuthController (e2e)', () => {
   ];
 
   async function cleanup() {
+    if (!userRepository) return;
     for (const phone of testPhones) {
       const user = await userRepository.findOne({ where: { phone } });
       if (user) {
@@ -153,6 +154,9 @@ describe('AuthController (e2e)', () => {
           full_name: 'Duplicate Customer',
           phone: '9999000001',
           pin: '1234',
+          whatsapp: '9999000001',
+          email: 'dup.customer@test.com',
+          address: '123 Duplicate Rd, Hyderabad',
           firebaseToken: 'valid-firebase-token-1',
         })
         .expect(409);
@@ -160,49 +164,47 @@ describe('AuthController (e2e)', () => {
   });
 
   describe('POST /auth/register-member', () => {
-    it('should register a member successfully with status REGISTERED when given valid firebaseToken', async () => {
+    it('should register a member successfully with status PENDING when given valid firebaseToken', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/register-member')
-        .send({
-          full_name: 'Test Entrepreneur',
-          phone: '9999000004',
-          pin: '5678',
-          whatsapp: '9999000004',
-          email: 'test.entrepreneur@example.com',
-          address: '123 Entrepreneur Way, Hyderabad',
-          business_name: 'Test Business Enterprise',
-          category_id: testCategoryId,
-          business_description: 'Providing best IT services and consulting',
-          website: 'https://testenterprise.com',
-          gst_number: '36AAAAA0000A1Z5',
-          firebaseToken: 'valid-firebase-token-4',
-        })
+        .field('full_name', 'Test Entrepreneur')
+        .field('phone', '9999000004')
+        .field('pin', '5678')
+        .field('whatsapp', '9999000004')
+        .field('email', 'test.entrepreneur@example.com')
+        .field('address', '123 Entrepreneur Way, Hyderabad')
+        .field('business_name', 'Test Business Enterprise')
+        .field('category_id', testCategoryId)
+        .field('business_description', 'Providing best IT services and consulting')
+        .field('website', 'https://testenterprise.com')
+        .field('gst_number', '36AAAAA0000A1Z5')
+        .field('firebaseToken', 'valid-firebase-token-4')
+        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf')
         .expect(201);
 
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.refreshToken).toBeDefined();
       expect(res.body.user.phone).toBe('9999000004');
       expect(res.body.user.role).toBe(UserRole.MEMBER);
-      expect(res.body.user.status).toBe(UserStatus.REGISTERED);
+      expect(res.body.user.status).toBe(UserStatus.PENDING);
     });
 
     it('should return 409 when registering a member with an existing phone number', async () => {
       await request(app.getHttpServer())
         .post('/auth/register-member')
-        .send({
-          full_name: 'Duplicate Entrepreneur',
-          phone: '9999000004',
-          pin: '5678',
-          whatsapp: '9999000004',
-          email: 'dup@example.com',
-          address: '456 Entrepreneur Way, Hyderabad',
-          business_name: 'Dup Business Enterprise',
-          category_id: testCategoryId,
-          business_description: 'Providing duplicate IT services',
-          website: 'https://dupenterprise.com',
-          gst_number: '36AAAAA0000A1Z6',
-          firebaseToken: 'valid-firebase-token-4',
-        })
+        .field('full_name', 'Duplicate Entrepreneur')
+        .field('phone', '9999000004')
+        .field('pin', '5678')
+        .field('whatsapp', '9999000004')
+        .field('email', 'dup@example.com')
+        .field('address', '456 Entrepreneur Way, Hyderabad')
+        .field('business_name', 'Dup Business Enterprise')
+        .field('category_id', testCategoryId)
+        .field('business_description', 'Providing duplicate IT services')
+        .field('website', 'https://dupenterprise.com')
+        .field('gst_number', '36AAAAA0000A1Z6')
+        .field('firebaseToken', 'valid-firebase-token-4')
+        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf')
         .expect(409);
     });
 

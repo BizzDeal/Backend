@@ -13,33 +13,6 @@ export class UserExistDto {
   phone: string;
 }
 
-export const userPaginationSchema = z.object({
-  page: z.preprocess(
-    (val) => (val !== undefined ? Number(val) : 1),
-    z.number().int().min(1).default(1),
-  ),
-  limit: z.preprocess(
-    (val) => (val !== undefined ? Number(val) : 10),
-    z.number().int().min(1).max(100).default(10),
-  ),
-});
-
-export class UserPaginationDto {
-  @ApiPropertyOptional({
-    description: 'Page number for pagination',
-    example: 1,
-    default: 1,
-  })
-  page?: number;
-
-  @ApiPropertyOptional({
-    description: 'Number of items per page',
-    example: 10,
-    default: 10,
-  })
-  limit?: number;
-}
-
 export const updateProfileSchema = z.object({
   userId: z.string().uuid('Valid user ID is required'),
   full_name: z.string().min(2, 'Full name must be at least 2 characters').optional(),
