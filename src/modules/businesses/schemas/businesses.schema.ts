@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BusinessStatus } from '../../../common/enums';
 
 export const updateBusinessSchema = z.object({
   name: z.string().min(2).optional(),
@@ -8,14 +7,6 @@ export const updateBusinessSchema = z.object({
   description: z.string().optional().nullable(),
   website: z.string().optional().nullable(),
   gst_number: z.string().optional().nullable(),
-  status: z.nativeEnum(BusinessStatus).optional(),
-  is_featured: z
-    .preprocess((val) => {
-      if (val === 'true') return true;
-      if (val === 'false') return false;
-      return val;
-    }, z.boolean())
-    .optional(),
 });
 
 export class UpdateBusinessDto {
@@ -49,18 +40,6 @@ export class UpdateBusinessDto {
     description: 'GST identification number',
   })
   gst_number?: string | null;
-
-  @ApiPropertyOptional({
-    enum: BusinessStatus,
-    description: 'Status of the business (Admin only)',
-  })
-  status?: BusinessStatus;
-
-  @ApiPropertyOptional({
-    type: Boolean,
-    description: 'Whether the business is featured (Admin only)',
-  })
-  is_featured?: boolean;
 
   @ApiPropertyOptional({
     type: 'string',
@@ -190,4 +169,26 @@ export class BusinessQueryDto {
   })
   gst_number?: string;
 }
+
+export const featureBusinessSchema = z.object({
+  businessId: z.string().uuid('Valid business UUID is required'),
+  is_featured: z.boolean(),
+});
+
+export class FeatureBusinessDto {
+  @ApiProperty({
+    type: String,
+    description: 'The UUID of the business to feature or unfeature',
+    example: 'd3b07384-d113-4c4e-9c81-632b84236a99',
+  })
+  businessId: string;
+
+  @ApiProperty({
+    type: Boolean,
+    description: 'Whether the business should be featured on the platform',
+    example: true,
+  })
+  is_featured: boolean;
+}
+
 

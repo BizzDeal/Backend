@@ -13,9 +13,16 @@ import {
   BadRequestException,
   UseInterceptors,
   UploadedFiles,
+  UseGuards,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiConsumes,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -26,9 +33,12 @@ import {
   UpdateProfileDto,
   memberActionSchema,
   MemberActionDto,
-  getProfileSchema,
-  GetProfileDto,
 } from './schemas/users.schema';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UserRole } from '../../common/enums';
 
 @ApiTags('Users')
 @Controller('users')
@@ -36,6 +46,8 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get All Users',
     description:
@@ -74,6 +86,8 @@ export class UsersController {
   }
 
   @Get('members')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get All Members',
     description:
@@ -88,6 +102,8 @@ export class UsersController {
   }
 
   @Get('customers')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get All Customers',
     description:
@@ -102,11 +118,13 @@ export class UsersController {
   }
 
   @Post('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get User Profile',
     description:
-      'Retrieves the profile details of the user by accepting userId in the request payload.',
+      'Retrieves the profile details of the currently authenticated user.',
   })
   @ApiResponse({
     status: 200,
@@ -116,18 +134,18 @@ export class UsersController {
     status: 404,
     description: 'User not found.',
   })
-  async getProfile(
-    @Body(new ZodValidationPipe(getProfileSchema)) dto: GetProfileDto,
-  ) {
-    return this.usersService.getProfile(dto.userId);
+  async getProfile(@CurrentUser() user: User) {
+    return this.usersService.getProfile(user.id);
   }
 
   @Put('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Update Own Profile',
     description:
-      'Updates the profile details of the user (full_name, phone, whatsapp, email, address, and member business details) along with replacement file uploads (profile_pic and business_logo).',
+      'Updates the profile details of the currently authenticated user along with replacement file uploads (profile_pic and business_logo).',
   })
   @ApiResponse({
     status: 200,
@@ -140,7 +158,7 @@ export class UsersController {
     ]),
   )
   async updateProfile(
-    @Req() req: any,
+    @CurrentUser() user: User,
     @Body(new ZodValidationPipe(updateProfileSchema)) dto: UpdateProfileDto,
     @UploadedFiles()
     files?: {
@@ -148,14 +166,13 @@ export class UsersController {
       business_logo?: Express.Multer.File[];
     },
   ) {
-    const userId = req?.user?.id || dto.userId;
-    if (!userId) {
-      throw new BadRequestException('userId is required');
-    }
-    return this.usersService.updateProfile(userId, dto, files);
+    return this.usersService.updateProfile(user.id, dto, files);
   }
 
   @Put('approve-member')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Approve Member',
     description:
@@ -166,15 +183,17 @@ export class UsersController {
     description: 'Member approved successfully.',
   })
   async approveMember(
-    @Req() req: any,
+    @CurrentUser() admin: User,
     @Ip() ip: string,
     @Body(new ZodValidationPipe(memberActionSchema)) dto: MemberActionDto,
   ) {
-    const adminId = req?.user?.id || dto.adminId;
-    return this.usersService.approveMember(dto.memberId, adminId, ip);
+    return this.usersService.approveMember(dto.memberId, admin.id, ip);
   }
 
   @Put('reject-member')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Reject Member',
     description: 'Rejects a member registration.',
@@ -184,15 +203,17 @@ export class UsersController {
     description: 'Member rejected successfully.',
   })
   async rejectMember(
-    @Req() req: any,
+    @CurrentUser() admin: User,
     @Ip() ip: string,
     @Body(new ZodValidationPipe(memberActionSchema)) dto: MemberActionDto,
   ) {
-    const adminId = req?.user?.id || dto.adminId;
-    return this.usersService.rejectMember(dto.memberId, adminId, ip);
+    return this.usersService.rejectMember(dto.memberId, admin.id, ip);
   }
 
   @Put('suspend-member')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Suspend Member',
     description: 'Suspends an active member and their business profile.',
@@ -202,15 +223,17 @@ export class UsersController {
     description: 'Member suspended successfully.',
   })
   async suspendMember(
-    @Req() req: any,
+    @CurrentUser() admin: User,
     @Ip() ip: string,
     @Body(new ZodValidationPipe(memberActionSchema)) dto: MemberActionDto,
   ) {
-    const adminId = req?.user?.id || dto.adminId;
-    return this.usersService.suspendMember(dto.memberId, adminId, ip);
+    return this.usersService.suspendMember(dto.memberId, admin.id, ip);
   }
 
   @Delete('member')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Delete Member',
     description: 'Deletes a member account from the platform.',
@@ -220,11 +243,10 @@ export class UsersController {
     description: 'Member deleted successfully.',
   })
   async deleteMember(
-    @Req() req: any,
+    @CurrentUser() admin: User,
     @Ip() ip: string,
     @Body(new ZodValidationPipe(memberActionSchema)) dto: MemberActionDto,
   ) {
-    const adminId = req?.user?.id || dto.adminId;
-    return this.usersService.deleteMember(dto.memberId, adminId, ip);
+    return this.usersService.deleteMember(dto.memberId, admin.id, ip);
   }
 }

@@ -80,6 +80,7 @@ export class OffersController {
 
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List Offers and Deals',
@@ -147,6 +148,7 @@ export class OffersController {
 
   @Get('business/:businessId')
   @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Offers by Business ID',
@@ -166,6 +168,7 @@ export class OffersController {
 
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Offer Details',
@@ -196,7 +199,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'Update Offer Details',
     description:
-      'Updates an offer or replaces its promotional image. If a member modifies core fields of an approved offer, status automatically resets to PENDING for re-approval.',
+      'Updates an offer or replaces its promotional image. Whenever a member updates an offer, its status automatically resets to PENDING for admin re-approval.',
   })
   @ApiResponse({
     status: 200,

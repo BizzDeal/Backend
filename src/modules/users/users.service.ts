@@ -67,6 +67,14 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { phone } });
   }
 
+  async findOneByPhoneWithPin(phone: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.pin_hash')
+      .where('user.phone = :phone', { phone })
+      .getOne();
+  }
+
   async findOneById(id: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { id } });
   }

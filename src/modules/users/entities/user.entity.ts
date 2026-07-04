@@ -29,8 +29,8 @@ export class User {
   @Column({ type: 'text', nullable: true })
   address: string | null;
 
-  @Column({ type: 'varchar', length: 255 })
-  pin_hash: string;
+  @Column({ type: 'varchar', length: 255, select: false })
+  pin_hash?: string;
 
   @Column({
     type: 'enum',

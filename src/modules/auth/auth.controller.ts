@@ -26,12 +26,14 @@ import {
   loginSchema,
   registerMemberSchema,
   registerCustomerSchema,
+  registerAdminSchema,
   forgotPinSchema,
   resetPinSchema,
   refreshTokenSchema,
   LoginDto,
   RegisterMemberDto,
   RegisterCustomerDto,
+  RegisterAdminDto,
   ForgotPinDto,
   ResetPinDto,
   RefreshTokenDto,
@@ -128,6 +130,35 @@ export class AuthController {
     @UploadedFile() profile_image?: Express.Multer.File,
   ) {
     return this.authService.registerCustomer(dto, profile_image);
+  }
+
+  @Post('register-admin')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Register Admin',
+    description:
+      'Registers a new admin account with optional profile_image upload and profile details. Requires client-side verification of the phone number via Firebase Phone Auth (firebaseToken). Admin is immediately active.',
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Admin registered successfully. Returns initial session tokens and profile.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed or Firebase token verification failed.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Phone number already registered.',
+  })
+  @UseInterceptors(FileInterceptor('profile_image'))
+  async registerAdmin(
+    @Body(new ZodValidationPipe(registerAdminSchema))
+    dto: RegisterAdminDto,
+    @UploadedFile() profile_image?: Express.Multer.File,
+  ) {
+    return this.authService.registerAdmin(dto, profile_image);
   }
 
   @Post('forgot-pin')

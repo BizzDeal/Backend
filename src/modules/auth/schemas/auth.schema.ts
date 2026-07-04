@@ -205,6 +205,75 @@ export class RegisterCustomerDto {
   profile_image?: any;
 }
 
+export const registerAdminSchema = z.object({
+  full_name: z.string().min(2, 'Full name must be at least 2 characters'),
+  phone: z.string().min(10, 'Valid phone number is required'),
+  pin: z.string().min(4, 'PIN must be at least 4 characters'),
+  whatsapp: z.string().min(10, 'Valid WhatsApp number is required'),
+  email: z.string().email('Invalid email address'),
+  address: z.string().min(5, 'Address is required'),
+  firebaseToken: z.string().min(1, 'Firebase authentication token is required'),
+});
+
+export class RegisterAdminDto {
+  @ApiProperty({
+    type: String,
+    description: 'The full name of the admin',
+    example: 'Admin User',
+  })
+  full_name: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'The unique phone number of the admin',
+    example: '9876543200',
+  })
+  phone: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'The secure 4+ digit numeric PIN for the new admin account',
+    example: '1234',
+  })
+  pin: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'The WhatsApp number of the admin',
+    example: '9876543200',
+  })
+  whatsapp: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'The mandatory email address of the admin',
+    example: 'admin@bizzdeal.com',
+  })
+  email: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'The physical address of the admin',
+    example: '101 Admin Tower, Tech Park, Hyderabad',
+  })
+  address: string;
+
+  @ApiProperty({
+    type: String,
+    description:
+      'Firebase ID token received after client-side phone verification',
+    example: 'eyJhbGciOiJSUzI1NiIs...',
+  })
+  firebaseToken: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Admin profile image upload',
+  })
+  profile_image?: any;
+}
+
 export const forgotPinSchema = z.object({
   phone: z.string().min(10, 'Valid phone number is required'),
 });

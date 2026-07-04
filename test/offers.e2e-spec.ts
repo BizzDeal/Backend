@@ -40,7 +40,7 @@ describe('OffersController (e2e)', () => {
   let categoryId: string;
   let createdOfferId: string;
 
-  const testPhones = ['9888000001', '9888000002', '9888000003'];
+  const testPhones = ['9555000001', '9555000002', '9555000003'];
 
   const mockFirebaseService = {
     verifyPhoneToken: jest.fn(),
@@ -60,7 +60,14 @@ describe('OffersController (e2e)', () => {
     for (const phone of testPhones) {
       const user = await userRepository.findOne({ where: { phone } });
       if (user) {
-        await offerRepository?.createQueryBuilder().delete().execute();
+        const businesses = await businessRepository?.find({
+          where: { owner_id: user.id },
+        });
+        if (businesses && businesses.length > 0) {
+          for (const b of businesses) {
+            await offerRepository?.delete({ business_id: b.id });
+          }
+        }
         await mediaRepository?.delete({ uploaded_by_id: user.id });
         await businessRepository?.delete({ owner_id: user.id });
         await userRepository.delete({ id: user.id });
@@ -100,13 +107,13 @@ describe('OffersController (e2e)', () => {
 
     // Create Category
     let category = await categoryRepository.findOne({
-      where: { name: 'Retail Test' },
+      where: { slug: 'offers-test-category' },
     });
     if (!category) {
       category = categoryRepository.create({
-        name: 'Retail Test',
-        slug: 'retail-test',
-        description: 'Retail category for offer tests',
+        name: 'Offers Test Category',
+        slug: 'offers-test-category',
+        description: 'Category for offer tests',
       });
       await categoryRepository.save(category);
     }
@@ -133,7 +140,7 @@ describe('OffersController (e2e)', () => {
     const business = businessRepository.create({
       owner_id: memberId,
       category_id: categoryId,
-      name: 'Member Deals Store',
+      name: 'Offers Deals Store',
       status: BusinessStatus.ACTIVE,
     });
     await businessRepository.save(business);
@@ -251,7 +258,7 @@ describe('OffersController (e2e)', () => {
     expect(found).toBeDefined();
   });
 
-  it('PUT /offers/:id - Member edits core field of APPROVED offer -> should reset to PENDING', async () => {
+  it('PUT /offers/:id - Member edits APPROVED offer -> should reset status to PENDING', async () => {
     const res = await request(app.getHttpServer())
       .put(`/offers/${createdOfferId}`)
       .set('Authorization', `Bearer ${memberToken}`)

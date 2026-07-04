@@ -26,6 +26,9 @@ import {
 import { BusinessesService } from './businesses.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/enums';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -34,6 +37,8 @@ import {
   UpdateBusinessDto,
   businessQuerySchema,
   BusinessQueryDto,
+  featureBusinessSchema,
+  FeatureBusinessDto,
 } from './schemas/businesses.schema';
 
 @ApiTags('Businesses')
@@ -68,24 +73,8 @@ export class BusinessesController {
     status: 200,
     description: 'List of featured businesses returned successfully.',
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid query parameters.',
-  })
-  async getFeatured(
-    @Query() queryParams: BusinessQueryDto,
-    @Req() req: any,
-  ) {
-    let query: BusinessQueryDto = {};
-    try {
-      query = businessQuerySchema.parse(queryParams || {});
-    } catch (err: any) {
-      throw new BadRequestException({
-        message: 'Invalid query parameters',
-        errors: err.errors || err.message,
-      });
-    }
-    return this.businessesService.findFeatured(query, req?.user);
+  async getFeatured(@CurrentUser() user?: User) {
+    return this.businessesService.findFeatured({}, user);
   }
 
   @Get('search')
@@ -107,7 +96,7 @@ export class BusinessesController {
   })
   async search(
     @Query() queryParams: BusinessQueryDto,
-    @Req() req: any,
+    @CurrentUser() user?: User,
   ) {
     let query: BusinessQueryDto = {};
     try {
@@ -118,7 +107,7 @@ export class BusinessesController {
         errors: err.errors || err.message,
       });
     }
-    return this.businessesService.findAll(query, req?.user);
+    return this.businessesService.findAll(query, user);
   }
 
   @Get('category/:categoryId')
@@ -133,25 +122,11 @@ export class BusinessesController {
     status: 200,
     description: 'Businesses in category returned successfully.',
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid query parameters.',
-  })
   async getByCategory(
     @Param('categoryId') categoryId: string,
-    @Query() queryParams: BusinessQueryDto,
-    @Req() req: any,
+    @CurrentUser() user?: User,
   ) {
-    let query: BusinessQueryDto = {};
-    try {
-      query = businessQuerySchema.parse(queryParams || {});
-    } catch (err: any) {
-      throw new BadRequestException({
-        message: 'Invalid query parameters',
-        errors: err.errors || err.message,
-      });
-    }
-    return this.businessesService.findByCategory(categoryId, query, req?.user);
+    return this.businessesService.findByCategory(categoryId, {}, user);
   }
 
   @Get()
@@ -166,28 +141,13 @@ export class BusinessesController {
     status: 200,
     description: 'List of businesses returned successfully.',
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid query parameters.',
-  })
-  async findAll(
-    @Query() queryParams: BusinessQueryDto,
-    @Req() req: any,
-  ) {
-    let query: BusinessQueryDto = {};
-    try {
-      query = businessQuerySchema.parse(queryParams || {});
-    } catch (err: any) {
-      throw new BadRequestException({
-        message: 'Invalid query parameters',
-        errors: err.errors || err.message,
-      });
-    }
-    return this.businessesService.findAll(query, req?.user);
+  async findAll(@CurrentUser() user?: User) {
+    return this.businessesService.findAll({}, user);
   }
 
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Business Details',
@@ -201,8 +161,43 @@ export class BusinessesController {
     status: 404,
     description: 'Business not found.',
   })
-  async findOne(@Param('id') id: string, @Req() req: any) {
-    return this.businessesService.findOne(id, req?.user);
+  async findOne(@Param('id') id: string, @CurrentUser() user?: User) {
+    return this.businessesService.findOne(id, user);
+  }
+
+  @Put('feature')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Feature or Unfeature Business (Admin Only)',
+    description:
+      'Allows administrators to control whether an active business is featured on the platform.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Business featured status updated successfully.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: Requires Admin role.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found.',
+  })
+  async featureBusiness(
+    @Body(new ZodValidationPipe(featureBusinessSchema))
+    dto: FeatureBusinessDto,
+    @CurrentUser() user: User,
+    @Ip() ip?: string,
+  ) {
+    return this.businessesService.featureBusiness(
+      dto.businessId,
+      dto.is_featured,
+      user.id,
+      ip,
+    );
   }
 
   @Put(':id')
@@ -212,7 +207,7 @@ export class BusinessesController {
   @ApiOperation({
     summary: 'Update Business Listing',
     description:
-      'Updates an existing business listing. Verifies that actor has rights (must be listing owner or Admin). Status and featured flags can only be updated by Admins.',
+      'Updates an existing business listing. Both the listing owner (Member) and Admins can update a listing. Whenever a member updates their listing, its status automatically resets to PENDING for admin re-approval. Admins do not require re-approval.',
   })
   @ApiResponse({
     status: 200,

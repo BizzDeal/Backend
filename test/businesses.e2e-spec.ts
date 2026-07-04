@@ -224,29 +224,17 @@ describe('BusinessesController (e2e)', () => {
         .expect(403);
     });
 
-    it('should forbid regular member from modifying admin-only attributes (status, is_featured)', async () => {
-      await request(app.getHttpServer())
-        .put(`/businesses/${createdBusinessId}`)
-        .set('Authorization', `Bearer ${activeMemberToken}`)
-        .send({ status: BusinessStatus.ACTIVE })
-        .expect(403);
-    });
-
-    it('should allow Admin to activate business status and set featured', async () => {
+    it('should allow Admin to update a business listing via PUT /businesses/:id without resetting status', async () => {
       const res = await request(app.getHttpServer())
         .put(`/businesses/${createdBusinessId}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          status: BusinessStatus.ACTIVE,
-          is_featured: true,
-        })
+        .send({ name: 'Admin Updated Name' })
         .expect(200);
 
-      expect(res.body.data.status).toBe(BusinessStatus.ACTIVE);
-      expect(res.body.data.is_featured).toBe(true);
+      expect(res.body.data.name).toBe('Admin Updated Name');
     });
 
-    it('should allow listing owner to update regular fields', async () => {
+    it('should allow listing owner to update regular fields and reset status to PENDING', async () => {
       const res = await request(app.getHttpServer())
         .put(`/businesses/${createdBusinessId}`)
         .set('Authorization', `Bearer ${activeMemberToken}`)
@@ -254,6 +242,42 @@ describe('BusinessesController (e2e)', () => {
         .expect(200);
 
       expect(res.body.data.name).toBe('Active Enterprise Updated');
+      expect(res.body.data.status).toBe(BusinessStatus.PENDING);
+    });
+  });
+
+  describe('PUT /businesses/feature', () => {
+    it('should forbid non-admin from featuring a business', async () => {
+      await request(app.getHttpServer())
+        .put('/businesses/feature')
+        .set('Authorization', `Bearer ${activeMemberToken}`)
+        .send({
+          businessId: createdBusinessId,
+          is_featured: true,
+        })
+        .expect(403);
+    });
+
+    it('should allow Admin to feature a business (and activate business via approve-member)', async () => {
+      // Admin activates member and business via dedicated approve-member API
+      await request(app.getHttpServer())
+        .put('/users/approve-member')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ memberId: activeMemberId })
+        .expect(200);
+
+      // Admin features the business via dedicated feature API
+      const res = await request(app.getHttpServer())
+        .put('/businesses/feature')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          businessId: createdBusinessId,
+          is_featured: true,
+        })
+        .expect(200);
+
+      expect(res.body.data.status).toBe(BusinessStatus.ACTIVE);
+      expect(res.body.data.is_featured).toBe(true);
     });
   });
 

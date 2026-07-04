@@ -27,6 +27,7 @@ describe('AuthController (e2e)', () => {
       if (idToken === 'valid-firebase-token-1') return Promise.resolve('9999000001');
       if (idToken === 'valid-firebase-token-4') return Promise.resolve('9999000004');
       if (idToken === 'valid-firebase-token-6') return Promise.resolve('9999000006');
+      if (idToken === 'valid-firebase-token-7') return Promise.resolve('9999000007');
       return Promise.reject(new Error('Invalid Firebase token'));
     }),
     getAuth: jest.fn(),
@@ -46,6 +47,7 @@ describe('AuthController (e2e)', () => {
     '9999000004',
     '9999000005',
     '9999000006',
+    '9999000007',
   ];
 
   async function cleanup() {
@@ -158,6 +160,59 @@ describe('AuthController (e2e)', () => {
           email: 'dup.customer@test.com',
           address: '123 Duplicate Rd, Hyderabad',
           firebaseToken: 'valid-firebase-token-1',
+        })
+        .expect(409);
+    });
+  });
+
+  describe('POST /auth/register-admin', () => {
+    it('should register an admin successfully when given a valid firebaseToken matching the phone', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register-admin')
+        .send({
+          full_name: 'Test Admin',
+          phone: '9999000007',
+          pin: '1234',
+          whatsapp: '9999000007',
+          email: 'admin@test.com',
+          address: '101 Admin Blvd, Hyderabad',
+          firebaseToken: 'valid-firebase-token-7',
+        })
+        .expect(201);
+
+      expect(res.body.accessToken).toBeDefined();
+      expect(res.body.refreshToken).toBeDefined();
+      expect(res.body.user).toBeDefined();
+      expect(res.body.user.phone).toBe('9999000007');
+      expect(res.body.user.whatsapp).toBe('9999000007');
+      expect(res.body.user.address).toBe('101 Admin Blvd, Hyderabad');
+      expect(res.body.user.role).toBe(UserRole.ADMIN);
+      expect(res.body.user.status).toBe(UserStatus.ACTIVE);
+      expect(res.body.user.pin_hash).toBeUndefined();
+    });
+
+    it('should return 400 when trying to register admin without firebaseToken', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register-admin')
+        .send({
+          full_name: 'Unverified Admin',
+          phone: '9999000003',
+          pin: '1234',
+        })
+        .expect(400);
+    });
+
+    it('should return 409 when registering admin with an already registered phone number', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register-admin')
+        .send({
+          full_name: 'Duplicate Admin',
+          phone: '9999000007',
+          pin: '1234',
+          whatsapp: '9999000007',
+          email: 'dup.admin@test.com',
+          address: '101 Duplicate Blvd, Hyderabad',
+          firebaseToken: 'valid-firebase-token-7',
         })
         .expect(409);
     });

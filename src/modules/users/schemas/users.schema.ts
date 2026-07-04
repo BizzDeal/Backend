@@ -14,7 +14,6 @@ export class UserExistDto {
 }
 
 export const updateProfileSchema = z.object({
-  userId: z.string().uuid('Valid user ID is required'),
   full_name: z.string().min(2, 'Full name must be at least 2 characters').optional(),
   phone: z.string().min(10, 'Valid phone number is required').optional(),
   whatsapp: z.string().optional().nullable(),
@@ -28,12 +27,6 @@ export const updateProfileSchema = z.object({
 });
 
 export class UpdateProfileDto {
-  @ApiProperty({
-    type: String,
-    description: 'User ID (required when testing without authentication guard)',
-    example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-  })
-  userId: string;
 
   @ApiPropertyOptional({
     type: String,
@@ -122,7 +115,6 @@ export class UpdateProfileDto {
 
 export const memberActionSchema = z.object({
   memberId: z.string().uuid('Valid member ID is required'),
-  adminId: z.string().uuid().optional(),
 });
 
 export class MemberActionDto {
@@ -131,22 +123,4 @@ export class MemberActionDto {
     example: 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
   })
   memberId: string;
-
-  @ApiPropertyOptional({
-    description: 'UUID of the admin performing the action (when testing without auth guard)',
-    example: 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33',
-  })
-  adminId?: string;
-}
-
-export const getProfileSchema = z.object({
-  userId: z.string().uuid('Valid user ID is required'),
-});
-
-export class GetProfileDto {
-  @ApiProperty({
-    description: 'UUID of the user whose profile details to retrieve',
-    example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-  })
-  userId: string;
 }

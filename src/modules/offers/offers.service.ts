@@ -224,21 +224,13 @@ export class OffersService {
         offer.approved_by_id = user.id;
         offer.approved_at = new Date();
       }
-    } else if (!isAdmin && offer.status === OfferStatus.APPROVED) {
-      const coreFieldsModified =
-        dto.title !== undefined ||
-        dto.discount_value !== undefined ||
-        dto.start_date !== undefined ||
-        dto.end_date !== undefined;
-
-      if (coreFieldsModified) {
-        this.logger.log(
-          `Offer ${offer.id} modified by member ${user.id}. Resetting status from APPROVED to PENDING for re-approval.`,
-        );
-        offer.status = OfferStatus.PENDING;
-        offer.approved_by_id = null;
-        offer.approved_at = null;
-      }
+    } else if (!isAdmin) {
+      this.logger.log(
+        `Offer ${offer.id} modified by member ${user.id}. Setting status to PENDING for re-approval.`,
+      );
+      offer.status = OfferStatus.PENDING;
+      offer.approved_by_id = null;
+      offer.approved_at = null;
     }
 
     return this.offerRepository.save(offer);

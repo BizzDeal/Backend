@@ -8,5 +8,6 @@
   },
   "transformIgnorePatterns": [
     "/node_modules/(?!(jose|jwks-rsa|firebase-admin)/)"
-  ]
+  ],
+  "maxWorkers": 1
 }

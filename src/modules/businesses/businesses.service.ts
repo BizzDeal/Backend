@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, SelectQueryBuilder } from 'typeorm';
@@ -21,6 +22,7 @@ import {
 
 @Injectable()
 export class BusinessesService {
+  private readonly logger = new Logger(BusinessesService.name);
   constructor(
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
@@ -411,27 +413,23 @@ export class BusinessesService {
       throw new NotFoundException('Business not found');
     }
 
-    // Verify ownership or Admin role rights
-    if (userRole !== UserRole.ADMIN && business.owner_id !== userId) {
+    const isAdmin = userRole === UserRole.ADMIN;
+    const isOwner = business.owner_id === userId;
+
+    if (!isAdmin && !isOwner) {
       throw new ForbiddenException(
-        'You do not have rights to update this business profile',
+        'You can only update your own business listing',
       );
     }
 
-    if (userRole === UserRole.MEMBER) {
+    if (!isAdmin) {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (user && user.status !== UserStatus.ACTIVE) {
         throw new ForbiddenException(
           'Your member account is suspended or not active',
         );
       }
-      if (dto.status !== undefined || dto.is_featured !== undefined) {
-        throw new ForbiddenException(
-          'Only administrators have rights to modify status or featured flag',
-        );
-      }
     }
-
     if (dto.category_id && dto.category_id !== business.category_id) {
       const category = await this.validateCategoryExists(dto.category_id);
       if (!category) {
@@ -441,15 +439,12 @@ export class BusinessesService {
       }
     }
 
-    const oldStatus = business.status;
     const updateData: Partial<Business> = {};
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.category_id !== undefined) updateData.category_id = dto.category_id;
     if (dto.description !== undefined) updateData.description = dto.description;
     if (dto.website !== undefined) updateData.website = dto.website;
     if (dto.gst_number !== undefined) updateData.gst_number = dto.gst_number;
-    if (dto.status !== undefined) updateData.status = dto.status;
-    if (dto.is_featured !== undefined) updateData.is_featured = dto.is_featured;
 
     if (logoFile) {
       const media = await this.mediaService.replaceUserFile(
@@ -460,20 +455,15 @@ export class BusinessesService {
       updateData.logo_id = media.id;
     }
 
+    if (!isAdmin) {
+      this.logger.log(
+        `Business listing ${business.id} modified by member ${userId}. Setting status to PENDING for admin re-approval.`,
+      );
+      updateData.status = BusinessStatus.PENDING;
+    }
+
     if (Object.keys(updateData).length > 0) {
       await this.businessRepository.update(id, updateData);
-
-      if (dto.status !== undefined && dto.status !== oldStatus) {
-        await this.auditService.createLog({
-          user_id: userId,
-          action: 'BUSINESS_STATUS_UPDATE',
-          entity_type: 'Business',
-          entity_id: id,
-          old_data: { status: oldStatus },
-          new_data: { status: dto.status },
-          ip_address: ipAddress,
-        });
-      }
     }
 
     const updated = await this.findOne(id, { id: userId, role: userRole });
@@ -533,6 +523,52 @@ export class BusinessesService {
     return {
       success: true,
       message: 'Business listing deleted successfully',
+    };
+  }
+
+  async featureBusiness(
+    businessId: string,
+    isFeatured: boolean,
+    adminId: string,
+    ipAddress?: string,
+  ) {
+    if (!this.isUUID(businessId)) {
+      throw new BadRequestException('Invalid business ID format');
+    }
+
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const oldFeatured = business.is_featured;
+    await this.businessRepository.update(businessId, {
+      is_featured: isFeatured,
+    });
+
+    await this.auditService.createLog({
+      user_id: adminId,
+      action: isFeatured ? 'BUSINESS_FEATURED' : 'BUSINESS_UNFEATURED',
+      entity_type: 'Business',
+      entity_id: businessId,
+      old_data: { is_featured: oldFeatured },
+      new_data: { is_featured: isFeatured },
+      ip_address: ipAddress,
+    });
+
+    const updated = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
+    const enriched = await this.enrichBusinessesWithMediaAndCategory(
+      updated ? [updated] : [business],
+    );
+
+    return {
+      success: true,
+      message: `Business ${isFeatured ? 'featured' : 'unfeatured'} successfully`,
+      data: enriched[0],
     };
   }
 }

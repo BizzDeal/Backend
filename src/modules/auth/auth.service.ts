@@ -22,6 +22,7 @@ import {
   LoginDto,
   RegisterMemberDto,
   RegisterCustomerDto,
+  RegisterAdminDto,
   ResetPinDto,
 } from './schemas/auth.schema';
 
@@ -98,8 +99,8 @@ export class AuthService {
     refreshToken: string;
     user: Omit<User, 'pin_hash'>;
   }> {
-    const user = await this.usersService.findOneByPhone(dto.phone);
-    if (!user) {
+    const user = await this.usersService.findOneByPhoneWithPin(dto.phone);
+    if (!user || !user.pin_hash) {
       throw new UnauthorizedException('Invalid phone number or PIN');
     }
 
@@ -258,6 +259,53 @@ export class AuthService {
       pin_hash: pinHash,
       role: UserRole.CUSTOMER,
       status: UserStatus.ACTIVE, // Customers are active by default
+    });
+
+    if (profile_image) {
+      await this.mediaService.saveFile(
+        profile_image,
+        newUser.id,
+        MediaPurpose.PROFILE_PIC,
+      );
+    }
+
+    const tokens = await this.generateTokens(newUser);
+
+    const { pin_hash: _pin_hash, ...userWithoutPin } = newUser;
+    return {
+      ...tokens,
+      user: userWithoutPin,
+    };
+  }
+
+  async registerAdmin(
+    dto: RegisterAdminDto,
+    profile_image?: Express.Multer.File,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Omit<User, 'pin_hash'>;
+  }> {
+    // Check if phone number is already registered
+    const existingUser = await this.usersService.findOneByPhone(dto.phone);
+    if (existingUser) {
+      throw new ConflictException('Phone number is already registered');
+    }
+
+    // Verify phone token via Firebase Auth
+    await this.verifyPhoneMatch(dto.phone, dto.firebaseToken);
+
+    const pinHash = await bcrypt.hash(dto.pin, 10);
+
+    const newUser = await this.usersService.create({
+      full_name: dto.full_name,
+      phone: dto.phone,
+      whatsapp: dto.whatsapp,
+      email: dto.email,
+      address: dto.address,
+      pin_hash: pinHash,
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE, // Admins are active by default
     });
 
     if (profile_image) {
