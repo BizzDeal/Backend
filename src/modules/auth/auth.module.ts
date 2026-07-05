@@ -18,9 +18,11 @@ import { MediaModule } from '../media/media.module';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_ACCESS_SECRET') || 'bizz_deal_access_secret',
+        secret:
+          config.get<string>('JWT_ACCESS_SECRET') || 'bizz_deal_access_secret',
         signOptions: {
-          expiresIn: (config.get<string>('JWT_ACCESS_EXPIRES_IN') || '1h') as unknown as number,
+          expiresIn: (config.get<string>('JWT_ACCESS_EXPIRES_IN') ||
+            '1h') as unknown as number,
         },
       }),
     }),

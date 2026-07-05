@@ -35,7 +35,9 @@ export class UsersService {
     private readonly businessesService: BusinessesService,
   ) {}
 
-  async findAll(): Promise<(Omit<User, 'pin_hash'> & { profile_pic_url: string | null })[]> {
+  async findAll(): Promise<
+    (Omit<User, 'pin_hash'> & { profile_pic_url: string | null })[]
+  > {
     const users = await this.usersRepository.find();
     if (users.length === 0) return [];
 
@@ -244,7 +246,8 @@ export class UsersService {
         profile_pic_url,
         payment_receipt_url:
           user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
-        business_id: user.role === UserRole.MEMBER ? (business?.id || null) : undefined,
+        business_id:
+          user.role === UserRole.MEMBER ? business?.id || null : undefined,
       },
     };
   }
@@ -289,7 +292,8 @@ export class UsersService {
         profile_pic_url,
         payment_receipt_url:
           user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
-        business_id: user.role === UserRole.MEMBER ? (business?.id || null) : undefined,
+        business_id:
+          user.role === UserRole.MEMBER ? business?.id || null : undefined,
       },
     };
   }
@@ -393,7 +397,9 @@ export class UsersService {
       throw new NotFoundException('Specified admin user not found');
     }
     if (adminUser.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Specified adminId does not have ADMIN role');
+      throw new ForbiddenException(
+        'Specified adminId does not have ADMIN role',
+      );
     }
   }
 

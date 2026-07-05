@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Referral } from './entities/referral.entity';
@@ -33,7 +37,14 @@ export class ReferralsService {
     return referral;
   }
 
-  async create(data: { referred_phone: string; referral_code: string; reward_amount?: number }, user: User): Promise<Referral> {
+  async create(
+    data: {
+      referred_phone: string;
+      referral_code: string;
+      reward_amount?: number;
+    },
+    user: User,
+  ): Promise<Referral> {
     const referral = this.referralRepository.create({
       referrer_id: user.id,
       referred_phone: data.referred_phone,

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BizzDeal Live Chat – Real-Time Testing Client</title>
+  <meta name="description" content="State-of-the-art WhatsApp-like Live Chat testing client for BizzDeal real-time backend API and WebSockets.">
+  
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- RemixIcon for Sleek Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet"/>
+  
+  <!-- Socket.IO Client CDN -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-background">
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+  </div>
+
+  <!-- AUTH / LOGIN MODAL -->
+  <div id="auth-modal" class="modal-overlay active">
+    <div class="auth-card glass-panel">
+      <div class="auth-header">
+        <div class="logo-badge">
+          <i class="ri-chat-voice-fill"></i>
+        </div>
+        <h1>BizzDeal Live Chat</h1>
+        <p>Real-Time WebSocket & REST API Testing Suite</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="tab-btn active" data-tab="tab-login">Phone & PIN Login</button>
+        <button class="tab-btn" data-tab="tab-token">Direct Token</button>
+      </div>
+
+      <!-- TAB 1: PHONE LOGIN -->
+      <form id="form-login" class="auth-form active">
+        <div class="input-group">
+          <label for="login-phone">Phone Number</label>
+          <div class="input-wrapper">
+            <i class="ri-phone-line"></i>
+            <input type="text" id="login-phone" placeholder="e.g. 9876543210" required autocomplete="tel">
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="login-pin">Security PIN</label>
+          <div class="input-wrapper">
+            <i class="ri-lock-password-line"></i>
+            <input type="password" id="login-pin" placeholder="e.g. 1234" required autocomplete="current-password">
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="api-base-url-1">Backend API Base URL</label>
+          <div class="input-wrapper">
+            <i class="ri-server-line"></i>
+            <input type="text" id="api-base-url-1" value="http://localhost:3000/bizzdeal/api" required>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">
+          <span>Connect & Login</span>
+          <i class="ri-arrow-right-line"></i>
+        </button>
+      </form>
+
+      <!-- TAB 2: DIRECT TOKEN -->
+      <form id="form-token" class="auth-form">
+        <div class="input-group">
+          <label for="jwt-token">JWT Access Token</label>
+          <div class="input-wrapper">
+            <i class="ri-key-2-line"></i>
+            <input type="text" id="jwt-token" placeholder="Paste Bearer token without prefix...">
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="user-id-input">Current User UUID</label>
+          <div class="input-wrapper">
+            <i class="ri-user-settings-line"></i>
+            <input type="text" id="user-id-input" placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000">
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="api-base-url-2">Backend API Base URL</label>
+          <div class="input-wrapper">
+            <i class="ri-server-line"></i>
+            <input type="text" id="api-base-url-2" value="http://localhost:3000/bizzdeal/api" required>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">
+          <span>Connect with Token</span>
+          <i class="ri-plug-line"></i>
+        </button>
+      </form>
+
+      <div id="auth-error" class="error-banner hidden"></div>
+    </div>
+  </div>
+
+  <!-- NEW CONVERSATION MODAL -->
+  <div id="new-conv-modal" class="modal-overlay">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h3>Start New Conversation</h3>
+        <button class="icon-btn close-modal" id="close-conv-modal"><i class="ri-close-line"></i></button>
+      </div>
+      <div class="user-selector-container">
+        <p class="modal-subtitle">Select any user from the platform to begin chatting instantly.</p>
+        <div class="search-box" style="margin-bottom: 16px;">
+          <i class="ri-search-2-line"></i>
+          <input type="text" id="search-users-input" placeholder="Search users by name or phone...">
+        </div>
+        <div id="users-list-container" class="users-list">
+          <div class="empty-state">
+            <i class="ri-loader-4-line ri-spin"></i>
+            <p>Loading platform users...</p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary close-modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CHAT APPLICATION -->
+  <div id="main-app" class="app-container hidden">
+    
+    <!-- LEFT SIDEBAR: CONVERSATIONS -->
+    <aside class="sidebar glass-panel">
+      <!-- Sidebar Header -->
+      <header class="sidebar-header">
+        <div class="user-profile">
+          <div class="avatar-wrapper">
+            <div class="avatar" id="current-user-avatar">U</div>
+            <span class="status-dot online" id="my-status-dot" title="Connected"></span>
+          </div>
+          <div class="user-info">
+            <h4 id="current-user-name">Loading...</h4>
+            <span class="socket-status" id="socket-status-text"><i class="ri-pulse-line"></i> Connected</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="btn-new-conv" title="Start New Conversation">
+            <i class="ri-chat-new-line"></i>
+          </button>
+          <button class="icon-btn danger" id="btn-logout" title="Logout & Disconnect">
+            <i class="ri-logout-box-r-line"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Search Bar -->
+      <div class="search-container">
+        <div class="search-box">
+          <i class="ri-search-2-line"></i>
+          <input type="text" id="search-convs" placeholder="Search conversations...">
+        </div>
+      </div>
+
+      <!-- Conversations List -->
+      <div class="conversations-list" id="conversations-list">
+        <div class="empty-state">
+          <i class="ri-chat-3-line"></i>
+          <p>No conversations yet. Click + to start chatting!</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT PANEL: CHAT ROOM -->
+    <main class="chat-main glass-panel">
+      <!-- Empty State when no conversation selected -->
+      <div id="no-chat-selected" class="no-chat-state active">
+        <div class="welcome-box">
+          <div class="glow-icon">
+            <i class="ri-message-3-fill"></i>
+          </div>
+          <h2>BizzDeal Real-Time Chat</h2>
+          <p>Select a conversation from the sidebar or start a new chat to test WebSockets, presence ticks, and read receipts in real time.</p>
+          <div class="feature-badges">
+            <span class="badge"><i class="ri-check-double-line"></i> Blue Ticks</span>
+            <span class="badge"><i class="ri-user-voice-line"></i> Live Typing</span>
+            <span class="badge"><i class="ri-notification-badge-line"></i> Offline Push</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Chat Room -->
+      <div id="active-chat-room" class="chat-room hidden">
+        <!-- Chat Header -->
+        <header class="chat-header">
+          <div class="partner-profile">
+            <div class="avatar-wrapper">
+              <div class="avatar" id="partner-avatar">P</div>
+              <span class="status-dot offline" id="partner-status-dot"></span>
+            </div>
+            <div class="partner-info">
+              <h3 id="partner-name">Partner Name</h3>
+              <div class="status-line">
+                <span id="partner-status-text">Offline</span>
+                <span id="partner-typing-indicator" class="typing-indicator hidden">
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span> typing...
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="chat-header-actions">
+            <button class="btn-outline" id="btn-mark-read" title="Mark messages as read via API">
+              <i class="ri-check-double-line"></i>
+              <span>Mark Read</span>
+            </button>
+            <button class="icon-btn" id="btn-refresh-msgs" title="Refresh messages via REST">
+              <i class="ri-refresh-line"></i>
+            </button>
+          </div>
+        </header>
+
+        <!-- Message History Area -->
+        <div class="messages-container" id="messages-container">
+          <!-- Messages dynamically inserted here -->
+        </div>
+
+        <!-- Chat Input Footer -->
+        <footer class="chat-footer">
+          <form id="form-send-message" class="message-form">
+            <div class="msg-type-select">
+              <select id="msg-type" title="Message Type">
+                <option value="TEXT">💬 Text</option>
+                <option value="IMAGE">📷 Image</option>
+                <option value="VOICE">🎤 Voice</option>
+                <option value="FILE">📎 File</option>
+              </select>
+            </div>
+            <div class="input-area">
+              <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+            </div>
+            <button type="submit" class="send-btn" id="btn-send">
+              <i class="ri-send-plane-2-fill"></i>
+            </button>
+          </form>
+        </footer>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Audio Notification Sound (Embedded Base64 or synth) -->
+  <audio id="notify-sound" preload="auto"></audio>
+
+  <script src="app.js"></script>
+</body>
+</html>

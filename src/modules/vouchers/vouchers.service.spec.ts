@@ -209,7 +209,10 @@ describe('VouchersService', () => {
         status: OfferStatus.APPROVED,
         start_date: new Date(Date.now() - 10000),
         end_date: new Date(Date.now() + 10000),
-        business: { status: BusinessStatus.ACTIVE, owner_id: 'different-owner-id' },
+        business: {
+          status: BusinessStatus.ACTIVE,
+          owner_id: 'different-owner-id',
+        },
       });
 
       await expect(
@@ -291,7 +294,9 @@ describe('VouchersService', () => {
         expect.anything(),
         expect.objectContaining({
           amount: 800,
-          description: expect.stringContaining('Remaining voucher balance credited'),
+          description: expect.stringContaining(
+            'Remaining voucher balance credited',
+          ),
         }),
       );
     });
@@ -320,7 +325,11 @@ describe('VouchersService', () => {
       });
 
       const res = await service.redeemVoucher(
-        { voucher_code: 'VOU-FIXED-500', bill_amount: 1500, wallet_amount_to_use: 300 },
+        {
+          voucher_code: 'VOU-FIXED-500',
+          bill_amount: 1500,
+          wallet_amount_to_use: 300,
+        },
         mockMember,
       );
       expect(res.status).toBe(VoucherStatus.REDEEMED);
@@ -328,7 +337,9 @@ describe('VouchersService', () => {
         expect.anything(),
         expect.objectContaining({
           amount: 300,
-          description: expect.stringContaining('Wallet balance used during voucher redemption'),
+          description: expect.stringContaining(
+            'Wallet balance used during voucher redemption',
+          ),
         }),
       );
     });
@@ -358,7 +369,11 @@ describe('VouchersService', () => {
 
       await expect(
         service.redeemVoucher(
-          { voucher_code: 'VOU-FIXED-1000', bill_amount: 1000, wallet_amount_to_use: 500 },
+          {
+            voucher_code: 'VOU-FIXED-1000',
+            bill_amount: 1000,
+            wallet_amount_to_use: 500,
+          },
           mockMember,
         ),
       ).rejects.toThrow(BadRequestException);
@@ -389,7 +404,11 @@ describe('VouchersService', () => {
 
       await expect(
         service.redeemVoucher(
-          { voucher_code: 'VOU-FIXED-500', bill_amount: 1500, wallet_amount_to_use: 500 },
+          {
+            voucher_code: 'VOU-FIXED-500',
+            bill_amount: 1500,
+            wallet_amount_to_use: 500,
+          },
           mockMember,
         ),
       ).rejects.toThrow(BadRequestException);
@@ -420,13 +439,18 @@ describe('VouchersService', () => {
     it('should query by voucher.id when parameter is a valid UUID', async () => {
       const uuid = 'e7bea8a7-a44a-4fcf-b734-fc2281164c8a';
       await service.findOne(uuid, mockAdmin);
-      expect(mockQb.where).toHaveBeenCalledWith('voucher.id = :id', { id: uuid });
+      expect(mockQb.where).toHaveBeenCalledWith('voucher.id = :id', {
+        id: uuid,
+      });
     });
 
     it('should query by voucher.voucher_code when parameter is not a UUID', async () => {
       const code = 'VOU-TEST-123';
       await service.findOne(code, mockAdmin);
-      expect(mockQb.where).toHaveBeenCalledWith('voucher.voucher_code = :code', { code });
+      expect(mockQb.where).toHaveBeenCalledWith(
+        'voucher.voucher_code = :code',
+        { code },
+      );
     });
   });
 });

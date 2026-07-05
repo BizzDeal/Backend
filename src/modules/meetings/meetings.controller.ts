@@ -34,7 +34,15 @@ export class MeetingsController {
   })
   @ApiResponse({ status: 201, description: 'Meeting created successfully.' })
   async create(
-    @Body() body: { title: string; description?: string; meeting_date: string; location?: string; meeting_link?: string; business_id?: string },
+    @Body()
+    body: {
+      title: string;
+      description?: string;
+      meeting_date: string;
+      location?: string;
+      meeting_link?: string;
+      business_id?: string;
+    },
     @CurrentUser() user: User,
   ) {
     return this.meetingsService.create(body, user);
@@ -44,9 +52,13 @@ export class MeetingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List Meetings',
-    description: 'Retrieves all meetings for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves all meetings for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Meetings list returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Meetings list returned successfully.',
+  })
   async findAll(@CurrentUser() user: User) {
     return this.meetingsService.findAll(user);
   }
@@ -55,9 +67,13 @@ export class MeetingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Meeting By ID',
-    description: 'Retrieves details of a specific meeting by UUID. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves details of a specific meeting by UUID. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Meeting details returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Meeting details returned successfully.',
+  })
   @ApiResponse({ status: 404, description: 'Meeting not found.' })
   async findOne(@Param('id') id: string, @CurrentUser() user: User) {
     return this.meetingsService.findOne(id, user);
@@ -70,7 +86,11 @@ export class MeetingsController {
     description: 'Invites a user to a meeting.',
   })
   @ApiResponse({ status: 201, description: 'Attendee added successfully.' })
-  async addAttendee(@Param('id') id: string, @Body() body: { user_id: string }, @CurrentUser() user: User) {
+  async addAttendee(
+    @Param('id') id: string,
+    @Body() body: { user_id: string },
+    @CurrentUser() user: User,
+  ) {
     return this.meetingsService.addAttendee(id, body.user_id, user);
   }
 
@@ -78,9 +98,13 @@ export class MeetingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List Attendees for Meeting',
-    description: 'Retrieves all attendees for a specific meeting without pagination. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves all attendees for a specific meeting without pagination. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Attendees list returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Attendees list returned successfully.',
+  })
   async getAttendees(@Param('id') id: string, @CurrentUser() user: User) {
     return this.meetingsService.getAttendees(id, user);
   }
@@ -89,11 +113,18 @@ export class MeetingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Attendee By ID',
-    description: 'Retrieves details of a specific meeting attendee record by UUID. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves details of a specific meeting attendee record by UUID. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Attendee details returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Attendee details returned successfully.',
+  })
   @ApiResponse({ status: 404, description: 'Attendee not found.' })
-  async getAttendeeById(@Param('attendeeId') attendeeId: string, @CurrentUser() user: User) {
+  async getAttendeeById(
+    @Param('attendeeId') attendeeId: string,
+    @CurrentUser() user: User,
+  ) {
     return this.meetingsService.getAttendeeById(attendeeId, user);
   }
 }

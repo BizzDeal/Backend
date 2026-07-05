@@ -36,12 +36,11 @@ export const redeemVoucherSchema = z.object({
       return isNaN(num) ? val : num;
     }, z.number().nonnegative().nullable())
     .optional(),
-  wallet_amount_to_use: z
-    .preprocess((val) => {
-      if (val === '' || val === null || val === undefined) return 0;
-      const num = Number(val);
-      return isNaN(num) ? 0 : num;
-    }, z.number().nonnegative().default(0)),
+  wallet_amount_to_use: z.preprocess((val) => {
+    if (val === '' || val === null || val === undefined) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().nonnegative().default(0)),
 });
 
 export class RedeemVoucherDto {

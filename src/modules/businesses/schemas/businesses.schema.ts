@@ -190,5 +190,3 @@ export class FeatureBusinessDto {
   })
   is_featured: boolean;
 }
-
-

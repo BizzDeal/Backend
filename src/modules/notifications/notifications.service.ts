@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
@@ -17,7 +21,9 @@ export class NotificationsService {
 
   async findAll(user: User): Promise<Notification[]> {
     if (user.role === UserRole.ADMIN) {
-      return this.notificationRepository.find({ order: { created_at: 'DESC' } });
+      return this.notificationRepository.find({
+        order: { created_at: 'DESC' },
+      });
     }
     return this.notificationRepository.find({
       where: { user_id: user.id },
@@ -36,7 +42,13 @@ export class NotificationsService {
     return notif;
   }
 
-  async create(data: { user_id: string; title: string; message: string; type: NotificationType; data?: Record<string, any> }): Promise<Notification> {
+  async create(data: {
+    user_id: string;
+    title: string;
+    message: string;
+    type: NotificationType;
+    data?: Record<string, any>;
+  }): Promise<Notification> {
     const notif = this.notificationRepository.create({
       user_id: data.user_id,
       title: data.title,
@@ -54,7 +66,12 @@ export class NotificationsService {
     return this.notificationRepository.save(notif);
   }
 
-  async registerDevice(fcmToken: string, deviceType: DeviceType, deviceName: string | null, user: User): Promise<UserDevice> {
+  async registerDevice(
+    fcmToken: string,
+    deviceType: DeviceType,
+    deviceName: string | null,
+    user: User,
+  ): Promise<UserDevice> {
     let device = await this.deviceRepository.findOne({
       where: { user_id: user.id, fcm_token: fcmToken },
     });

@@ -14,7 +14,12 @@ import { User } from '../users/entities/user.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
 import { MediaService } from '../media/media.service';
 import { AuditService } from '../audit/audit.service';
-import { UserRole, UserStatus, BusinessStatus, MediaPurpose } from '../../common/enums';
+import {
+  UserRole,
+  UserStatus,
+  BusinessStatus,
+  MediaPurpose,
+} from '../../common/enums';
 import {
   UpdateBusinessDto,
   BusinessQueryDto,

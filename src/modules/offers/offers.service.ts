@@ -50,7 +50,9 @@ export class OffersService {
 
     const isAdmin = user.role === UserRole.ADMIN;
     if (!isAdmin && business.owner_id !== user.id) {
-      throw new ForbiddenException('You can only create offers for your own business');
+      throw new ForbiddenException(
+        'You can only create offers for your own business',
+      );
     }
 
     if (!isAdmin && business.status !== BusinessStatus.ACTIVE) {
@@ -169,7 +171,9 @@ export class OffersService {
     const isAdmin = user?.role === UserRole.ADMIN;
 
     if (offer.status !== OfferStatus.APPROVED && !isOwner && !isAdmin) {
-      throw new ForbiddenException('Offer is not available or pending approval');
+      throw new ForbiddenException(
+        'Offer is not available or pending approval',
+      );
     }
 
     delete (offer as any).business;
@@ -198,11 +202,15 @@ export class OffersService {
     const isAdmin = user.role === UserRole.ADMIN;
 
     if (!isAdmin && !isOwner) {
-      throw new ForbiddenException('You can only update your own business offers');
+      throw new ForbiddenException(
+        'You can only update your own business offers',
+      );
     }
 
     if (!isAdmin && dto.status) {
-      throw new ForbiddenException('Only admins can change offer status directly');
+      throw new ForbiddenException(
+        'Only admins can change offer status directly',
+      );
     }
 
     if (file) {
@@ -220,9 +228,12 @@ export class OffersService {
     if (dto.title !== undefined) offer.title = dto.title;
     if (dto.description !== undefined) offer.description = dto.description;
     if (dto.offer_type !== undefined) offer.offer_type = dto.offer_type;
-    if (dto.discount_value !== undefined) offer.discount_value = dto.discount_value;
-    if (dto.discount_type !== undefined) offer.discount_type = dto.discount_type;
-    if (dto.start_date !== undefined) offer.start_date = new Date(dto.start_date);
+    if (dto.discount_value !== undefined)
+      offer.discount_value = dto.discount_value;
+    if (dto.discount_type !== undefined)
+      offer.discount_type = dto.discount_type;
+    if (dto.start_date !== undefined)
+      offer.start_date = new Date(dto.start_date);
     if (dto.end_date !== undefined) offer.end_date = new Date(dto.end_date);
 
     if (isAdmin && dto.status) {
@@ -261,7 +272,9 @@ export class OffersService {
     const isAdmin = user.role === UserRole.ADMIN;
 
     if (!isAdmin && !isOwner) {
-      throw new ForbiddenException('You can only delete your own business offers');
+      throw new ForbiddenException(
+        'You can only delete your own business offers',
+      );
     }
 
     if (offer.image_id) {
@@ -292,7 +305,11 @@ export class OffersService {
     return savedOffer;
   }
 
-  async reject(offerId: string, adminId: string, reason?: string): Promise<Offer> {
+  async reject(
+    offerId: string,
+    adminId: string,
+    reason?: string,
+  ): Promise<Offer> {
     const offer = await this.offerRepository.findOne({
       where: { id: offerId },
     });
@@ -303,7 +320,9 @@ export class OffersService {
 
     offer.status = OfferStatus.REJECTED;
     if (reason) {
-      this.logger.log(`Offer ${offerId} rejected by admin ${adminId}. Reason: ${reason}`);
+      this.logger.log(
+        `Offer ${offerId} rejected by admin ${adminId}. Reason: ${reason}`,
+      );
     }
 
     const savedOffer = await this.offerRepository.save(offer);

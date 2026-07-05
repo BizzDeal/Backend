@@ -32,9 +32,13 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List Notifications',
-    description: 'Retrieves all notifications for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves all notifications for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Notifications list returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notifications list returned successfully.',
+  })
   async findAll(@CurrentUser() user: User) {
     return this.notificationsService.findAll(user);
   }
@@ -45,8 +49,20 @@ export class NotificationsController {
     summary: 'Create Notification',
     description: 'Creates a notification for a user.',
   })
-  @ApiResponse({ status: 201, description: 'Notification created successfully.' })
-  async create(@Body() body: { user_id: string; title: string; message: string; type?: NotificationType; data?: Record<string, any> }) {
+  @ApiResponse({
+    status: 201,
+    description: 'Notification created successfully.',
+  })
+  async create(
+    @Body()
+    body: {
+      user_id: string;
+      title: string;
+      message: string;
+      type?: NotificationType;
+      data?: Record<string, any>;
+    },
+  ) {
     return this.notificationsService.create({
       user_id: body.user_id,
       title: body.title,
@@ -60,9 +76,13 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List Registered Devices',
-    description: 'Retrieves all registered push notification devices for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves all registered push notification devices for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Devices list returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Devices list returned successfully.',
+  })
   async getDevices(@CurrentUser() user: User) {
     return this.notificationsService.getDevices(user);
   }
@@ -75,7 +95,8 @@ export class NotificationsController {
   })
   @ApiResponse({ status: 201, description: 'Device registered successfully.' })
   async registerDevice(
-    @Body() body: { fcm_token: string; device_type: DeviceType; device_name?: string },
+    @Body()
+    body: { fcm_token: string; device_type: DeviceType; device_name?: string },
     @CurrentUser() user: User,
   ) {
     return this.notificationsService.registerDevice(
@@ -90,9 +111,13 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Device By ID',
-    description: 'Retrieves details of a specific user device record by UUID. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves details of a specific user device record by UUID. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Device details returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Device details returned successfully.',
+  })
   @ApiResponse({ status: 404, description: 'Device not found.' })
   async getDeviceById(@Param('id') id: string, @CurrentUser() user: User) {
     return this.notificationsService.getDeviceById(id, user);
@@ -102,9 +127,13 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Notification By ID',
-    description: 'Retrieves details of a specific notification by UUID. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves details of a specific notification by UUID. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Notification details returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification details returned successfully.',
+  })
   @ApiResponse({ status: 404, description: 'Notification not found.' })
   async findOne(@Param('id') id: string, @CurrentUser() user: User) {
     return this.notificationsService.findOne(id, user);

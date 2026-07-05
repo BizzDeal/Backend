@@ -34,7 +34,12 @@ export class ReferralsController {
   })
   @ApiResponse({ status: 201, description: 'Referral created successfully.' })
   async create(
-    @Body() body: { referred_phone: string; referral_code: string; reward_amount?: number },
+    @Body()
+    body: {
+      referred_phone: string;
+      referral_code: string;
+      reward_amount?: number;
+    },
     @CurrentUser() user: User,
   ) {
     return this.referralsService.create(body, user);
@@ -44,9 +49,13 @@ export class ReferralsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List Referrals',
-    description: 'Retrieves all referrals for the authenticated user without pagination. Returns only foreign key IDs (referrer_id, referred_user_id) without nested relational objects.',
+    description:
+      'Retrieves all referrals for the authenticated user without pagination. Returns only foreign key IDs (referrer_id, referred_user_id) without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Referrals list returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Referrals list returned successfully.',
+  })
   async findAll(@CurrentUser() user: User) {
     return this.referralsService.findAll(user);
   }
@@ -55,9 +64,13 @@ export class ReferralsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Referral By ID',
-    description: 'Retrieves details of a specific referral by UUID. Returns only foreign key IDs without nested relational objects.',
+    description:
+      'Retrieves details of a specific referral by UUID. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({ status: 200, description: 'Referral details returned successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Referral details returned successfully.',
+  })
   @ApiResponse({ status: 404, description: 'Referral not found.' })
   async findOne(@Param('id') id: string, @CurrentUser() user: User) {
     return this.referralsService.findOne(id, user);

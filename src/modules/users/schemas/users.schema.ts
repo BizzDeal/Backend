@@ -14,7 +14,10 @@ export class UserExistDto {
 }
 
 export const updateProfileSchema = z.object({
-  full_name: z.string().min(2, 'Full name must be at least 2 characters').optional(),
+  full_name: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .optional(),
   phone: z.string().min(10, 'Valid phone number is required').optional(),
   whatsapp: z.string().optional().nullable(),
   email: z.string().email('Invalid email address').optional().nullable(),
@@ -27,7 +30,6 @@ export const updateProfileSchema = z.object({
 });
 
 export class UpdateProfileDto {
-
   @ApiPropertyOptional({
     type: String,
     description: 'Full name of the user',

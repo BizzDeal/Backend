@@ -26,7 +26,10 @@ export class MediaService {
   ): Promise<MediaFile> {
     const bucket = this.firebaseService.getBucket();
     const uniqueId = randomUUID();
-    const cleanFileName = (file.originalname || 'file').replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const cleanFileName = (file.originalname || 'file').replace(
+      /[^a-zA-Z0-9.\-_]/g,
+      '_',
+    );
     const destinationPath = `uploads/${userId}/${purpose}/${uniqueId}-${cleanFileName}`;
 
     const fileRef = bucket.file(destinationPath);

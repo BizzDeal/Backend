@@ -6,7 +6,12 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { AppModule } from './../src/app.module';
-import { UserRole, UserStatus, MediaPurpose, MediaType } from './../src/common/enums';
+import {
+  UserRole,
+  UserStatus,
+  MediaPurpose,
+  MediaType,
+} from './../src/common/enums';
 import { User } from './../src/modules/users/entities/user.entity';
 import { MediaFile } from './../src/modules/media/entities/media-file.entity';
 
@@ -40,8 +45,12 @@ describe('UsersController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    userRepository = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
-    mediaRepository = moduleFixture.get<Repository<MediaFile>>(getRepositoryToken(MediaFile));
+    userRepository = moduleFixture.get<Repository<User>>(
+      getRepositoryToken(User),
+    );
+    mediaRepository = moduleFixture.get<Repository<MediaFile>>(
+      getRepositoryToken(MediaFile),
+    );
     jwtService = moduleFixture.get<JwtService>(JwtService);
     await cleanup();
 
@@ -63,7 +72,8 @@ describe('UsersController (e2e)', () => {
 
     await mediaRepository.save(
       mediaRepository.create({
-        file_url: 'https://storage.googleapis.com/bizzdeal.firebasestorage.app/uploads/profile.jpg',
+        file_url:
+          'https://storage.googleapis.com/bizzdeal.firebasestorage.app/uploads/profile.jpg',
         public_id: 'test_public_id_profile',
         file_type: MediaType.IMAGE,
         mime_type: 'image/jpeg',
@@ -81,9 +91,7 @@ describe('UsersController (e2e)', () => {
 
   describe('GET /users', () => {
     it('should return 401 when no authorization token is provided', async () => {
-      await request(app.getHttpServer())
-        .get('/users')
-        .expect(401);
+      await request(app.getHttpServer()).get('/users').expect(401);
     });
 
     it('should return all users including profile_pic_url property when authenticated', async () => {

@@ -24,10 +24,14 @@ describe('AuthController (e2e)', () => {
 
   const mockFirebaseService = {
     verifyPhoneToken: jest.fn().mockImplementation((idToken: string) => {
-      if (idToken === 'valid-firebase-token-1') return Promise.resolve('9999000001');
-      if (idToken === 'valid-firebase-token-4') return Promise.resolve('9999000004');
-      if (idToken === 'valid-firebase-token-6') return Promise.resolve('9999000006');
-      if (idToken === 'valid-firebase-token-7') return Promise.resolve('9999000007');
+      if (idToken === 'valid-firebase-token-1')
+        return Promise.resolve('9999000001');
+      if (idToken === 'valid-firebase-token-4')
+        return Promise.resolve('9999000004');
+      if (idToken === 'valid-firebase-token-6')
+        return Promise.resolve('9999000006');
+      if (idToken === 'valid-firebase-token-7')
+        return Promise.resolve('9999000007');
       return Promise.reject(new Error('Invalid Firebase token'));
     }),
     getAuth: jest.fn(),
@@ -230,7 +234,10 @@ describe('AuthController (e2e)', () => {
         .field('address', '123 Entrepreneur Way, Hyderabad')
         .field('business_name', 'Test Business Enterprise')
         .field('category_id', testCategoryId)
-        .field('business_description', 'Providing best IT services and consulting')
+        .field(
+          'business_description',
+          'Providing best IT services and consulting',
+        )
         .field('website', 'https://testenterprise.com')
         .field('gst_number', '36AAAAA0000A1Z5')
         .field('firebaseToken', 'valid-firebase-token-4')

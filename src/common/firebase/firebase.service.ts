@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
@@ -49,7 +54,9 @@ export class FirebaseService implements OnModuleInit {
       });
     }
 
-    this.logger.log(`Firebase Admin SDK initialized successfully for project: ${projectId}`);
+    this.logger.log(
+      `Firebase Admin SDK initialized successfully for project: ${projectId}`,
+    );
     if (process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
       this.logger.log(
         `Firebase Storage running against local emulator at: ${process.env.FIREBASE_STORAGE_EMULATOR_HOST}`,
@@ -63,9 +70,13 @@ export class FirebaseService implements OnModuleInit {
    */
   async verifyPhoneToken(idToken: string): Promise<string> {
     try {
-      const decodedToken = await getAuth(this.firebaseApp).verifyIdToken(idToken);
+      const decodedToken = await getAuth(this.firebaseApp).verifyIdToken(
+        idToken,
+      );
       if (!decodedToken.phone_number) {
-        throw new UnauthorizedException('Firebase ID token does not contain a verified phone number.');
+        throw new UnauthorizedException(
+          'Firebase ID token does not contain a verified phone number.',
+        );
       }
       return decodedToken.phone_number;
     } catch (error) {
@@ -75,7 +86,9 @@ export class FirebaseService implements OnModuleInit {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException('Invalid or expired Firebase authentication token.');
+      throw new UnauthorizedException(
+        'Invalid or expired Firebase authentication token.',
+      );
     }
   }
 

@@ -44,7 +44,7 @@ import {
 @ApiTags('Businesses')
 @Controller('businesses')
 export class BusinessesController {
-  constructor(private readonly businessesService: BusinessesService) { }
+  constructor(private readonly businessesService: BusinessesService) {}
 
   @Get('categories')
   @HttpCode(HttpStatus.OK)
@@ -65,7 +65,8 @@ export class BusinessesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Business Category Details',
-    description: 'Retrieves details of a specific business category by its UUID or slug.',
+    description:
+      'Retrieves details of a specific business category by its UUID or slug.',
   })
   @ApiResponse({
     status: 200,

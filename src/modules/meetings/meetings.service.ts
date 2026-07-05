@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Meeting } from './entities/meeting.entity';
@@ -50,7 +54,14 @@ export class MeetingsService {
   }
 
   async create(
-    data: { title: string; description?: string; meeting_date: string | Date; location?: string; meeting_link?: string; business_id?: string },
+    data: {
+      title: string;
+      description?: string;
+      meeting_date: string | Date;
+      location?: string;
+      meeting_link?: string;
+      business_id?: string;
+    },
     user: User,
   ): Promise<Meeting> {
     const meeting = this.meetingRepository.create({
@@ -74,10 +85,16 @@ export class MeetingsService {
     return saved;
   }
 
-  async addAttendee(meetingId: string, targetUserId: string, user: User): Promise<MeetingAttendee> {
+  async addAttendee(
+    meetingId: string,
+    targetUserId: string,
+    user: User,
+  ): Promise<MeetingAttendee> {
     const meeting = await this.findOne(meetingId, user);
     if (user.role !== UserRole.ADMIN && meeting.created_by_id !== user.id) {
-      throw new ForbiddenException('Only meeting creator or Admin can add attendees');
+      throw new ForbiddenException(
+        'Only meeting creator or Admin can add attendees',
+      );
     }
     let attendee = await this.attendeeRepository.findOne({
       where: { meeting_id: meetingId, user_id: targetUserId },
@@ -93,7 +110,10 @@ export class MeetingsService {
     return attendee;
   }
 
-  async getAttendees(meetingId: string, user: User): Promise<MeetingAttendee[]> {
+  async getAttendees(
+    meetingId: string,
+    user: User,
+  ): Promise<MeetingAttendee[]> {
     await this.findOne(meetingId, user);
     return this.attendeeRepository.find({
       where: { meeting_id: meetingId },

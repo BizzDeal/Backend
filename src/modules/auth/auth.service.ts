@@ -16,7 +16,12 @@ import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/businesses.service';
 import { FirebaseService } from '../../common/firebase/firebase.service';
 import { MediaService } from '../media/media.service';
-import { UserRole, UserStatus, BusinessStatus, MediaPurpose } from '../../common/enums';
+import {
+  UserRole,
+  UserStatus,
+  BusinessStatus,
+  MediaPurpose,
+} from '../../common/enums';
 import { User } from '../users/entities/user.entity';
 import {
   LoginDto,
@@ -73,14 +78,16 @@ export class AuthService {
 
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
-      expiresIn: (process.env.JWT_ACCESS_EXPIRES_IN || '1h') as unknown as number,
+      expiresIn: (process.env.JWT_ACCESS_EXPIRES_IN ||
+        '1h') as unknown as number,
     });
 
     const refreshToken = await this.jwtService.signAsync(
       { sub: user.id },
       {
         secret: process.env.JWT_REFRESH_SECRET || 'bizz_deal_refresh_secret',
-        expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as unknown as number,
+        expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN ||
+          '7d') as unknown as number,
       },
     );
 
@@ -386,9 +393,9 @@ export class AuthService {
     refreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     try {
-      const payload = (await this.jwtService.verifyAsync(refreshToken, {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET || 'bizz_deal_refresh_secret',
-      })) as { sub: string };
+      });
 
       const tokenHash = this.hashToken(refreshToken);
       const storedToken = await this.refreshTokenRepository.findOne({

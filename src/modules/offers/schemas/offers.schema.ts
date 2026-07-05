@@ -4,8 +4,12 @@ import { OfferType, DiscountType, OfferStatus } from '../../../common/enums';
 
 export const createOfferSchema = z
   .object({
-    business_id: z.string().uuid({ message: 'Valid business_id UUID is required' }),
-    title: z.string().min(3, { message: 'Title must be at least 3 characters long' }),
+    business_id: z
+      .string()
+      .uuid({ message: 'Valid business_id UUID is required' }),
+    title: z
+      .string()
+      .min(3, { message: 'Title must be at least 3 characters long' }),
     description: z.string().min(1, { message: 'Description is required' }),
     offer_type: z.nativeEnum(OfferType),
     discount_value: z
@@ -113,14 +117,16 @@ export const updateOfferSchema = z
     start_date: z
       .preprocess((val) => {
         if (!val) return undefined;
-        if (typeof val === 'string' || val instanceof Date) return new Date(val);
+        if (typeof val === 'string' || val instanceof Date)
+          return new Date(val);
         return val;
       }, z.date())
       .optional(),
     end_date: z
       .preprocess((val) => {
         if (!val) return undefined;
-        if (typeof val === 'string' || val instanceof Date) return new Date(val);
+        if (typeof val === 'string' || val instanceof Date)
+          return new Date(val);
         return val;
       }, z.date())
       .optional(),

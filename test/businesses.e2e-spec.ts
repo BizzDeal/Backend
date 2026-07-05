@@ -30,12 +30,7 @@ describe('BusinessesController (e2e)', () => {
   let categoryId: string;
   let createdBusinessId: string;
 
-  const testPhones = [
-    '9777000001',
-    '9777000002',
-    '9777000003',
-    '9777000004',
-  ];
+  const testPhones = ['9777000001', '9777000002', '9777000003', '9777000004'];
 
   const mockFirebaseService = {
     verifyPhoneToken: jest.fn(),
@@ -117,7 +112,11 @@ describe('BusinessesController (e2e)', () => {
     );
     activeMemberId = activeMember.id;
     activeMemberToken = await jwtService.signAsync(
-      { sub: activeMember.id, phone: activeMember.phone, role: activeMember.role },
+      {
+        sub: activeMember.id,
+        phone: activeMember.phone,
+        role: activeMember.role,
+      },
       { secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret' },
     );
 
@@ -132,7 +131,11 @@ describe('BusinessesController (e2e)', () => {
       }),
     );
     pendingMemberToken = await jwtService.signAsync(
-      { sub: pendingMember.id, phone: pendingMember.phone, role: pendingMember.role },
+      {
+        sub: pendingMember.id,
+        phone: pendingMember.phone,
+        role: pendingMember.role,
+      },
       { secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret' },
     );
 
@@ -196,7 +199,6 @@ describe('BusinessesController (e2e)', () => {
       expect(res.body.data.length).toBeGreaterThanOrEqual(1);
     });
   });
-
 
   describe('GET /businesses/:id and GET /businesses', () => {
     it('should allow owner to view their pending business profile', async () => {
@@ -288,7 +290,9 @@ describe('BusinessesController (e2e)', () => {
         .expect(200);
 
       expect(res.body.pagination).toBeUndefined();
-      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(true);
+      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(
+        true,
+      );
     });
 
     it('should find our listing via search keyword matching business name', async () => {
@@ -296,7 +300,9 @@ describe('BusinessesController (e2e)', () => {
         .get('/businesses/search?q=Enterprise')
         .expect(200);
 
-      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(true);
+      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(
+        true,
+      );
     });
 
     it('should find our listing via search keyword matching owner phone', async () => {
@@ -304,7 +310,9 @@ describe('BusinessesController (e2e)', () => {
         .get('/businesses/search?q=9777000001')
         .expect(200);
 
-      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(true);
+      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(
+        true,
+      );
     });
 
     it('should find our listing via search keyword matching GST number', async () => {
@@ -312,7 +320,9 @@ describe('BusinessesController (e2e)', () => {
         .get('/businesses/search?q=27AADCB2230M1Z3')
         .expect(200);
 
-      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(true);
+      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(
+        true,
+      );
     });
 
     it('should find our listing using explicit field filter (phone)', async () => {
@@ -320,7 +330,9 @@ describe('BusinessesController (e2e)', () => {
         .get('/businesses/search?phone=9777000001')
         .expect(200);
 
-      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(true);
+      expect(res.body.data.some((b: any) => b.id === createdBusinessId)).toBe(
+        true,
+      );
     });
   });
 

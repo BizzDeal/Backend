@@ -44,8 +44,14 @@ describe('OffersService', () => {
 
   beforeEach(async () => {
     mockOfferRepo = {
-      create: jest.fn().mockImplementation((data) => ({ id: 'offer-id', ...data })),
-      save: jest.fn().mockImplementation((entity) => Promise.resolve({ id: 'offer-id', ...entity })),
+      create: jest
+        .fn()
+        .mockImplementation((data) => ({ id: 'offer-id', ...data })),
+      save: jest
+        .fn()
+        .mockImplementation((entity) =>
+          Promise.resolve({ id: 'offer-id', ...entity }),
+        ),
       findOne: jest.fn(),
       remove: jest.fn().mockResolvedValue(true),
       createQueryBuilder: jest.fn(),
@@ -158,7 +164,11 @@ describe('OffersService', () => {
         business: { owner_id: 'owner-id' },
       });
 
-      const res = await service.update('offer-id', { title: 'New Title' }, mockMember);
+      const res = await service.update(
+        'offer-id',
+        { title: 'New Title' },
+        mockMember,
+      );
       expect(res.status).toBe(OfferStatus.PENDING);
       expect(mockOfferRepo.save).toHaveBeenCalled();
     });

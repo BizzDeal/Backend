@@ -122,7 +122,10 @@ export class OffersController {
     status: 404,
     description: 'Offer not found.',
   })
-  async approve(@CurrentUser() user: User, @Body(new ZodValidationPipe(offerActionSchema)) dto: OfferActionDto) {
+  async approve(
+    @CurrentUser() user: User,
+    @Body(new ZodValidationPipe(offerActionSchema)) dto: OfferActionDto,
+  ) {
     return this.offersService.approve(dto.offer_id, user.id);
   }
 
@@ -143,7 +146,10 @@ export class OffersController {
     status: 404,
     description: 'Offer not found.',
   })
-  async reject(@CurrentUser() user: User, @Body(new ZodValidationPipe(offerActionSchema)) dto: OfferActionDto) {
+  async reject(
+    @CurrentUser() user: User,
+    @Body(new ZodValidationPipe(offerActionSchema)) dto: OfferActionDto,
+  ) {
     return this.offersService.reject(dto.offer_id, user.id, dto.reason);
   }
 

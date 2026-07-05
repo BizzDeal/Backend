@@ -6,6 +6,12 @@ import { SWAGGER_AUTH_SCRIPT } from './common/utils/swagger-auth.script';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable CORS for frontend applications and test clients
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
   // Set the global context path so all API routes are prefixed with /bizzdeal/api
   app.setGlobalPrefix('bizzdeal/api');
 
