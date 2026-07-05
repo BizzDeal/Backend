@@ -48,7 +48,8 @@ export class OffersController {
   constructor(private readonly offersService: OffersService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MEMBER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @HttpCode(HttpStatus.CREATED)
@@ -147,21 +148,30 @@ export class OffersController {
   }
 
   @Get('business/:businessId')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get Offers by Business ID',
+    summary: 'Get Offers by Business ID (Admin Only)',
     description:
-      'Retrieves all promotional offers for a specific business. Customers only see APPROVED offers within active dates; business owners and Admins see all offers.',
+      'Retrieves all promotional offers for a specific business. Restricted to Admin users only.',
   })
   @ApiResponse({
     status: 200,
     description: 'List of offers for the business returned successfully.',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized: Authentication token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: Requires Admin role.',
+  })
   async getByBusinessId(
     @Param('businessId') businessId: string,
-    @CurrentUser() user?: User,
+    @CurrentUser() user: User,
   ) {
     return this.offersService.findAll({ business_id: businessId }, user);
   }
@@ -192,7 +202,8 @@ export class OffersController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MEMBER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @HttpCode(HttpStatus.OK)
@@ -220,7 +231,8 @@ export class OffersController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MEMBER, UserRole.ADMIN)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

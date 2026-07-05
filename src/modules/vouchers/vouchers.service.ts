@@ -41,6 +41,8 @@ export class VouchersService {
     private readonly offerRepository: Repository<Offer>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   private generateVoucherCode(): string {
@@ -71,9 +73,44 @@ export class VouchersService {
       );
     }
 
+    if (user.role === UserRole.MEMBER && offer.business?.owner_id !== user.id) {
+      throw new ForbiddenException(
+        'Members can only issue vouchers for offers belonging to their own business',
+      );
+    }
+
     const now = new Date();
     if (now < offer.start_date || now > offer.end_date) {
       throw new BadRequestException('Offer is not currently active');
+    }
+
+    let targetCustomerId = user.id;
+
+    if (user.role === UserRole.CUSTOMER) {
+      if (dto.customer_id && dto.customer_id !== user.id) {
+        throw new ForbiddenException(
+          'Customers can only claim vouchers for themselves',
+        );
+      }
+      targetCustomerId = user.id;
+    } else {
+      if (!dto.customer_id) {
+        throw new BadRequestException(
+          'customer_id is required when issuing a voucher as a Member or Admin',
+        );
+      }
+      const targetCustomer = await this.userRepository.findOne({
+        where: { id: dto.customer_id },
+      });
+      if (!targetCustomer) {
+        throw new NotFoundException('Customer not found');
+      }
+      if (targetCustomer.role !== UserRole.CUSTOMER) {
+        throw new BadRequestException(
+          'Vouchers can only be issued to users with CUSTOMER role',
+        );
+      }
+      targetCustomerId = targetCustomer.id;
     }
 
     const voucherCode = this.generateVoucherCode();
@@ -81,7 +118,7 @@ export class VouchersService {
     const voucher = this.voucherRepository.create({
       voucher_code: voucherCode,
       offer_id: offer.id,
-      customer_id: user.id,
+      customer_id: targetCustomerId,
       business_id: offer.business_id,
       status: VoucherStatus.ISSUED,
       issued_at: now,
@@ -134,19 +171,30 @@ export class VouchersService {
       const savedVoucher = await manager.save(Voucher, voucher);
 
       let calculatedAmount = 0;
+      let remainingAmount = 0;
       const { offer } = voucher;
 
       if (offer.discount_value && offer.discount_value > 0) {
+        const totalValue = Number(offer.discount_value);
         if (offer.discount_type === DiscountType.PERCENTAGE) {
           if (dto.bill_amount && dto.bill_amount > 0) {
-            calculatedAmount = (dto.bill_amount * Number(offer.discount_value)) / 100;
+            calculatedAmount = (dto.bill_amount * totalValue) / 100;
           }
         } else {
-          calculatedAmount = Number(offer.discount_value);
+          if (
+            dto.bill_amount &&
+            dto.bill_amount > 0 &&
+            dto.bill_amount < totalValue
+          ) {
+            calculatedAmount = dto.bill_amount;
+            remainingAmount = totalValue - dto.bill_amount;
+          } else {
+            calculatedAmount = totalValue;
+          }
         }
       }
 
-      if (calculatedAmount > 0) {
+      if (calculatedAmount > 0 || remainingAmount > 0) {
         let wallet = await manager.findOne(Wallet, {
           where: { user_id: voucher.customer_id },
         });
@@ -159,31 +207,49 @@ export class VouchersService {
           });
         }
 
-        const txType =
-          offer.offer_type === OfferType.CASHBACK
-            ? WalletTransactionType.CREDIT
-            : WalletTransactionType.SAVING;
+        if (calculatedAmount > 0) {
+          const txType =
+            offer.offer_type === OfferType.CASHBACK
+              ? WalletTransactionType.CREDIT
+              : WalletTransactionType.SAVING;
 
-        if (txType === WalletTransactionType.CREDIT) {
-          wallet.balance = Number(wallet.balance) + calculatedAmount;
-        } else {
-          wallet.total_savings =
-            Number(wallet.total_savings) + calculatedAmount;
+          if (txType === WalletTransactionType.CREDIT) {
+            wallet.balance = Number(wallet.balance) + calculatedAmount;
+          } else {
+            wallet.total_savings =
+              Number(wallet.total_savings) + calculatedAmount;
+          }
+
+          const walletTx = manager.create(WalletTransaction, {
+            wallet_id: wallet.id,
+            user_id: voucher.customer_id,
+            type: txType,
+            amount: calculatedAmount,
+            description: `Voucher redeemed: ${offer.title} (${voucher.voucher_code})`,
+            reference_type: WalletReferenceType.VOUCHER,
+            reference_id: savedVoucher.id,
+          });
+
+          await manager.save(WalletTransaction, walletTx);
+        }
+
+        if (remainingAmount > 0) {
+          wallet.balance = Number(wallet.balance) + remainingAmount;
+
+          const remainingTx = manager.create(WalletTransaction, {
+            wallet_id: wallet.id,
+            user_id: voucher.customer_id,
+            type: WalletTransactionType.CREDIT,
+            amount: remainingAmount,
+            description: `Remaining voucher balance credited to wallet: ${offer.title} (${voucher.voucher_code})`,
+            reference_type: WalletReferenceType.VOUCHER,
+            reference_id: savedVoucher.id,
+          });
+
+          await manager.save(WalletTransaction, remainingTx);
         }
 
         await manager.save(Wallet, wallet);
-
-        const walletTx = manager.create(WalletTransaction, {
-          wallet_id: wallet.id,
-          user_id: voucher.customer_id,
-          type: txType,
-          amount: calculatedAmount,
-          description: `Voucher redeemed: ${offer.title} (${voucher.voucher_code})`,
-          reference_type: WalletReferenceType.VOUCHER,
-          reference_id: savedVoucher.id,
-        });
-
-        await manager.save(WalletTransaction, walletTx);
       }
 
       return savedVoucher;

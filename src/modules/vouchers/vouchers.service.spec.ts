@@ -40,6 +40,9 @@ describe('VouchersService', () => {
   let mockBusinessRepo: {
     findOne: jest.Mock;
   };
+  let mockUserRepo: {
+    findOne: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockManager = {
@@ -76,6 +79,10 @@ describe('VouchersService', () => {
       findOne: jest.fn(),
     };
 
+    mockUserRepo = {
+      findOne: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VouchersService,
@@ -90,6 +97,10 @@ describe('VouchersService', () => {
         {
           provide: getRepositoryToken(Business),
           useValue: mockBusinessRepo,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepo,
         },
       ],
     }).compile();
@@ -152,6 +163,62 @@ describe('VouchersService', () => {
         service.issueVoucher({ offer_id: 'offer-id' }, mockUser),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should throw ForbiddenException if customer tries to claim for another user', async () => {
+      mockOfferRepo.findOne.mockResolvedValue({
+        id: 'offer-id',
+        status: OfferStatus.APPROVED,
+        start_date: new Date(Date.now() - 10000),
+        end_date: new Date(Date.now() + 10000),
+        business: { status: BusinessStatus.ACTIVE },
+      });
+
+      await expect(
+        service.issueVoucher(
+          { offer_id: 'offer-id', customer_id: 'other-customer-id' },
+          mockUser,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow Member to issue voucher to a Customer for their own business', async () => {
+      const mockMember = { id: 'owner-id', role: UserRole.MEMBER } as User;
+      mockOfferRepo.findOne.mockResolvedValue({
+        id: 'offer-id',
+        status: OfferStatus.APPROVED,
+        start_date: new Date(Date.now() - 10000),
+        end_date: new Date(Date.now() + 10000),
+        business: { status: BusinessStatus.ACTIVE, owner_id: 'owner-id' },
+      });
+      mockUserRepo.findOne.mockResolvedValue({
+        id: 'target-customer-id',
+        role: UserRole.CUSTOMER,
+      });
+
+      const res = await service.issueVoucher(
+        { offer_id: 'offer-id', customer_id: 'target-customer-id' },
+        mockMember,
+      );
+      expect(res.customer_id).toBe('target-customer-id');
+    });
+
+    it('should throw ForbiddenException if Member tries to issue voucher for another business', async () => {
+      const mockMember = { id: 'owner-id', role: UserRole.MEMBER } as User;
+      mockOfferRepo.findOne.mockResolvedValue({
+        id: 'offer-id',
+        status: OfferStatus.APPROVED,
+        start_date: new Date(Date.now() - 10000),
+        end_date: new Date(Date.now() + 10000),
+        business: { status: BusinessStatus.ACTIVE, owner_id: 'different-owner-id' },
+      });
+
+      await expect(
+        service.issueVoucher(
+          { offer_id: 'offer-id', customer_id: 'target-customer-id' },
+          mockMember,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('redeemVoucher', () => {
@@ -197,6 +264,36 @@ describe('VouchersService', () => {
       );
       expect(res.status).toBe(VoucherStatus.REDEEMED);
       expect(mockManager.save).toHaveBeenCalled();
+    });
+
+    it('should push remaining voucher balance into wallet balance when bill_amount is less than fixed discount value', async () => {
+      mockVoucherRepo.findOne.mockResolvedValue({
+        id: 'voucher-id',
+        voucher_code: 'VOU-FIXED-1000',
+        customer_id: 'customer-id',
+        status: VoucherStatus.ISSUED,
+        expires_at: new Date(Date.now() + 100000),
+        business: { owner_id: 'owner-id' },
+        offer: {
+          title: '1000 Store Credit',
+          offer_type: OfferType.DISCOUNT,
+          discount_value: 1000,
+          discount_type: DiscountType.FIXED_AMOUNT,
+        },
+      });
+
+      const res = await service.redeemVoucher(
+        { voucher_code: 'VOU-FIXED-1000', bill_amount: 200 },
+        mockMember,
+      );
+      expect(res.status).toBe(VoucherStatus.REDEEMED);
+      expect(mockManager.create).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          amount: 800,
+          description: expect.stringContaining('Remaining voucher balance credited'),
+        }),
+      );
     });
   });
 });

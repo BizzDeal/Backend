@@ -247,10 +247,15 @@ describe('OffersController (e2e)', () => {
     expect(found.status).toBe(OfferStatus.APPROVED);
   });
 
-  it('GET /offers/business/:businessId - Retrieves offers by business ID', async () => {
-    const res = await request(app.getHttpServer())
+  it('GET /offers/business/:businessId - Retrieves offers by business ID (Admin Only)', async () => {
+    const resForbidden = await request(app.getHttpServer())
       .get(`/offers/business/${businessId}`)
       .set('Authorization', `Bearer ${memberToken}`);
+    expect(resForbidden.status).toBe(403);
+
+    const res = await request(app.getHttpServer())
+      .get(`/offers/business/${businessId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);

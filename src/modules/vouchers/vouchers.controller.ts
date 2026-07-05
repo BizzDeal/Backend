@@ -45,7 +45,7 @@ export class VouchersController {
   @ApiOperation({
     summary: 'Issue Voucher',
     description:
-      'Issues a new voucher for an active, approved promotional offer. The voucher is tagged to the authenticated customer.',
+      'Issues a new voucher for an active, approved promotional offer. Customers can self-claim vouchers for themselves. Members (for their own businesses) and Admins can also issue vouchers to specific customers by providing customer_id. Customers cannot claim vouchers for other users.',
   })
   @ApiResponse({
     status: 201,
@@ -53,11 +53,17 @@ export class VouchersController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad Request: Offer is unapproved, inactive, or expired.',
+    description:
+      'Bad Request: Offer is unapproved/inactive/expired, or customer_id missing/invalid for Member/Admin.',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden: Customer trying to claim for another user, or Member trying to issue for another business.',
   })
   @ApiResponse({
     status: 404,
-    description: 'Offer not found.',
+    description: 'Offer or target Customer not found.',
   })
   async issue(
     @CurrentUser() user: User,
