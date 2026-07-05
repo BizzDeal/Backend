@@ -228,4 +228,30 @@ export class WalletService {
       return { wallet: savedWallet, transaction: savedTx };
     });
   }
+
+  async getTransactionById(id: string, currentUser: User): Promise<WalletTransaction> {
+    const tx = await this.transactionRepository.findOne({ where: { id } });
+    if (!tx) {
+      throw new NotFoundException('Wallet transaction not found');
+    }
+
+    if (tx.user_id !== currentUser.id && currentUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('You do not have permission to view this transaction');
+    }
+
+    return tx;
+  }
+
+  async getWalletById(id: string, currentUser: User): Promise<Wallet> {
+    const wallet = await this.walletRepository.findOne({ where: { id } });
+    if (!wallet) {
+      throw new NotFoundException('Wallet not found');
+    }
+
+    if (wallet.user_id !== currentUser.id && currentUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('You do not have permission to view this wallet');
+    }
+
+    return wallet;
+  }
 }

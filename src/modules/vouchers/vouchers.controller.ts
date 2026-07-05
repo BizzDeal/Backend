@@ -168,7 +168,7 @@ export class VouchersController {
   @ApiOperation({
     summary: 'Get Voucher Details',
     description:
-      'Retrieves detailed information for a specific voucher by UUID or unique voucher code, including offer, business, customer, and redemption details.',
+      'Retrieves information for a specific voucher by UUID or unique voucher code. Returns only foreign key IDs (offer_id, business_id, customer_id, redeemed_by_id) without nested relational objects.',
   })
   @ApiResponse({
     status: 200,

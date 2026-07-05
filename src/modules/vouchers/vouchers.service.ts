@@ -125,7 +125,12 @@ export class VouchersService {
       expires_at: offer.end_date,
     });
 
-    return this.voucherRepository.save(voucher);
+    const savedVoucher = await this.voucherRepository.save(voucher);
+    delete (savedVoucher as any).offer;
+    delete (savedVoucher as any).business;
+    delete (savedVoucher as any).customer;
+    delete (savedVoucher as any).redeemed_by;
+    return savedVoucher;
   }
 
   async redeemVoucher(dto: RedeemVoucherDto, user: User): Promise<Voucher> {
@@ -194,7 +199,11 @@ export class VouchersService {
         }
       }
 
-      if (calculatedAmount > 0 || remainingAmount > 0) {
+      if (
+        calculatedAmount > 0 ||
+        remainingAmount > 0 ||
+        (dto.wallet_amount_to_use && dto.wallet_amount_to_use > 0)
+      ) {
         let wallet = await manager.findOne(Wallet, {
           where: { user_id: voucher.customer_id },
         });
@@ -205,11 +214,13 @@ export class VouchersService {
             balance: 0,
             total_savings: 0,
           });
+          wallet = await manager.save(Wallet, wallet);
         }
 
         if (calculatedAmount > 0) {
           const txType =
-            offer.offer_type === OfferType.CASHBACK
+            offer.offer_type === OfferType.CASHBACK &&
+            (!dto.bill_amount || dto.bill_amount <= 0)
               ? WalletTransactionType.CREDIT
               : WalletTransactionType.SAVING;
 
@@ -219,6 +230,7 @@ export class VouchersService {
             wallet.total_savings =
               Number(wallet.total_savings) + calculatedAmount;
           }
+          wallet = await manager.save(Wallet, wallet);
 
           const walletTx = manager.create(WalletTransaction, {
             wallet_id: wallet.id,
@@ -235,6 +247,7 @@ export class VouchersService {
 
         if (remainingAmount > 0) {
           wallet.balance = Number(wallet.balance) + remainingAmount;
+          wallet = await manager.save(Wallet, wallet);
 
           const remainingTx = manager.create(WalletTransaction, {
             wallet_id: wallet.id,
@@ -249,19 +262,51 @@ export class VouchersService {
           await manager.save(WalletTransaction, remainingTx);
         }
 
-        await manager.save(Wallet, wallet);
+        if (dto.wallet_amount_to_use && dto.wallet_amount_to_use > 0) {
+          const walletUseAmount = Number(dto.wallet_amount_to_use);
+          if (Number(wallet.balance) < walletUseAmount) {
+            throw new BadRequestException(
+              'Insufficient wallet balance to cover requested wallet amount',
+            );
+          }
+
+          if (dto.bill_amount && dto.bill_amount > 0) {
+            const remainingBill = Number(dto.bill_amount) - calculatedAmount;
+            if (walletUseAmount > remainingBill) {
+              throw new BadRequestException(
+                'Wallet amount to use cannot exceed the remaining bill amount after voucher discount',
+              );
+            }
+          }
+
+          wallet.balance = Number(wallet.balance) - walletUseAmount;
+          wallet = await manager.save(Wallet, wallet);
+
+          const debitTx = manager.create(WalletTransaction, {
+            wallet_id: wallet.id,
+            user_id: voucher.customer_id,
+            type: WalletTransactionType.DEBIT,
+            amount: walletUseAmount,
+            description: `Wallet balance used during voucher redemption: ${offer.title} (${voucher.voucher_code})`,
+            reference_type: WalletReferenceType.VOUCHER,
+            reference_id: savedVoucher.id,
+          });
+
+          await manager.save(WalletTransaction, debitTx);
+        }
       }
 
+      delete (savedVoucher as any).offer;
+      delete (savedVoucher as any).business;
+      delete (savedVoucher as any).customer;
+      delete (savedVoucher as any).redeemed_by;
       return savedVoucher;
     });
   }
 
   async findAll(query: VoucherQueryDto, user?: User): Promise<Voucher[]> {
     const qb = this.voucherRepository.createQueryBuilder('voucher');
-    qb.leftJoinAndSelect('voucher.offer', 'offer');
-    qb.leftJoinAndSelect('voucher.business', 'business');
-    qb.leftJoinAndSelect('voucher.customer', 'customer');
-    qb.leftJoinAndSelect('voucher.redeemed_by', 'redeemed_by');
+    qb.leftJoin('voucher.business', 'business');
 
     if (query.status) {
       qb.andWhere('voucher.status = :status', { status: query.status });
@@ -297,12 +342,18 @@ export class VouchersService {
 
   async findOne(id: string, user?: User): Promise<Voucher> {
     const qb = this.voucherRepository.createQueryBuilder('voucher');
-    qb.leftJoinAndSelect('voucher.offer', 'offer');
-    qb.leftJoinAndSelect('voucher.business', 'business');
-    qb.leftJoinAndSelect('voucher.customer', 'customer');
-    qb.leftJoinAndSelect('voucher.redeemed_by', 'redeemed_by');
+    qb.leftJoin('voucher.business', 'business');
+    qb.addSelect('business.owner_id');
 
-    qb.where('voucher.id = :id OR voucher.voucher_code = :id', { id });
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id,
+      );
+    if (isUuid) {
+      qb.where('voucher.id = :id', { id });
+    } else {
+      qb.where('voucher.voucher_code = :code', { code: id });
+    }
     const voucher = await qb.getOne();
 
     if (!voucher) {
@@ -318,6 +369,11 @@ export class VouchersService {
         'You do not have permission to view this voucher',
       );
     }
+
+    delete (voucher as any).business;
+    delete (voucher as any).offer;
+    delete (voucher as any).customer;
+    delete (voucher as any).redeemed_by;
 
     return voucher;
   }

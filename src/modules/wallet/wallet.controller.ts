@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Body,
+  Param,
   Query,
   UseGuards,
   HttpCode,
@@ -183,5 +184,55 @@ export class WalletController {
     @Body(new ZodValidationPipe(debitWalletSchema)) dto: DebitWalletDto,
   ) {
     return this.walletService.debitWallet(dto);
+  }
+
+  @Get('transactions/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Wallet Transaction By ID',
+    description:
+      'Retrieves details of a specific wallet transaction by UUID. Returns only foreign key IDs (wallet_id, user_id, reference_id) without nested relational objects.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Transaction details returned successfully.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: No permission to view this transaction.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Transaction not found.',
+  })
+  async getTransactionById(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.walletService.getTransactionById(id, user);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Wallet By ID',
+    description:
+      'Retrieves summary of a specific wallet by its UUID. Returns only foreign key IDs (user_id) without nested relational objects.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Wallet summary returned successfully.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: No permission to view this wallet.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Wallet not found.',
+  })
+  async getWalletById(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.walletService.getWalletById(id, user);
   }
 }

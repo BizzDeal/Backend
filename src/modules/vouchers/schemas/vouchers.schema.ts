@@ -36,6 +36,12 @@ export const redeemVoucherSchema = z.object({
       return isNaN(num) ? val : num;
     }, z.number().nonnegative().nullable())
     .optional(),
+  wallet_amount_to_use: z
+    .preprocess((val) => {
+      if (val === '' || val === null || val === undefined) return 0;
+      const num = Number(val);
+      return isNaN(num) ? 0 : num;
+    }, z.number().nonnegative().default(0)),
 });
 
 export class RedeemVoucherDto {
@@ -53,6 +59,15 @@ export class RedeemVoucherDto {
     example: 1000,
   })
   bill_amount?: number | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    description:
+      'Optional wallet balance amount to debit and apply towards the remaining bill after voucher discount (defaults to 0)',
+    example: 500,
+    default: 0,
+  })
+  wallet_amount_to_use?: number;
 }
 
 export const voucherQuerySchema = z.object({

@@ -79,8 +79,6 @@ export class BusinessesService {
     const logoIds = businesses
       .map((b) => b.logo_id)
       .filter((id): id is string => !!id);
-    const categoryIds = businesses.map((b) => b.category_id);
-    const ownerIds = businesses.map((b) => b.owner_id);
 
     const mediaMap = new Map<string, string>();
     if (logoIds.length > 0) {
@@ -90,27 +88,40 @@ export class BusinessesService {
       mediaFiles.forEach((m) => mediaMap.set(m.id, m.file_url));
     }
 
-    const categoryMap = new Map<string, BusinessCategory>();
-    const categories = await this.categoryRepository.find({
-      where: { id: In(categoryIds) },
+    return businesses.map((b) => {
+      const { ...biz } = b;
+      delete (biz as any).category;
+      delete (biz as any).owner;
+      return {
+        ...biz,
+        logo_url: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
+      };
     });
-    categories.forEach((c) => categoryMap.set(c.id, c));
+  }
 
-    const ownerMap = new Map<string, Partial<User>>();
-    const owners = await this.userRepository.find({
-      where: { id: In(ownerIds) },
-    });
-    owners.forEach((o) => {
-      const { pin_hash: _pin_hash, ...ownerData } = o;
-      ownerMap.set(o.id, ownerData);
-    });
+  async getCategoryById(idOrSlug: string): Promise<{
+    success: boolean;
+    data: BusinessCategory;
+  }> {
+    let category: BusinessCategory | null = null;
+    if (this.isUUID(idOrSlug)) {
+      category = await this.categoryRepository.findOne({
+        where: { id: idOrSlug, is_active: true },
+      });
+    } else {
+      category = await this.categoryRepository.findOne({
+        where: { slug: idOrSlug, is_active: true },
+      });
+    }
 
-    return businesses.map((b) => ({
-      ...b,
-      logo_url: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
-      category: categoryMap.get(b.category_id) || null,
-      owner: ownerMap.get(b.owner_id) || null,
-    }));
+    if (!category) {
+      throw new NotFoundException('Business category not found');
+    }
+
+    return {
+      success: true,
+      data: category,
+    };
   }
 
   private applySearchFilters(

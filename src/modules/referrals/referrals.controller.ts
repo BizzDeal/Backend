@@ -1,7 +1,65 @@
-import { Controller } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ReferralsService } from './referrals.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 
+@ApiTags('Referrals')
 @Controller('referrals')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class ReferralsController {
   constructor(private readonly referralsService: ReferralsService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create Referral',
+    description: 'Creates a new referral record for the authenticated user.',
+  })
+  @ApiResponse({ status: 201, description: 'Referral created successfully.' })
+  async create(
+    @Body() body: { referred_phone: string; referral_code: string; reward_amount?: number },
+    @CurrentUser() user: User,
+  ) {
+    return this.referralsService.create(body, user);
+  }
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List Referrals',
+    description: 'Retrieves all referrals for the authenticated user without pagination. Returns only foreign key IDs (referrer_id, referred_user_id) without nested relational objects.',
+  })
+  @ApiResponse({ status: 200, description: 'Referrals list returned successfully.' })
+  async findAll(@CurrentUser() user: User) {
+    return this.referralsService.findAll(user);
+  }
+
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Referral By ID',
+    description: 'Retrieves details of a specific referral by UUID. Returns only foreign key IDs without nested relational objects.',
+  })
+  @ApiResponse({ status: 200, description: 'Referral details returned successfully.' })
+  @ApiResponse({ status: 404, description: 'Referral not found.' })
+  async findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.referralsService.findOne(id, user);
+  }
 }

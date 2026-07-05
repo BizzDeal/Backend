@@ -149,7 +149,7 @@ export class UsersService {
         ...userWithoutPin,
         profile_pic_url: profilePicMap.get(user.id) || null,
         payment_receipt_url: receiptMap.get(user.id) || null,
-        business: businessMap.get(user.id) || null,
+        business_id: businessMap.get(user.id)?.id || null,
       };
     });
 
@@ -244,7 +244,52 @@ export class UsersService {
         profile_pic_url,
         payment_receipt_url:
           user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
-        business: user.role === UserRole.MEMBER ? business : undefined,
+        business_id: user.role === UserRole.MEMBER ? (business?.id || null) : undefined,
+      },
+    };
+  }
+
+  async getUserById(userId: string) {
+    const user = await this.findOneById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const mediaFiles = await this.mediaRepository.find({
+      where: {
+        uploaded_by_id: userId,
+        purpose: In([MediaPurpose.PROFILE_PIC, MediaPurpose.PAYMENT_RECEIPT]),
+      },
+    });
+
+    let profile_pic_url: string | null = null;
+    let payment_receipt_url: string | null = null;
+
+    mediaFiles.forEach((m) => {
+      if (m.purpose === MediaPurpose.PROFILE_PIC) {
+        profile_pic_url = m.file_url;
+      } else if (m.purpose === MediaPurpose.PAYMENT_RECEIPT) {
+        payment_receipt_url = m.file_url;
+      }
+    });
+
+    let business: Business | null = null;
+    if (user.role === UserRole.MEMBER) {
+      business = await this.businessRepository.findOne({
+        where: { owner_id: userId },
+      });
+    }
+
+    const { pin_hash: _pin_hash, ...userWithoutPin } = user;
+    return {
+      success: true,
+      message: 'User details fetched successfully',
+      data: {
+        ...userWithoutPin,
+        profile_pic_url,
+        payment_receipt_url:
+          user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
+        business_id: user.role === UserRole.MEMBER ? (business?.id || null) : undefined,
       },
     };
   }

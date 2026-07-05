@@ -183,7 +183,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'Get Offer Details',
     description:
-      'Retrieves full details of a specific offer. Pending/rejected offers are only accessible to the listing owner or Admin.',
+      'Retrieves full details of a specific offer by ID. Returns only foreign key IDs (business_id, image_id, approved_by_id) without nested relational objects. Pending/rejected offers are only accessible to the listing owner or Admin.',
   })
   @ApiResponse({
     status: 200,

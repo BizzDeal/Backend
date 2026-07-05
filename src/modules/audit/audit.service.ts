@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLog } from './entities/audit-log.entity';
@@ -29,5 +29,19 @@ export class AuditService {
       ip_address: data.ip_address ?? null,
     });
     return this.auditRepository.save(log);
+  }
+
+  async findAllLogs(): Promise<AuditLog[]> {
+    return this.auditRepository.find({
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async findLogById(id: string): Promise<AuditLog> {
+    const log = await this.auditRepository.findOne({ where: { id } });
+    if (!log) {
+      throw new NotFoundException('Audit log not found');
+    }
+    return log;
   }
 }

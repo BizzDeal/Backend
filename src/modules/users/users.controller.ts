@@ -5,6 +5,7 @@ import {
   Put,
   Delete,
   Body,
+  Param,
   Query,
   Req,
   Ip,
@@ -248,5 +249,25 @@ export class UsersController {
     @Body(new ZodValidationPipe(memberActionSchema)) dto: MemberActionDto,
   ) {
     return this.usersService.deleteMember(dto.memberId, admin.id, ip);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get User By ID',
+    description:
+      'Retrieves public or detailed profile information for any registered user by UUID. Returns only foreign key IDs (such as business_id) without nested relational objects.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User details returned successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+  })
+  async getUserById(@Param('id') id: string) {
+    return this.usersService.getUserById(id);
   }
 }

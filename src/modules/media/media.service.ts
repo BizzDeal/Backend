@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MediaFile } from './entities/media-file.entity';
@@ -128,5 +128,17 @@ export class MediaService {
     }
 
     await this.mediaRepository.remove(mediaFile);
+  }
+
+  async getFileById(mediaId: string): Promise<MediaFile> {
+    const mediaFile = await this.mediaRepository.findOne({
+      where: { id: mediaId },
+    });
+
+    if (!mediaFile) {
+      throw new NotFoundException('Media file not found');
+    }
+
+    return mediaFile;
   }
 }

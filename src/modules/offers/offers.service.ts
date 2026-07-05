@@ -87,13 +87,16 @@ export class OffersService {
       approved_at: isAdmin ? new Date() : null,
     });
 
-    return this.offerRepository.save(offer);
+    const savedOffer = await this.offerRepository.save(offer);
+    delete (savedOffer as any).business;
+    delete (savedOffer as any).image;
+    delete (savedOffer as any).approved_by;
+    return savedOffer;
   }
 
   async findAll(query: OfferQueryDto, user?: User): Promise<Offer[]> {
     const qb = this.offerRepository.createQueryBuilder('offer');
-    qb.leftJoinAndSelect('offer.business', 'business');
-    qb.leftJoinAndSelect('offer.image', 'image');
+    qb.leftJoin('offer.business', 'business');
 
     if (query.business_id) {
       qb.andWhere('offer.business_id = :businessId', {
@@ -169,6 +172,10 @@ export class OffersService {
       throw new ForbiddenException('Offer is not available or pending approval');
     }
 
+    delete (offer as any).business;
+    delete (offer as any).image;
+    delete (offer as any).approved_by;
+
     return offer;
   }
 
@@ -233,7 +240,11 @@ export class OffersService {
       offer.approved_at = null;
     }
 
-    return this.offerRepository.save(offer);
+    const savedOffer = await this.offerRepository.save(offer);
+    delete (savedOffer as any).business;
+    delete (savedOffer as any).image;
+    delete (savedOffer as any).approved_by;
+    return savedOffer;
   }
 
   async delete(id: string, user: User): Promise<{ success: boolean }> {
@@ -274,7 +285,11 @@ export class OffersService {
     offer.approved_by_id = adminId;
     offer.approved_at = new Date();
 
-    return this.offerRepository.save(offer);
+    const savedOffer = await this.offerRepository.save(offer);
+    delete (savedOffer as any).business;
+    delete (savedOffer as any).image;
+    delete (savedOffer as any).approved_by;
+    return savedOffer;
   }
 
   async reject(offerId: string, adminId: string, reason?: string): Promise<Offer> {
@@ -291,6 +306,10 @@ export class OffersService {
       this.logger.log(`Offer ${offerId} rejected by admin ${adminId}. Reason: ${reason}`);
     }
 
-    return this.offerRepository.save(offer);
+    const savedOffer = await this.offerRepository.save(offer);
+    delete (savedOffer as any).business;
+    delete (savedOffer as any).image;
+    delete (savedOffer as any).approved_by;
+    return savedOffer;
   }
 }

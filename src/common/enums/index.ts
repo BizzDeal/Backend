@@ -27,7 +27,6 @@ export enum BusinessStatus {
 export enum OfferType {
   DISCOUNT = 'DISCOUNT',
   CASHBACK = 'CASHBACK',
-  DEAL = 'DEAL',
 }
 
 export enum DiscountType {

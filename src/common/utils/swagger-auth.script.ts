@@ -203,6 +203,29 @@ export const SWAGGER_AUTH_SCRIPT = `
     }
   };
 
+  const syncSwaggerAuth = () => {
+    if (!window.ui || !window.ui.getState || !window.ui.authActions) return;
+    const stateToken = window.ui.getState().getIn(['auth', 'authorized', 'bearer', 'value']);
+    const localToken = localStorage.getItem('swagger_jwt_token');
+    if (!stateToken && localToken) {
+      window.ui.authActions.authorize({
+        bearer: {
+          name: 'bearer',
+          schema: {
+            type: 'http',
+            in: 'header',
+            scheme: 'bearer',
+            description: ''
+          },
+          value: localToken
+        }
+      });
+      if (typeof window.ui.preauthorizeApiKey === 'function') {
+        window.ui.preauthorizeApiKey('bearer', localToken);
+      }
+    }
+  };
+
   const initAuthHelper = () => {
     const defaultAuthBtn = document.querySelector('.swagger-ui .auth-wrapper');
     if (defaultAuthBtn) {
@@ -247,6 +270,7 @@ export const SWAGGER_AUTH_SCRIPT = `
   };
 
   const timer = setInterval(() => {
+    syncSwaggerAuth();
     initAuthHelper();
   }, 300);
 })();

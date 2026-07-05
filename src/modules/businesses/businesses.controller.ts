@@ -61,6 +61,24 @@ export class BusinessesController {
     return this.businessesService.getCategories();
   }
 
+  @Get('categories/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Business Category Details',
+    description: 'Retrieves details of a specific business category by its UUID or slug.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Business category details returned successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business category not found.',
+  })
+  async getCategoryById(@Param('id') id: string) {
+    return this.businessesService.getCategoryById(id);
+  }
+
   @Get('featured')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()

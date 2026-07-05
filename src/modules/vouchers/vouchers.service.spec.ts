@@ -295,5 +295,138 @@ describe('VouchersService', () => {
         }),
       );
     });
+
+    it('should debit wallet balance when wallet_amount_to_use is provided during voucher redemption', async () => {
+      mockVoucherRepo.findOne.mockResolvedValue({
+        id: 'voucher-id',
+        voucher_code: 'VOU-FIXED-500',
+        customer_id: 'customer-id',
+        status: VoucherStatus.ISSUED,
+        expires_at: new Date(Date.now() + 100000),
+        business: { owner_id: 'owner-id' },
+        offer: {
+          title: '500 Off',
+          offer_type: OfferType.DISCOUNT,
+          discount_value: 500,
+          discount_type: DiscountType.FIXED_AMOUNT,
+        },
+      });
+
+      mockManager.findOne.mockResolvedValue({
+        id: 'wallet-id',
+        user_id: 'customer-id',
+        balance: 1000,
+        total_savings: 0,
+      });
+
+      const res = await service.redeemVoucher(
+        { voucher_code: 'VOU-FIXED-500', bill_amount: 1500, wallet_amount_to_use: 300 },
+        mockMember,
+      );
+      expect(res.status).toBe(VoucherStatus.REDEEMED);
+      expect(mockManager.create).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          amount: 300,
+          description: expect.stringContaining('Wallet balance used during voucher redemption'),
+        }),
+      );
+    });
+
+    it('should throw BadRequestException when wallet_amount_to_use exceeds remaining bill amount after voucher discount', async () => {
+      mockVoucherRepo.findOne.mockResolvedValue({
+        id: 'voucher-id',
+        voucher_code: 'VOU-FIXED-1000',
+        customer_id: 'customer-id',
+        status: VoucherStatus.ISSUED,
+        expires_at: new Date(Date.now() + 100000),
+        business: { owner_id: 'owner-id' },
+        offer: {
+          title: '1000 Off',
+          offer_type: OfferType.DISCOUNT,
+          discount_value: 1000,
+          discount_type: DiscountType.FIXED_AMOUNT,
+        },
+      });
+
+      mockManager.findOne.mockResolvedValue({
+        id: 'wallet-id',
+        user_id: 'customer-id',
+        balance: 2000,
+        total_savings: 0,
+      });
+
+      await expect(
+        service.redeemVoucher(
+          { voucher_code: 'VOU-FIXED-1000', bill_amount: 1000, wallet_amount_to_use: 500 },
+          mockMember,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when wallet balance is insufficient to cover wallet_amount_to_use', async () => {
+      mockVoucherRepo.findOne.mockResolvedValue({
+        id: 'voucher-id',
+        voucher_code: 'VOU-FIXED-500',
+        customer_id: 'customer-id',
+        status: VoucherStatus.ISSUED,
+        expires_at: new Date(Date.now() + 100000),
+        business: { owner_id: 'owner-id' },
+        offer: {
+          title: '500 Off',
+          offer_type: OfferType.DISCOUNT,
+          discount_value: 500,
+          discount_type: DiscountType.FIXED_AMOUNT,
+        },
+      });
+
+      mockManager.findOne.mockResolvedValue({
+        id: 'wallet-id',
+        user_id: 'customer-id',
+        balance: 100,
+        total_savings: 0,
+      });
+
+      await expect(
+        service.redeemVoucher(
+          { voucher_code: 'VOU-FIXED-500', bill_amount: 1500, wallet_amount_to_use: 500 },
+          mockMember,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('findOne', () => {
+    let mockQb: any;
+    const mockAdmin: User = {
+      id: 'admin-id',
+      role: UserRole.ADMIN,
+    } as User;
+
+    beforeEach(() => {
+      mockQb = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue({
+          id: 'e7bea8a7-a44a-4fcf-b734-fc2281164c8a',
+          voucher_code: 'VOU-TEST-123',
+          customer_id: 'customer-id',
+        }),
+      };
+      mockVoucherRepo.createQueryBuilder.mockReturnValue(mockQb);
+    });
+
+    it('should query by voucher.id when parameter is a valid UUID', async () => {
+      const uuid = 'e7bea8a7-a44a-4fcf-b734-fc2281164c8a';
+      await service.findOne(uuid, mockAdmin);
+      expect(mockQb.where).toHaveBeenCalledWith('voucher.id = :id', { id: uuid });
+    });
+
+    it('should query by voucher.voucher_code when parameter is not a UUID', async () => {
+      const code = 'VOU-TEST-123';
+      await service.findOne(code, mockAdmin);
+      expect(mockQb.where).toHaveBeenCalledWith('voucher.voucher_code = :code', { code });
+    });
   });
 });
