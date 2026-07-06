@@ -326,6 +326,23 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       showToast('success', 'Push Dispatched!', 'Notification saved and FCM multicast broadcast initiated.');
+      
+      if (window.Notification && Notification.permission === 'granted') {
+        try {
+          const osNotif = new Notification(title || 'BizzDeal FCM Alert', {
+            body: message,
+            icon: 'https://cdn-icons-png.flaticon.com/512/3602/3602145.png',
+            tag: 'dispatch_' + Date.now()
+          });
+          osNotif.onclick = () => {
+            window.focus();
+            osNotif.close();
+          };
+        } catch (e) {
+          console.error('OS Push error:', e);
+        }
+      }
+
       fetchNotifications();
     } catch (err) {
       showToast('error', 'Dispatch Failed', err.message);
