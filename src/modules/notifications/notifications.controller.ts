@@ -21,16 +21,18 @@ import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
-import { NotificationType } from '../../common/enums';
+import { NotificationType, UserRole } from '../../common/enums';
 import {
   CreateNotificationDto,
-  BroadcastNotificationDto,
+  SendBulkNotificationDto,
+  BroadcastRoleNotificationDto,
   RegisterDeviceDto,
   NotificationQueryDto,
 } from './dto/notifications.dto';
 import {
   createNotificationSchema,
-  broadcastNotificationSchema,
+  sendBulkNotificationSchema,
+  broadcastRoleNotificationSchema,
   registerDeviceSchema,
   notificationQuerySchema,
 } from './schemas/notifications.schema';
@@ -86,27 +88,80 @@ export class NotificationsController {
     });
   }
 
-  @Post('broadcast')
+  @Post('send-bulk')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Broadcast Push Notification to Multiple Members/Customers',
+    summary: 'Send Push Notification to Multiple Users (by UUIDs)',
     description:
-      'Creates notification alerts in the database and automatically dispatches universal Firebase Cloud Messaging (FCM) push notifications to multiple target users (by specific user_ids array or platform-wide by target_role like MEMBER or CUSTOMER). Returns only foreign key IDs without nested relational objects.',
+      'Creates notification alerts in the database and automatically dispatches universal Firebase Cloud Messaging (FCM) push notifications to a specific list of recipient user UUIDs. Returns only foreign key IDs without nested relational objects.',
   })
   @ApiResponse({
     status: 201,
     description:
       'Bulk notifications created and FCM push dispatch initiated successfully.',
   })
-  async broadcast(
-    @Body(new ZodValidationPipe(broadcastNotificationSchema))
-    body: BroadcastNotificationDto,
+  async sendBulk(
+    @Body(new ZodValidationPipe(sendBulkNotificationSchema))
+    body: SendBulkNotificationDto,
+  ) {
+    return this.notificationsService.sendBulkToUsers({
+      user_ids: body.user_ids,
+      title: body.title,
+      message: body.message,
+      type: body.type || NotificationType.GENERAL,
+      data: body.data,
+    });
+  }
+
+  @Post('members')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Broadcast Push Notification to All Members',
+    description:
+      'Creates notification alerts in the database and automatically dispatches universal Firebase Cloud Messaging (FCM) push notifications to all active Members/Entrepreneurs across the platform. Admin only.',
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Broadcast notifications created for all members and FCM push dispatch initiated successfully.',
+  })
+  async broadcastToMembers(
+    @Body(new ZodValidationPipe(broadcastRoleNotificationSchema))
+    body: BroadcastRoleNotificationDto,
     @CurrentUser() user: User,
   ) {
-    return this.notificationsService.broadcast(
+    return this.notificationsService.broadcastToRole(
+      UserRole.MEMBER,
       {
-        user_ids: body.user_ids,
-        target_role: body.target_role,
+        title: body.title,
+        message: body.message,
+        type: body.type || NotificationType.GENERAL,
+        data: body.data,
+      },
+      user,
+    );
+  }
+
+  @Post('customers')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Broadcast Push Notification to All Customers',
+    description:
+      'Creates notification alerts in the database and automatically dispatches universal Firebase Cloud Messaging (FCM) push notifications to all active Customers across the platform. Admin only.',
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Broadcast notifications created for all customers and FCM push dispatch initiated successfully.',
+  })
+  async broadcastToCustomers(
+    @Body(new ZodValidationPipe(broadcastRoleNotificationSchema))
+    body: BroadcastRoleNotificationDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.notificationsService.broadcastToRole(
+      UserRole.CUSTOMER,
+      {
         title: body.title,
         message: body.message,
         type: body.type || NotificationType.GENERAL,

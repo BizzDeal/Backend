@@ -122,43 +122,19 @@ export class NotificationsService {
     }
   }
 
-  async broadcast(
-    data: {
-      user_ids?: string[];
-      target_role?: UserRole;
-      title: string;
-      message: string;
-      type: NotificationType;
-      data?: Record<string, any>;
-    },
-    actor: User,
-  ): Promise<{ count: number; user_ids: string[]; message: string }> {
-    if (data.target_role && actor.role !== UserRole.ADMIN) {
-      throw new ForbiddenException(
-        'Only administrators can broadcast notifications platform-wide by user role.',
-      );
-    }
-
-    let targetUserIds: string[] = [];
-
-    if (data.user_ids && data.user_ids.length > 0) {
-      targetUserIds = [...data.user_ids];
-    }
-
-    if (data.target_role) {
-      const usersWithRole = await this.userRepository.find({
-        where: { role: data.target_role },
-        select: { id: true },
-      });
-      const roleUserIds = usersWithRole.map((u) => u.id);
-      targetUserIds = Array.from(new Set([...targetUserIds, ...roleUserIds]));
-    }
-
+  async sendBulkToUsers(data: {
+    user_ids: string[];
+    title: string;
+    message: string;
+    type: NotificationType;
+    data?: Record<string, any>;
+  }): Promise<{ count: number; user_ids: string[]; message: string }> {
+    const targetUserIds = Array.from(new Set(data.user_ids));
     if (targetUserIds.length === 0) {
       return {
         count: 0,
         user_ids: [],
-        message: 'No recipients found matching the criteria.',
+        message: 'No valid target user IDs provided.',
       };
     }
 
@@ -186,6 +162,63 @@ export class NotificationsService {
       count: savedNotifications.length,
       user_ids: targetUserIds,
       message: `Successfully created notifications and initiated FCM push dispatch for ${savedNotifications.length} user(s).`,
+    };
+  }
+
+  async broadcastToRole(
+    role: UserRole,
+    data: {
+      title: string;
+      message: string;
+      type: NotificationType;
+      data?: Record<string, any>;
+    },
+    actor: User,
+  ): Promise<{ count: number; role: UserRole; message: string }> {
+    if (actor.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        `Only administrators can broadcast notifications to all ${role.toLowerCase()}s platform-wide.`,
+      );
+    }
+
+    const usersWithRole = await this.userRepository.find({
+      where: { role },
+      select: { id: true },
+    });
+    const targetUserIds = usersWithRole.map((u) => u.id);
+
+    if (targetUserIds.length === 0) {
+      return {
+        count: 0,
+        role,
+        message: `No users found with role ${role}.`,
+      };
+    }
+
+    const notificationsToSave = targetUserIds.map((userId) =>
+      this.notificationRepository.create({
+        user_id: userId,
+        title: data.title,
+        message: data.message,
+        type: data.type || NotificationType.GENERAL,
+        data: data.data || null,
+      }),
+    );
+
+    const savedNotifications = await this.notificationRepository.save(
+      notificationsToSave,
+    );
+
+    this.dispatchBulkFcmPush(savedNotifications).catch((err) => {
+      this.logger.error(
+        `Error in background role broadcast FCM push dispatch: ${err instanceof Error ? err.message : err}`,
+      );
+    });
+
+    return {
+      count: savedNotifications.length,
+      role,
+      message: `Successfully created notifications and initiated FCM push dispatch for ${savedNotifications.length} ${role.toLowerCase()}(s).`,
     };
   }
 

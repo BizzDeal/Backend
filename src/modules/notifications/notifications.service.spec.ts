@@ -273,12 +273,12 @@ describe('NotificationsService', () => {
     });
   });
 
-  describe('broadcast', () => {
-    it('should forbid non-admin from broadcasting by target_role', async () => {
+  describe('sendBulkToUsers and broadcastToRole', () => {
+    it('should forbid non-admin from broadcasting to role', async () => {
       await expect(
-        service.broadcast(
+        service.broadcastToRole(
+          UserRole.MEMBER,
           {
-            target_role: UserRole.MEMBER,
             title: 'Test',
             message: 'Message',
             type: NotificationType.GENERAL,
@@ -288,7 +288,7 @@ describe('NotificationsService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should broadcast notifications to user_ids successfully', async () => {
+    it('should send bulk notifications to user_ids successfully', async () => {
       notificationRepo.create.mockReturnValue(mockNotification);
       notificationRepo.save.mockResolvedValue([mockNotification]);
       deviceRepo.find.mockResolvedValue([mockDevice]);
@@ -298,15 +298,12 @@ describe('NotificationsService', () => {
         staleTokens: [],
       });
 
-      const result = await service.broadcast(
-        {
-          user_ids: [mockUser.id],
-          title: 'Test',
-          message: 'Message',
-          type: NotificationType.GENERAL,
-        },
-        mockAdmin,
-      );
+      const result = await service.sendBulkToUsers({
+        user_ids: [mockUser.id],
+        title: 'Test',
+        message: 'Message',
+        type: NotificationType.GENERAL,
+      });
 
       expect(result.count).toBe(1);
       expect(result.user_ids).toContain(mockUser.id);
