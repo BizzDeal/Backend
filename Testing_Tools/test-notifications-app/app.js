@@ -115,6 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginPhoneInput = document.getElementById('loginPhone');
   const loginPinInput = document.getElementById('loginPin');
   const phoneLoginBtn = document.getElementById('phoneLoginBtn');
+  const tabPhoneLogin = document.getElementById('tabPhoneLogin');
+  const tabJwtLogin = document.getElementById('tabJwtLogin');
+  const boxPhoneLogin = document.getElementById('boxPhoneLogin');
+  const boxJwtLogin = document.getElementById('boxJwtLogin');
 
   const apiStatusPill = document.getElementById('apiStatusPill');
   const apiStatusText = document.getElementById('apiStatusText');
@@ -124,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const userProfileCard = document.getElementById('userProfileCard');
   const displayUserId = document.getElementById('displayUserId');
   const displayUserRole = document.getElementById('displayUserRole');
+  const switchAccountBtn = document.getElementById('switchAccountBtn');
 
   const deviceNameInput = document.getElementById('deviceName');
   const fcmTokenInput = document.getElementById('fcmToken');
@@ -329,9 +334,40 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem('bizzdeal_fcm_jwt_token');
     updateConnectionUI(false, false);
     userProfileCard.classList.add('hidden');
+    if (tabPhoneLogin && tabPhoneLogin.parentElement) tabPhoneLogin.parentElement.classList.remove('hidden');
+    if (boxPhoneLogin && tabPhoneLogin && tabPhoneLogin.classList.contains('active')) boxPhoneLogin.classList.remove('hidden');
+    if (boxJwtLogin && tabJwtLogin && tabJwtLogin.classList.contains('active')) boxJwtLogin.classList.remove('hidden');
     clearInterval(state.pollingInterval);
     showToast('info', 'Logged Out', 'Authentication cleared.');
   });
+
+  if (tabPhoneLogin && tabJwtLogin) {
+    tabPhoneLogin.addEventListener('click', () => {
+      tabPhoneLogin.classList.remove('btn-secondary');
+      tabPhoneLogin.classList.add('btn-accent-gradient', 'active');
+      tabJwtLogin.classList.remove('btn-accent-gradient', 'active');
+      tabJwtLogin.classList.add('btn-secondary');
+      if (boxPhoneLogin) boxPhoneLogin.classList.remove('hidden');
+      if (boxJwtLogin) boxJwtLogin.classList.add('hidden');
+    });
+    tabJwtLogin.addEventListener('click', () => {
+      tabJwtLogin.classList.remove('btn-secondary');
+      tabJwtLogin.classList.add('btn-accent-gradient', 'active');
+      tabPhoneLogin.classList.remove('btn-accent-gradient', 'active');
+      tabPhoneLogin.classList.add('btn-secondary');
+      if (boxJwtLogin) boxJwtLogin.classList.remove('hidden');
+      if (boxPhoneLogin) boxPhoneLogin.classList.add('hidden');
+    });
+  }
+
+  if (switchAccountBtn) {
+    switchAccountBtn.addEventListener('click', () => {
+      userProfileCard.classList.add('hidden');
+      if (tabPhoneLogin && tabPhoneLogin.parentElement) tabPhoneLogin.parentElement.classList.remove('hidden');
+      if (boxPhoneLogin && tabPhoneLogin && tabPhoneLogin.classList.contains('active')) boxPhoneLogin.classList.remove('hidden');
+      if (boxJwtLogin && tabJwtLogin && tabJwtLogin.classList.contains('active')) boxJwtLogin.classList.remove('hidden');
+    });
+  }
 
   // Device Platform Radio Cards
   document.querySelectorAll('.platform-card').forEach(card => {
@@ -638,6 +674,9 @@ document.addEventListener('DOMContentLoaded', () => {
       displayUserId.textContent = `UUID: ${userId}`;
       displayUserRole.textContent = userRole;
       userProfileCard.classList.remove('hidden');
+      if (tabPhoneLogin && tabPhoneLogin.parentElement) tabPhoneLogin.parentElement.classList.add('hidden');
+      if (boxPhoneLogin) boxPhoneLogin.classList.add('hidden');
+      if (boxJwtLogin) boxJwtLogin.classList.add('hidden');
       if (!targetUserIdInput.value) {
         targetUserIdInput.value = userId;
       }

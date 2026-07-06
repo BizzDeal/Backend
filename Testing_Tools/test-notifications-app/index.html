@@ -40,52 +40,54 @@
   </header>
 
   <main class="app-container">
-    <!-- Left Column: Settings, Auth & Device Registration -->
-    <div class="left-col">
-      <!-- Section 1: Authentication & API Configuration -->
-      <section class="card glass-panel" id="authSection">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="card-icon">🔐</span>
-            <h2>Authentication & API</h2>
-          </div>
-          <span class="badge badge-primary">Step 1</span>
+    <!-- Top Left: Step 1: Authentication & API -->
+    <section class="card glass-panel" id="authSection">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🔐</span>
+          <h2>Authentication & API</h2>
         </div>
-        <div class="card-body" style="gap: 12px;">
-          <div class="form-group" style="margin-bottom: 0;">
-            <label for="apiUrl">Backend API Base URL</label>
-            <div class="input-with-icon">
-              <span class="input-icon">🌐</span>
-              <input type="text" id="apiUrl" value="http://localhost:3000/bizzdeal/api" placeholder="e.g. http://localhost:3000/bizzdeal/api">
-            </div>
+        <span class="badge badge-primary">Step 1</span>
+      </div>
+      <div class="card-body" style="gap: 12px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="apiUrl">Backend API Base URL</label>
+          <div class="input-with-icon">
+            <span class="input-icon">🌐</span>
+            <input type="text" id="apiUrl" value="http://localhost:3000/bizzdeal/api" placeholder="e.g. http://localhost:3000/bizzdeal/api">
           </div>
+        </div>
 
-          <!-- Phone + PIN Quick Login Card -->
-          <div class="login-box-card" style="padding: 12px; gap: 8px;">
-            <div class="login-box-header" style="justify-content: space-between;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="login-box-icon">📱</span>
-                <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">Quick Phone + PIN Login</span>
-              </div>
-              <span style="font-size: 11px; color: var(--text-muted);">Auto-connects JWT</span>
+        <!-- Auth Method Tabs -->
+        <div class="auth-method-tabs" style="display: flex; gap: 8px; margin-top: 4px;">
+          <button class="btn btn-xs btn-accent-gradient active" id="tabPhoneLogin" style="flex: 1; padding: 8px;">📱 Quick Phone + PIN</button>
+          <button class="btn btn-xs btn-secondary" id="tabJwtLogin" style="flex: 1; padding: 8px;">🔑 Manual JWT Token</button>
+        </div>
+
+        <!-- Phone + PIN Quick Login Box -->
+        <div id="boxPhoneLogin" class="login-box-card" style="padding: 12px; gap: 8px;">
+          <div class="login-box-header" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="login-box-icon">📱</span>
+              <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">Quick Phone + PIN Login</span>
             </div>
-            <div class="form-row" style="gap: 8px;">
-              <div class="form-group mb-0 flex-1">
-                <input type="text" id="loginPhone" placeholder="Phone (e.g. 9876543210)" autocomplete="tel" style="padding: 8px 12px; font-size: 13px;">
-              </div>
-              <div class="form-group mb-0" style="width: 100px;">
-                <input type="password" id="loginPin" placeholder="PIN (1234)" style="padding: 8px 12px; font-size: 13px;">
-              </div>
-              <button class="btn btn-accent-gradient" id="phoneLoginBtn" style="padding: 8px 16px; font-size: 13px; white-space: nowrap;">
-                🚀 Login
-              </button>
+            <span style="font-size: 11px; color: var(--text-muted);">Auto-connects JWT</span>
+          </div>
+          <div class="form-row" style="gap: 8px;">
+            <div class="form-group mb-0 flex-1">
+              <input type="text" id="loginPhone" placeholder="Phone (e.g. 9876543210)" autocomplete="tel" style="padding: 8px 12px; font-size: 13px;">
             </div>
+            <div class="form-group mb-0" style="width: 100px;">
+              <input type="password" id="loginPin" placeholder="PIN (1234)" style="padding: 8px 12px; font-size: 13px;">
+            </div>
+            <button class="btn btn-accent-gradient" id="phoneLoginBtn" style="padding: 8px 16px; font-size: 13px; white-space: nowrap;">
+              🚀 Login
+            </button>
           </div>
+        </div>
 
-          <div class="divider-line" style="margin: 4px 0;">
-            <span style="font-size: 10px;">OR MANUAL JWT TOKEN</span>
-          </div>
-
+        <!-- Manual JWT Token Box (Hidden by default) -->
+        <div id="boxJwtLogin" class="hidden" style="display: flex; flex-direction: column; gap: 8px;">
           <div class="form-row" style="align-items: center; gap: 8px;">
             <div class="form-group mb-0 flex-1">
               <div class="input-with-icon">
@@ -99,203 +101,209 @@
             </button>
             <button class="btn btn-outline" id="clearAuthBtn" style="padding: 8px 12px; font-size: 13px;">Clear</button>
           </div>
-
-          <div class="user-profile-card hidden" id="userProfileCard" style="margin-top: 4px; padding: 8px 12px;">
-            <div class="avatar" style="width: 32px; height: 32px; font-size: 16px;">👤</div>
-            <div class="user-details" style="flex-direction: row; align-items: center; justify-content: space-between; width: 100%;">
-              <div class="user-id" id="displayUserId" style="font-size: 11px;">UUID: Loading...</div>
-              <div class="user-role badge badge-accent" id="displayUserRole" style="padding: 2px 8px; font-size: 10px;">MEMBER</div>
-            </div>
-          </div>
+          <small class="helper-text" style="margin: 0;">Required to authenticate notification & device API requests.</small>
         </div>
-      </section>
 
-      <!-- Section 2: FCM Device Registration -->
-      <section class="card glass-panel" id="deviceSection">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="card-icon">📱</span>
-            <h2>FCM Device Registration</h2>
-          </div>
-          <span class="badge badge-accent">Step 2</span>
-        </div>
-        <div class="card-body" style="gap: 12px;">
-          <p class="section-desc" style="margin-bottom: 0;">Register an FCM device token to receive OS-level background and terminated push notifications.</p>
-          
-          <div class="form-row" style="gap: 12px;">
-            <div class="form-group mb-0 flex-1">
-              <label>Device Platform Type</label>
-              <div class="platform-cards" style="gap: 6px;">
-                <label class="platform-card active" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
-                  <input type="radio" name="deviceType" value="WEB" checked>
-                  <span class="platform-icon" style="font-size: 16px;">🌐</span>
-                  <span class="platform-name" style="font-size: 11px;">Web</span>
-                </label>
-                <label class="platform-card" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
-                  <input type="radio" name="deviceType" value="ANDROID">
-                  <span class="platform-icon" style="font-size: 16px;">🤖</span>
-                  <span class="platform-name" style="font-size: 11px;">Android</span>
-                </label>
-                <label class="platform-card" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
-                  <input type="radio" name="deviceType" value="IOS">
-                  <span class="platform-icon" style="font-size: 16px;">🍎</span>
-                  <span class="platform-name" style="font-size: 11px;">iOS</span>
-                </label>
+        <div class="user-profile-card hidden" id="userProfileCard" style="margin-top: 4px; padding: 10px 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar" style="width: 36px; height: 36px; font-size: 18px;">👤</div>
+              <div>
+                <div class="user-id" id="displayUserId" style="font-size: 12px; font-weight: 700; color: var(--text-main);">UUID: Loading...</div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                  <span class="user-role badge badge-accent" id="displayUserRole" style="padding: 2px 8px; font-size: 10px;">MEMBER</span>
+                  <span style="font-size: 11px; color: var(--success);">● Verified</span>
+                </div>
               </div>
             </div>
+            <button class="btn btn-xs btn-outline" id="switchAccountBtn" style="padding: 6px 10px; font-size: 11px;">🔄 Switch / Logout</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
-            <div class="form-group mb-0 flex-1">
-              <label for="deviceName">Device Name / Model</label>
-              <input type="text" id="deviceName" value="Chrome Web Simulator" placeholder="e.g. Samsung S23" style="padding: 8px 12px; font-size: 13px;">
+    <!-- Top Right: Step 2: FCM Device Registration -->
+    <section class="card glass-panel" id="deviceSection">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">📱</span>
+          <h2>FCM Device Registration</h2>
+        </div>
+        <span class="badge badge-accent">Step 2</span>
+      </div>
+      <div class="card-body" style="gap: 12px;">
+        <p class="section-desc" style="margin-bottom: 0;">Register an FCM device token to receive OS-level background and terminated push notifications.</p>
+        
+        <div class="form-row" style="gap: 12px;">
+          <div class="form-group mb-0 flex-1">
+            <label>Device Platform Type</label>
+            <div class="platform-cards" style="gap: 6px;">
+              <label class="platform-card active" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
+                <input type="radio" name="deviceType" value="WEB" checked>
+                <span class="platform-icon" style="font-size: 16px;">🌐</span>
+                <span class="platform-name" style="font-size: 11px;">Web</span>
+              </label>
+              <label class="platform-card" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
+                <input type="radio" name="deviceType" value="ANDROID">
+                <span class="platform-icon" style="font-size: 16px;">🤖</span>
+                <span class="platform-name" style="font-size: 11px;">Android</span>
+              </label>
+              <label class="platform-card" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
+                <input type="radio" name="deviceType" value="IOS">
+                <span class="platform-icon" style="font-size: 16px;">🍎</span>
+                <span class="platform-name" style="font-size: 11px;">iOS</span>
+              </label>
             </div>
           </div>
 
-          <div class="form-group" style="margin-bottom: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label for="fcmToken">FCM Registration Token</label>
-              <div class="token-actions" style="margin-top: 0; gap: 4px;">
-                <button class="btn btn-xs btn-accent-gradient" id="getRealTokenBtn" style="padding: 4px 8px; font-size: 11px;">🔥 Real Token</button>
-                <button class="btn btn-xs btn-secondary" id="generateTokenBtn" style="padding: 4px 8px; font-size: 11px;">✨ Simulated</button>
-                <button class="btn btn-xs btn-outline" id="pasteClipboardBtn" style="padding: 4px 8px; font-size: 11px;">📋 Paste</button>
-              </div>
-            </div>
-            <div class="token-input-wrapper">
-              <textarea id="fcmToken" rows="2" placeholder="Paste FCM registration token or generate a simulated token..." style="padding: 8px 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace;"></textarea>
+          <div class="form-group mb-0 flex-1">
+            <label for="deviceName">Device Name / Model</label>
+            <input type="text" id="deviceName" value="Chrome Web Simulator" placeholder="e.g. Samsung S23" style="padding: 8px 12px; font-size: 13px;">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label for="fcmToken">FCM Registration Token</label>
+            <div class="token-actions" style="margin-top: 0; gap: 4px;">
+              <button class="btn btn-xs btn-accent-gradient" id="getRealTokenBtn" style="padding: 4px 8px; font-size: 11px;">🔥 Real Token</button>
+              <button class="btn btn-xs btn-secondary" id="generateTokenBtn" style="padding: 4px 8px; font-size: 11px;">✨ Simulated</button>
+              <button class="btn btn-xs btn-outline" id="pasteClipboardBtn" style="padding: 4px 8px; font-size: 11px;">📋 Paste</button>
             </div>
           </div>
+          <div class="token-input-wrapper">
+            <textarea id="fcmToken" rows="2" placeholder="Paste FCM registration token or generate a simulated token..." style="padding: 8px 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace;"></textarea>
+          </div>
+        </div>
 
-          <div id="fcmStatusBox" class="fcm-status-box hidden" style="padding: 6px 12px; margin-bottom: 0;">
-            <div class="fcm-status-header" style="font-size: 11px;">
-              <span class="fcm-status-icon">🔥</span>
-              <span class="fcm-status-text" id="fcmStatusText">Firebase not initialized</span>
+        <div id="fcmStatusBox" class="fcm-status-box hidden" style="padding: 6px 12px; margin-bottom: 0;">
+          <div class="fcm-status-header" style="font-size: 11px;">
+            <span class="fcm-status-icon">🔥</span>
+            <span class="fcm-status-text" id="fcmStatusText">Firebase not initialized</span>
+          </div>
+        </div>
+
+        <button class="btn btn-gradient w-100" id="registerDeviceBtn" style="padding: 10px; font-size: 13px;">
+          <span class="btn-icon">📲</span> Register Push Device
+        </button>
+
+        <!-- Registered Devices List -->
+        <div class="registered-devices-wrapper" style="margin-top: 4px; padding-top: 10px; gap: 8px;">
+          <div class="wrapper-header">
+            <h3 style="font-size: 13px;">Registered Devices (<span id="deviceCount">0</span>)</h3>
+            <button class="icon-btn-small" id="refreshDevicesBtn" title="Refresh Devices List" style="width: 24px; height: 24px;">🔄</button>
+          </div>
+          <div class="devices-list" id="devicesList" style="max-height: 120px; gap: 6px;">
+            <div class="empty-state" style="padding: 10px; font-size: 12px;">No devices registered yet. Register a token above!</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Left: Step 3: Universal Notification Dispatcher -->
+    <section class="card glass-panel" id="dispatchSection">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🚀</span>
+          <h2>Universal Push Dispatcher</h2>
+        </div>
+        <span class="badge badge-warning">Trigger Engine</span>
+      </div>
+      <div class="card-body">
+        <p class="section-desc">Trigger backend notifications that automatically broadcast via FCM multicast push to all registered devices.</p>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="targetUserId">Target Recipient UUID</label>
+            <div class="input-with-action">
+              <input type="text" id="targetUserId" placeholder="UUID of recipient...">
+              <button class="btn btn-xs btn-outline" id="useMyIdBtn" title="Use my logged-in ID">Self</button>
             </div>
           </div>
+          <div class="form-group">
+            <label for="notificationType">Notification Category</label>
+            <select id="notificationType" class="custom-select">
+              <option value="GENERAL">📢 General Alert</option>
+              <option value="OFFER">🎁 Special Offer</option>
+              <option value="VOUCHER">🎫 Voucher & Coupon</option>
+              <option value="WALLET">💰 Wallet Transaction</option>
+              <option value="MEETING">📅 Meeting & Invite</option>
+              <option value="CHAT">💬 Chat Message</option>
+            </select>
+          </div>
+        </div>
 
-          <button class="btn btn-gradient w-100" id="registerDeviceBtn" style="padding: 10px; font-size: 13px;">
-            <span class="btn-icon">📲</span> Register Push Device
+        <div class="form-group">
+          <label for="notifTitle">Alert Title</label>
+          <input type="text" id="notifTitle" value="🔥 Exclusive Offer Unlocked!" placeholder="Enter engaging notification title...">
+        </div>
+
+        <div class="form-group">
+          <label for="notifMessage">Message Content</label>
+          <textarea id="notifMessage" rows="2" placeholder="Enter notification description...">Congratulations! You have received an instant ₹500 discount voucher on your next BizzDeal purchase.</textarea>
+        </div>
+
+        <!-- Quick Templates -->
+        <div class="form-group">
+          <label>Quick Presets</label>
+          <div class="preset-chips">
+            <button class="chip" data-preset="offer">🎁 50% Offer</button>
+            <button class="chip" data-preset="wallet">💰 ₹1,000 Credited</button>
+            <button class="chip" data-preset="meeting">📅 Meeting Invite</button>
+            <button class="chip" data-preset="chat">💬 New Message</button>
+            <button class="chip" data-preset="voucher">🎫 Voucher Redeemed</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="notifData">Custom JSON Metadata Payload (Optional)</label>
+          <textarea id="notifData" rows="2" class="code-font" placeholder='{"offer_id": "89a01234-b56c-78d9-e012-345678901234", "discount": 50}'>{"action": "OPEN_OFFER", "discount": 50, "code": "BIZZ500"}</textarea>
+        </div>
+
+        <button class="btn btn-accent-gradient w-100 btn-lg" id="sendNotifBtn">
+          <span class="btn-icon">🚀</span> Dispatch FCM Push Alert
+        </button>
+      </div>
+    </section>
+
+    <!-- Bottom Right: Live Notification Center -->
+    <section class="card glass-panel" id="inboxSection">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🔔</span>
+          <h2>Live Notification Center</h2>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-xs btn-secondary" id="enableOsPushBtn" title="Enable Windows/Mac Desktop Push Popups">
+            🔔 Enable OS Popups
           </button>
-
-          <!-- Registered Devices List -->
-          <div class="registered-devices-wrapper" style="margin-top: 4px; padding-top: 10px; gap: 8px;">
-            <div class="wrapper-header">
-              <h3 style="font-size: 13px;">Registered Devices (<span id="deviceCount">0</span>)</h3>
-              <button class="icon-btn-small" id="refreshDevicesBtn" title="Refresh Devices List" style="width: 24px; height: 24px;">🔄</button>
-            </div>
-            <div class="devices-list" id="devicesList" style="max-height: 120px; gap: 6px;">
-              <div class="empty-state" style="padding: 10px; font-size: 12px;">No devices registered yet. Register a token above!</div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <!-- Right Column: Trigger Simulator & Live Notification Feed -->
-    <div class="right-col">
-      <!-- Section 3: Universal Notification Dispatcher -->
-      <section class="card glass-panel" id="dispatchSection">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="card-icon">🚀</span>
-            <h2>Universal Push Dispatcher</h2>
-          </div>
-          <span class="badge badge-warning">Trigger Engine</span>
-        </div>
-        <div class="card-body">
-          <p class="section-desc">Trigger backend notifications that automatically broadcast via FCM multicast push to all registered devices.</p>
-
-          <div class="grid-2">
-            <div class="form-group">
-              <label for="targetUserId">Target Recipient UUID</label>
-              <div class="input-with-action">
-                <input type="text" id="targetUserId" placeholder="UUID of recipient...">
-                <button class="btn btn-xs btn-outline" id="useMyIdBtn" title="Use my logged-in ID">Self</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="notificationType">Notification Category</label>
-              <select id="notificationType" class="custom-select">
-                <option value="GENERAL">📢 General Alert</option>
-                <option value="OFFER">🎁 Special Offer</option>
-                <option value="VOUCHER">🎫 Voucher & Coupon</option>
-                <option value="WALLET">💰 Wallet Transaction</option>
-                <option value="MEETING">📅 Meeting & Invite</option>
-                <option value="CHAT">💬 Chat Message</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="notifTitle">Alert Title</label>
-            <input type="text" id="notifTitle" value="🔥 Exclusive Offer Unlocked!" placeholder="Enter engaging notification title...">
-          </div>
-
-          <div class="form-group">
-            <label for="notifMessage">Message Content</label>
-            <textarea id="notifMessage" rows="2" placeholder="Enter notification description...">Congratulations! You have received an instant ₹500 discount voucher on your next BizzDeal purchase.</textarea>
-          </div>
-
-          <!-- Quick Templates -->
-          <div class="form-group">
-            <label>Quick Presets</label>
-            <div class="preset-chips">
-              <button class="chip" data-preset="offer">🎁 50% Offer</button>
-              <button class="chip" data-preset="wallet">💰 ₹1,000 Credited</button>
-              <button class="chip" data-preset="meeting">📅 Meeting Invite</button>
-              <button class="chip" data-preset="chat">💬 New Message</button>
-              <button class="chip" data-preset="voucher">🎫 Voucher Redeemed</button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="notifData">Custom JSON Metadata Payload (Optional)</label>
-            <textarea id="notifData" rows="2" class="code-font" placeholder='{"offer_id": "89a01234-b56c-78d9-e012-345678901234", "discount": 50}'>{"action": "OPEN_OFFER", "discount": 50, "code": "BIZZ500"}</textarea>
-          </div>
-
-          <button class="btn btn-accent-gradient w-100 btn-lg" id="sendNotifBtn">
-            <span class="btn-icon">🚀</span> Dispatch FCM Push Alert
+          <button class="btn btn-xs btn-outline" id="testOsPushBtn" title="Test instant OS notification popup right now">
+            🧪 Test OS Popup
           </button>
+          <span class="unread-badge" id="unreadBadge">0 Unread</span>
+          <button class="btn btn-xs btn-outline" id="refreshFeedBtn">🔄 Refresh</button>
         </div>
-      </section>
+      </div>
+      <div class="card-body">
+        <div class="feed-controls">
+          <div class="filter-tabs">
+            <button class="tab-btn active" data-filter="ALL">All</button>
+            <button class="tab-btn" data-filter="UNREAD">Unread</button>
+            <button class="tab-btn" data-filter="OFFER">Offers</button>
+            <button class="tab-btn" data-filter="WALLET">Wallet</button>
+            <button class="tab-btn" data-filter="MEETING">Meetings</button>
+          </div>
+        </div>
 
-      <!-- Section 4: Live Notification Inbox / Feed -->
-      <section class="card glass-panel" id="inboxSection">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="card-icon">🔔</span>
-            <h2>Live Notification Center</h2>
-          </div>
-          <div class="header-actions">
-            <button class="btn btn-xs btn-secondary" id="enableOsPushBtn" title="Enable Windows/Mac Desktop Push Popups">
-              🔔 Enable OS Popups
-            </button>
-            <button class="btn btn-xs btn-outline" id="testOsPushBtn" title="Test instant OS notification popup right now">
-              🧪 Test OS Popup
-            </button>
-            <span class="unread-badge" id="unreadBadge">0 Unread</span>
-            <button class="btn btn-xs btn-outline" id="refreshFeedBtn">🔄 Refresh</button>
+        <div class="notifications-list" id="notificationsList">
+          <div class="empty-state-container">
+            <div class="empty-icon">🔔</div>
+            <h3>No Notifications Found</h3>
+            <p>Your notification inbox is currently empty. Dispatch a test notification above to see it arrive in real-time!</p>
           </div>
         </div>
-        <div class="card-body">
-          <div class="feed-controls">
-            <div class="filter-tabs">
-              <button class="tab-btn active" data-filter="ALL">All</button>
-              <button class="tab-btn" data-filter="UNREAD">Unread</button>
-              <button class="tab-btn" data-filter="OFFER">Offers</button>
-              <button class="tab-btn" data-filter="WALLET">Wallet</button>
-              <button class="tab-btn" data-filter="MEETING">Meetings</button>
-            </div>
-          </div>
-
-          <div class="notifications-list" id="notificationsList">
-            <div class="empty-state-container">
-              <div class="empty-icon">🔔</div>
-              <h3>No Notifications Found</h3>
-              <p>Your notification inbox is currently empty. Dispatch a test notification above to see it arrive in real-time!</p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+      </div>
+    </section>
   </main>
 
   <!-- Toast Notification Container for Feedback -->
