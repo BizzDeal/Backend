@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const refreshFeedBtn = document.getElementById('refreshFeedBtn');
   const notificationsListEl = document.getElementById('notificationsList');
   const enableOsPushBtn = document.getElementById('enableOsPushBtn');
+  const testOsPushBtn = document.getElementById('testOsPushBtn');
 
   // --- INITIALIZATION ---
   apiUrlInput.value = state.apiUrl;
@@ -94,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
           showToast('success', 'OS Push Enabled!', 'You will now see real desktop notification banners arrive in real-time!');
           new Notification('BizzDeal FCM Engine', {
             body: '🎉 Desktop push notifications are now active for BizzDeal!',
-            icon: 'https://cdn-icons-png.flaticon.com/512/3602/3602145.png'
+            requireInteraction: true
           });
         } else {
           showToast('error', 'Permission Denied', 'Please allow notification permissions in your browser address bar.');
@@ -103,6 +104,43 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('error', 'Error', err.message);
       }
     });
+  }
+
+  if (testOsPushBtn) {
+    testOsPushBtn.addEventListener('click', () => {
+      if (!window.Notification) {
+        return showToast('error', 'Not Supported', 'HTML5 Notifications are not supported in this browser.');
+      }
+      if (Notification.permission !== 'granted') {
+        Notification.requestPermission().then(perm => {
+          if (perm === 'granted') {
+            if (enableOsPushBtn) {
+              enableOsPushBtn.innerHTML = '✅ OS Popups Active';
+              enableOsPushBtn.classList.add('badge-success');
+            }
+            triggerTestPopup();
+          } else {
+            showToast('error', 'Permission Denied', 'Please allow notifications in browser site settings.');
+          }
+        });
+      } else {
+        triggerTestPopup();
+      }
+    });
+  }
+
+  function triggerTestPopup() {
+    try {
+      const n = new Notification('🚀 BizzDeal OS Push Test', {
+        body: 'Success! Your Windows desktop notification popup is 100% working!',
+        requireInteraction: true
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+      showToast('success', 'Popup Sent!', 'Check your Windows desktop bottom right corner or Notification Center.');
+    } catch (err) {
+      console.error('Test notification failed:', err);
+      showToast('error', 'OS Blocked', 'Windows or browser site settings blocked the popup: ' + err.message);
+    }
   }
 
   if (phoneLoginBtn) {
@@ -331,8 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const osNotif = new Notification(title || 'BizzDeal FCM Alert', {
             body: message,
-            icon: 'https://cdn-icons-png.flaticon.com/512/3602/3602145.png',
-            tag: 'dispatch_' + Date.now()
+            tag: 'dispatch_' + Date.now(),
+            requireInteraction: true
           });
           osNotif.onclick = () => {
             window.focus();
@@ -517,8 +555,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const osNotif = new Notification(n.title || 'BizzDeal Push Alert', {
             body: n.message,
-            icon: 'https://cdn-icons-png.flaticon.com/512/3602/3602145.png',
             tag: n.id,
+            requireInteraction: true
           });
           osNotif.onclick = () => {
             window.focus();
