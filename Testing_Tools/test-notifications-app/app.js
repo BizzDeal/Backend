@@ -144,6 +144,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const targetUserIdInput = document.getElementById('targetUserId');
   const useMyIdBtn = document.getElementById('useMyIdBtn');
+  const singleUserGroup = document.getElementById('singleUserGroup');
+  const bulkUsersGroup = document.getElementById('bulkUsersGroup');
+  const bulkUserIdsInput = document.getElementById('bulkUserIds');
+  const useMyIdBulkBtn = document.getElementById('useMyIdBulkBtn');
+  const roleInfoGroup = document.getElementById('roleInfoGroup');
+  const roleInfoText = document.getElementById('roleInfoText');
   const notificationTypeSelect = document.getElementById('notificationType');
   const notifTitleInput = document.getElementById('notifTitle');
   const notifMessageInput = document.getElementById('notifMessage');
@@ -496,6 +502,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  useMyIdBulkBtn.addEventListener('click', () => {
+    if (state.userProfile && state.userProfile.id) {
+      const current = bulkUserIdsInput.value.trim();
+      if (current) {
+        if (!current.includes(state.userProfile.id)) {
+          bulkUserIdsInput.value = current + ', ' + state.userProfile.id;
+        }
+      } else {
+        bulkUserIdsInput.value = state.userProfile.id;
+      }
+      showToast('info', 'Target Added', 'Added your logged-in UUID to bulk list.');
+    } else {
+      showToast('error', 'No User', 'User profile not loaded. Connect first.');
+    }
+  });
+
+  document.querySelectorAll('input[name="dispatchMode"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      document.querySelectorAll('#dispatchModeCards .platform-card').forEach(c => c.classList.remove('active'));
+      e.target.closest('.platform-card')?.classList.add('active');
+
+      const mode = e.target.value;
+      singleUserGroup.classList.add('hidden');
+      bulkUsersGroup.classList.add('hidden');
+      roleInfoGroup.classList.add('hidden');
+
+      if (mode === 'SINGLE') {
+        singleUserGroup.classList.remove('hidden');
+        sendNotifBtn.innerHTML = '<span class="btn-icon">🚀</span> Dispatch Single FCM Push Alert';
+      } else if (mode === 'BULK') {
+        bulkUsersGroup.classList.remove('hidden');
+        sendNotifBtn.innerHTML = '<span class="btn-icon">👥</span> Dispatch Bulk FCM Push Alert';
+      } else if (mode === 'MEMBERS') {
+        roleInfoGroup.classList.remove('hidden');
+        roleInfoText.innerHTML = '💼 Broadcasts to ALL active Members via <code style="color: var(--accent-color);">POST /notifications/members</code>';
+        sendNotifBtn.innerHTML = '<span class="btn-icon">💼</span> Broadcast to All Members';
+      } else if (mode === 'CUSTOMERS') {
+        roleInfoGroup.classList.remove('hidden');
+        roleInfoText.innerHTML = '🛍️ Broadcasts to ALL active Customers via <code style="color: var(--accent-color);">POST /notifications/customers</code>';
+        sendNotifBtn.innerHTML = '<span class="btn-icon">🛍️</span> Broadcast to All Customers';
+      }
+    });
+  });
+
   // Preset Chips
   document.querySelectorAll('.chip[data-preset]').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -540,10 +590,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!state.jwtToken) {
       return showToast('error', 'Auth Required', 'Please connect with a JWT access token first.');
     }
-    const user_id = targetUserIdInput.value.trim() || (state.userProfile?.id);
-    if (!user_id) {
-      return showToast('error', 'Validation Error', 'Target Recipient UUID is required.');
-    }
+    const mode = document.querySelector('input[name="dispatchMode"]:checked')?.value || 'SINGLE';
+
     const title = notifTitleInput.value.trim();
     const message = notifMessageInput.value.trim();
     if (!title || !message) {
@@ -563,17 +611,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       sendNotifBtn.disabled = true;
-      sendNotifBtn.innerHTML = '<span class="btn-icon">🚀</span> Dispatching FCM Push...';
+      const originalText = sendNotifBtn.innerHTML;
+      sendNotifBtn.innerHTML = '<span class="btn-icon">⏳</span> Dispatching FCM Push...';
 
-      const res = await apiFetch('/notifications', 'POST', {
-        user_id,
-        title,
-        message,
-        type,
-        data
-      });
+      let res = null;
+      if (mode === 'SINGLE') {
+        const user_id = targetUserIdInput.value.trim() || (state.userProfile?.id);
+        if (!user_id) {
+          sendNotifBtn.disabled = false;
+          sendNotifBtn.innerHTML = originalText;
+          return showToast('error', 'Validation Error', 'Target Recipient UUID is required.');
+        }
+        res = await apiFetch('/notifications', 'POST', { user_id, title, message, type, data });
+      } else if (mode === 'BULK') {
+        const user_ids = bulkUserIdsInput.value.split(',').map(id => id.trim()).filter(Boolean);
+        if (user_ids.length === 0) {
+          sendNotifBtn.disabled = false;
+          sendNotifBtn.innerHTML = originalText;
+          return showToast('error', 'Validation Error', 'Please enter at least one target UUID.');
+        }
+        res = await apiFetch('/notifications/send-bulk', 'POST', { user_ids, title, message, type, data });
+      } else if (mode === 'MEMBERS') {
+        res = await apiFetch('/notifications/members', 'POST', { title, message, type, data });
+      } else if (mode === 'CUSTOMERS') {
+        res = await apiFetch('/notifications/customers', 'POST', { title, message, type, data });
+      }
 
-      showToast('success', 'Push Dispatched!', 'Notification saved and FCM multicast broadcast initiated.');
+      showToast('success', 'Push Dispatched!', res?.message || 'Notification saved and FCM multicast broadcast initiated.');
       
       if (window.Notification && Notification.permission === 'granted') {
         try {
@@ -596,7 +660,11 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('error', 'Dispatch Failed', err.message);
     } finally {
       sendNotifBtn.disabled = false;
-      sendNotifBtn.innerHTML = '<span class="btn-icon">🚀</span> Dispatch FCM Push Alert';
+      const mode = document.querySelector('input[name="dispatchMode"]:checked')?.value || 'SINGLE';
+      if (mode === 'SINGLE') sendNotifBtn.innerHTML = '<span class="btn-icon">🚀</span> Dispatch Single FCM Push Alert';
+      else if (mode === 'BULK') sendNotifBtn.innerHTML = '<span class="btn-icon">👥</span> Dispatch Bulk FCM Push Alert';
+      else if (mode === 'MEMBERS') sendNotifBtn.innerHTML = '<span class="btn-icon">💼</span> Broadcast to All Members';
+      else if (mode === 'CUSTOMERS') sendNotifBtn.innerHTML = '<span class="btn-icon">🛍️</span> Broadcast to All Customers';
     }
   });
 

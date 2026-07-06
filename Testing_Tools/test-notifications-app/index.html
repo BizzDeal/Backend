@@ -136,14 +136,60 @@
         <div class="card-body">
           <p class="section-desc">Trigger backend notifications that automatically broadcast via FCM multicast push to all registered devices.</p>
 
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label>Dispatch Target Mode (API Endpoint)</label>
+            <div class="platform-cards" id="dispatchModeCards" style="gap: 6px;">
+              <label class="platform-card active" style="flex-direction: row; padding: 8px 10px; justify-content: center; gap: 6px; cursor: pointer;">
+                <input type="radio" name="dispatchMode" value="SINGLE" checked>
+                <span class="platform-icon">👤</span>
+                <span class="platform-name" style="font-size: 11px;">Single User</span>
+              </label>
+              <label class="platform-card" style="flex-direction: row; padding: 8px 10px; justify-content: center; gap: 6px; cursor: pointer;">
+                <input type="radio" name="dispatchMode" value="BULK">
+                <span class="platform-icon">👥</span>
+                <span class="platform-name" style="font-size: 11px;">Bulk Users</span>
+              </label>
+              <label class="platform-card" style="flex-direction: row; padding: 8px 10px; justify-content: center; gap: 6px; cursor: pointer;">
+                <input type="radio" name="dispatchMode" value="MEMBERS">
+                <span class="platform-icon">💼</span>
+                <span class="platform-name" style="font-size: 11px;">All Members</span>
+              </label>
+              <label class="platform-card" style="flex-direction: row; padding: 8px 10px; justify-content: center; gap: 6px; cursor: pointer;">
+                <input type="radio" name="dispatchMode" value="CUSTOMERS">
+                <span class="platform-icon">🛍️</span>
+                <span class="platform-name" style="font-size: 11px;">All Customers</span>
+              </label>
+            </div>
+          </div>
+
           <div class="grid-2">
-            <div class="form-group">
-              <label for="targetUserId">Target Recipient UUID</label>
+            <!-- Single User Input -->
+            <div class="form-group" id="singleUserGroup">
+              <label for="targetUserId">Target Recipient UUID (<code style="font-size:10px;">POST /notifications</code>)</label>
               <div class="input-with-action">
                 <input type="text" id="targetUserId" placeholder="UUID of recipient...">
                 <button class="btn btn-xs btn-outline" id="useMyIdBtn" title="Use my logged-in ID">Self</button>
               </div>
             </div>
+
+            <!-- Bulk Users Input (Hidden by default) -->
+            <div class="form-group hidden" id="bulkUsersGroup">
+              <label for="bulkUserIds">Target UUIDs (<code style="font-size:10px;">POST /notifications/send-bulk</code>)</label>
+              <div class="input-with-action">
+                <input type="text" id="bulkUserIds" placeholder="Comma-separated UUIDs...">
+                <button class="btn btn-xs btn-outline" id="useMyIdBulkBtn" title="Add my logged-in ID">Self</button>
+              </div>
+            </div>
+
+            <!-- Role Broadcast Info (Hidden by default) -->
+            <div class="form-group hidden" id="roleInfoGroup">
+              <label>Broadcast Target Endpoint</label>
+              <div class="fcm-status-box" style="padding: 10px 12px; margin: 0; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                <span id="roleInfoText" style="font-size: 11px; color: var(--text-primary); font-weight: 500;">💼 Broadcasts to ALL active Members via <code style="color: var(--accent-color);">POST /notifications/members</code></span>
+              </div>
+            </div>
+
+            <!-- Notification Category (Always shown) -->
             <div class="form-group">
               <label for="notificationType">Notification Category</label>
               <select id="notificationType" class="custom-select">
