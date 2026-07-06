@@ -22,6 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const connectBtn = document.getElementById('connectBtn');
   const clearAuthBtn = document.getElementById('clearAuthBtn');
   
+  const loginPhoneInput = document.getElementById('loginPhone');
+  const loginPinInput = document.getElementById('loginPin');
+  const phoneLoginBtn = document.getElementById('phoneLoginBtn');
+
   const apiStatusPill = document.getElementById('apiStatusPill');
   const apiStatusText = document.getElementById('apiStatusText');
   const authStatusPill = document.getElementById('authStatusPill');
@@ -61,6 +65,50 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- EVENT LISTENERS ---
+  if (phoneLoginBtn) {
+    phoneLoginBtn.addEventListener('click', async () => {
+      const phone = loginPhoneInput.value.trim();
+      const pin = loginPinInput.value.trim();
+      state.apiUrl = apiUrlInput.value.trim().replace(/\/$/, '');
+      localStorage.setItem('bizzdeal_fcm_api_url', state.apiUrl);
+
+      if (!phone || !pin) {
+        showToast('error', 'Validation Error', 'Please enter both phone number and PIN.');
+        return;
+      }
+
+      phoneLoginBtn.disabled = true;
+      phoneLoginBtn.innerHTML = '<span class="btn-icon">⏳</span> Logging in...';
+
+      try {
+        const response = await fetch(`${state.apiUrl}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, pin }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          const errorMsg = data?.message || data?.error || 'Login failed';
+          throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        }
+
+        state.jwtToken = data.accessToken || data.access_token;
+        jwtTokenInput.value = state.jwtToken;
+        localStorage.setItem('bizzdeal_fcm_jwt_token', state.jwtToken);
+
+        showToast('success', 'Login Successful!', `Welcome back, ${data.user?.full_name || data.user?.phone || 'User'}!`);
+        loginPinInput.value = ''; // Clear PIN for security
+        verifyAndConnect();
+      } catch (err) {
+        showToast('error', 'Login Failed', err.message);
+      } finally {
+        phoneLoginBtn.disabled = false;
+        phoneLoginBtn.innerHTML = '<span class="btn-icon">🚀</span> Login & Auto-Connect';
+      }
+    });
+  }
+
   toggleTokenBtn.addEventListener('click', () => {
     if (jwtTokenInput.type === 'password') {
       jwtTokenInput.type = 'text';
@@ -482,6 +530,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 ✔️ Read
               </span>
             `}
+            <button class="btn btn-xs btn-outline" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteNotification('${n.id}')" title="Delete Notification">
+              🗑️ Delete
+            </button>
           </div>
         </div>
       `;
@@ -506,6 +557,19 @@ document.addEventListener('DOMContentLoaded', () => {
       renderNotifications();
       updateUnreadBadge();
       showToast('success', 'Read', 'Notification marked as read.');
+    } catch (err) {
+      showToast('error', 'Error', err.message);
+    }
+  };
+
+  window.deleteNotification = async (id) => {
+    if (!confirm('Are you sure you want to delete this notification?')) return;
+    try {
+      await apiFetch(`/notifications/${id}`, 'DELETE');
+      state.notifications = state.notifications.filter(n => n.id !== id);
+      renderNotifications();
+      updateUnreadBadge();
+      showToast('success', 'Deleted', 'Notification deleted successfully.');
     } catch (err) {
       showToast('error', 'Error', err.message);
     }

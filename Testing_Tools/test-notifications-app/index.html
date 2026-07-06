@@ -56,6 +56,33 @@
               <input type="text" id="apiUrl" value="http://localhost:3000" placeholder="e.g. http://localhost:3000">
             </div>
           </div>
+
+          <!-- Phone + PIN Quick Login Card -->
+          <div class="login-box-card">
+            <div class="login-box-header">
+              <span class="login-box-icon">📱</span>
+              <div class="login-box-title">
+                <h4>Quick Phone + PIN Login</h4>
+                <p>Login directly to auto-fetch & connect your JWT access token</p>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group mb-0 flex-1">
+                <input type="text" id="loginPhone" placeholder="Phone (e.g. 9876543210)" autocomplete="tel">
+              </div>
+              <div class="form-group mb-0 flex-1">
+                <input type="password" id="loginPin" placeholder="PIN (e.g. 1234)">
+              </div>
+            </div>
+            <button class="btn btn-accent-gradient w-100 mt-2" id="phoneLoginBtn">
+              <span class="btn-icon">🚀</span> Login & Auto-Connect
+            </button>
+          </div>
+
+          <div class="divider-line">
+            <span>OR MANUALLY ENTER TOKEN</span>
+          </div>
+
           <div class="form-group">
             <label for="jwtToken">JWT Bearer Token</label>
             <div class="input-with-icon">
