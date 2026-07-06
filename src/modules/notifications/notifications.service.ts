@@ -148,7 +148,7 @@ export class NotificationsService {
     if (data.target_role) {
       const usersWithRole = await this.userRepository.find({
         where: { role: data.target_role },
-        select: ['id'],
+        select: { id: true },
       });
       const roleUserIds = usersWithRole.map((u) => u.id);
       targetUserIds = Array.from(new Set([...targetUserIds, ...roleUserIds]));
