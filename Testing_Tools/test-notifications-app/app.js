@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const unreadBadgeEl = document.getElementById('unreadBadge');
   const refreshFeedBtn = document.getElementById('refreshFeedBtn');
   const notificationsListEl = document.getElementById('notificationsList');
+  const enableOsPushBtn = document.getElementById('enableOsPushBtn');
 
   // --- INITIALIZATION ---
   apiUrlInput.value = state.apiUrl;
@@ -70,7 +71,40 @@ document.addEventListener('DOMContentLoaded', () => {
     verifyAndConnect();
   }
 
+  if (enableOsPushBtn && window.Notification && Notification.permission === 'granted') {
+    enableOsPushBtn.innerHTML = '✅ OS Popups Active';
+    enableOsPushBtn.classList.add('badge-success');
+  }
+
   // --- EVENT LISTENERS ---
+  if (enableOsPushBtn) {
+    enableOsPushBtn.addEventListener('click', async () => {
+      if (!window.Notification) {
+        return showToast('error', 'Not Supported', 'Your browser does not support HTML5 Desktop Notifications.');
+      }
+      if (Notification.permission === 'granted') {
+        showToast('info', 'Already Active', 'Windows/Desktop push popups are already enabled!');
+        return;
+      }
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          enableOsPushBtn.innerHTML = '✅ OS Popups Active';
+          enableOsPushBtn.classList.add('badge-success');
+          showToast('success', 'OS Push Enabled!', 'You will now see real desktop notification banners arrive in real-time!');
+          new Notification('BizzDeal FCM Engine', {
+            body: '🎉 Desktop push notifications are now active for BizzDeal!',
+            icon: 'https://cdn-icons-png.flaticon.com/512/3602/3602145.png'
+          });
+        } else {
+          showToast('error', 'Permission Denied', 'Please allow notification permissions in your browser address bar.');
+        }
+      } catch (err) {
+        showToast('error', 'Error', err.message);
+      }
+    });
+  }
+
   if (phoneLoginBtn) {
     phoneLoginBtn.addEventListener('click', async () => {
       const phone = loginPhoneInput.value.trim();
@@ -456,10 +490,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
 
+  function processNewNotifications(newNotifsList) {
+    if (!newNotifsList || newNotifsList.length === 0) return;
+    const oldIds = new Set(state.notifications.map(n => n.id));
+    const newlyArrived = newNotifsList.filter(n => !oldIds.has(n.id) && !n.is_read);
+
+    if (newlyArrived.length > 0 && window.Notification && Notification.permission === 'granted') {
+      newlyArrived.forEach(n => {
+        try {
+          const osNotif = new Notification(n.title || 'BizzDeal Push Alert', {
+            body: n.message,
+            icon: 'https://cdn-icons-png.flaticon.com/512/3602/3602145.png',
+            tag: n.id,
+          });
+          osNotif.onclick = () => {
+            window.focus();
+            osNotif.close();
+          };
+        } catch (e) {
+          console.error('OS Notification error:', e);
+        }
+      });
+    }
+  }
+
   async function fetchNotifications() {
     if (!state.jwtToken) return;
     try {
       const notifs = await apiFetch('/notifications');
+      processNewNotifications(notifs || []);
       state.notifications = notifs || [];
       renderNotifications();
       updateUnreadBadge();
@@ -473,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const notifs = await apiFetch('/notifications');
       if (JSON.stringify(notifs) !== JSON.stringify(state.notifications)) {
+        processNewNotifications(notifs || []);
         state.notifications = notifs || [];
         renderNotifications();
         updateUnreadBadge();
