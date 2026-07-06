@@ -4,9 +4,15 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  let defaultUrl = localStorage.getItem('bizzdeal_fcm_api_url') || 'http://localhost:3000/bizzdeal/api';
+  if (defaultUrl === 'http://localhost:3000' || defaultUrl === 'http://localhost:3000/') {
+    defaultUrl = 'http://localhost:3000/bizzdeal/api';
+    localStorage.setItem('bizzdeal_fcm_api_url', defaultUrl);
+  }
+
   // --- STATE ---
   const state = {
-    apiUrl: localStorage.getItem('bizzdeal_fcm_api_url') || 'http://localhost:3000',
+    apiUrl: defaultUrl,
     jwtToken: localStorage.getItem('bizzdeal_fcm_jwt_token') || '',
     userProfile: null,
     devices: [],
