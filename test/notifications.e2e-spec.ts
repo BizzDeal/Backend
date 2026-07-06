@@ -86,6 +86,8 @@ describe('NotificationsController (e2e)', () => {
       .useValue(mockNotificationRepo)
       .overrideProvider(getRepositoryToken(UserDevice))
       .useValue(mockDeviceRepo)
+      .overrideProvider(getRepositoryToken(User))
+      .useValue({})
       .overrideProvider(FirebaseService)
       .useValue(mockFirebaseService)
       .overrideGuard(JwtAuthGuard)
