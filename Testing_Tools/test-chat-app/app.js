@@ -18,6 +18,12 @@ class BizzDealChatClient {
     this.typingTimeout = null;
     this.isTyping = false;
     
+    this.mediaCache = new Map();
+    this.selectedFile = null;
+    this.mediaRecorder = null;
+    this.audioChunks = [];
+    this.isRecording = false;
+    
     this.initDOM();
     this.initEventListeners();
     this.initAudio();
@@ -35,6 +41,11 @@ class BizzDealChatClient {
     
     // Sidebar
     this.mainApp = document.getElementById('main-app');
+    this.sidebarPanel = document.getElementById('sidebar-panel');
+    this.sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    this.btnToggleSidebarEmpty = document.getElementById('btn-toggle-sidebar-empty');
+    this.btnToggleSidebarActive = document.getElementById('btn-toggle-sidebar-active');
+    this.btnCloseSidebar = document.getElementById('btn-close-sidebar');
     this.currentUserAvatar = document.getElementById('current-user-avatar');
     this.currentUserName = document.getElementById('current-user-name');
     this.myStatusDot = document.getElementById('my-status-dot');
@@ -52,13 +63,34 @@ class BizzDealChatClient {
     this.partnerTypingIndicator = document.getElementById('partner-typing-indicator');
     this.messagesContainer = document.getElementById('messages-container');
     
-    // Form
+    // Form & Attachments
     this.formSendMessage = document.getElementById('form-send-message');
     this.messageInput = document.getElementById('message-input');
-    this.msgTypeSelect = document.getElementById('msg-type');
+    this.attachmentPreview = document.getElementById('attachment-preview');
+    this.attachmentIcon = document.getElementById('attachment-icon');
+    this.attachmentName = document.getElementById('attachment-name');
+    this.btnClearAttachment = document.getElementById('btn-clear-attachment');
+    this.mediaFileInput = document.getElementById('media-file-input');
+    this.btnAttach = document.getElementById('btn-attach');
+    this.btnVoiceRecord = document.getElementById('btn-voice-record');
   }
 
   initEventListeners() {
+    // Responsive Drawer Toggle & Close
+    const openSidebar = () => {
+      if (this.sidebarPanel) this.sidebarPanel.classList.add('open');
+      if (this.sidebarBackdrop) this.sidebarBackdrop.classList.remove('hidden');
+    };
+    const closeSidebar = () => {
+      if (this.sidebarPanel) this.sidebarPanel.classList.remove('open');
+      if (this.sidebarBackdrop) this.sidebarBackdrop.classList.add('hidden');
+    };
+
+    this.btnToggleSidebarEmpty?.addEventListener('click', openSidebar);
+    this.btnToggleSidebarActive?.addEventListener('click', openSidebar);
+    this.btnCloseSidebar?.addEventListener('click', closeSidebar);
+    this.sidebarBackdrop?.addEventListener('click', closeSidebar);
+
     // Auth Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -147,6 +179,29 @@ class BizzDealChatClient {
       if (this.activeConversation) {
         await this.loadMessages(this.activeConversation.id);
       }
+    });
+
+    // Attachment Button
+    this.btnAttach.addEventListener('click', () => {
+      this.mediaFileInput.click();
+    });
+
+    // File Selected
+    this.mediaFileInput.addEventListener('change', () => {
+      if (this.mediaFileInput.files && this.mediaFileInput.files[0]) {
+        this.selectedFile = this.mediaFileInput.files[0];
+        this.showAttachmentPreview(this.selectedFile.name);
+      }
+    });
+
+    // Clear Attachment Button
+    this.btnClearAttachment.addEventListener('click', () => {
+      this.clearAttachment();
+    });
+
+    // Voice Record Button
+    this.btnVoiceRecord.addEventListener('click', () => {
+      this.toggleVoiceRecording();
     });
   }
 
@@ -448,14 +503,14 @@ class BizzDealChatClient {
 
   async markConversationAsRead(conversationId) {
     try {
-      // Hit REST fallback API
-      await this.fetchWithAuth(`/chat/conversations/${conversationId}/read`, {
-        method: 'PUT'
-      });
-      
-      // Also emit WebSocket mark_as_read
+      // Emit WebSocket mark_as_read immediately if connected
       if (this.socket && this.socket.connected) {
         this.socket.emit('mark_as_read', { conversation_id: conversationId });
+      } else {
+        // Hit REST fallback API only if socket is disconnected
+        await this.fetchWithAuth(`/chat/conversations/${conversationId}/read`, {
+          method: 'PUT'
+        });
       }
 
       // Update local unread count badge
@@ -547,10 +602,8 @@ class BizzDealChatClient {
           message_id: msg.id
         });
 
-        // If window is active, mark as read immediately
-        if (!document.hidden) {
-          this.markConversationAsRead(msg.conversation_id);
-        }
+        // Mark conversation as read immediately since it is active in UI
+        this.markConversationAsRead(msg.conversation_id);
       } else {
         // Increment unread count badge in sidebar
         const conv = this.conversations.find(c => c.id === msg.conversation_id);
@@ -572,7 +625,8 @@ class BizzDealChatClient {
         const msgObj = this.messages.find(m => m.id === data.message_id);
         if (msgObj) {
           msgObj.status = data.status;
-          this.updateMessageTicksUI(data.message_id, 'DELIVERED');
+          if (data.status === 'READ') msgObj.is_read = true;
+          this.updateMessageTicksUI(data.message_id, data.status);
         }
       }
     });
@@ -584,6 +638,7 @@ class BizzDealChatClient {
         this.messages.forEach(m => {
           if (m.sender_id === this.currentUser.id) {
             m.is_read = true;
+            m.status = 'READ';
           }
         });
         // Update all outgoing bubbles to Blue Ticks
@@ -593,6 +648,17 @@ class BizzDealChatClient {
           el.title = 'Read';
         });
       }
+    });
+
+    // Message Edited & Deleted
+    this.socket.on('message_edited', (updatedMsg) => {
+      console.log('✏️ Message edited via Socket:', updatedMsg);
+      this.handleMessageEdited(updatedMsg);
+    });
+
+    this.socket.on('message_deleted', (data) => {
+      console.log('🗑️ Message deleted via Socket:', data);
+      this.handleMessageDeleted(data);
     });
 
     // Typing Indicators
@@ -614,24 +680,41 @@ class BizzDealChatClient {
      ========================================================================== */
   async sendMessage() {
     const text = this.messageInput.value.trim();
-    const type = this.msgTypeSelect.value;
     
-    if (!text && type === 'TEXT') return;
+    if (!text && !this.selectedFile) return;
     if (!this.activeConversation) return;
+
+    let type = 'TEXT';
+    if (this.selectedFile) {
+      if (this.selectedFile.type.startsWith('image/')) {
+        type = 'IMAGE';
+      } else if (this.selectedFile.type.startsWith('audio/') || this.selectedFile.type.startsWith('video/') || this.selectedFile.name.endsWith('.webm') || this.selectedFile.name.endsWith('.mp3') || this.selectedFile.name.endsWith('.wav')) {
+        type = 'VOICE';
+      } else {
+        type = 'FILE';
+      }
+    }
+
+    let mediaFileId = null;
+    if (this.selectedFile) {
+      this.showAttachmentPreview('Uploading attachment...', 'ri-loader-4-line ri-spin');
+      mediaFileId = await this.uploadMediaFile(this.selectedFile);
+      if (!mediaFileId && (type === 'IMAGE' || type === 'VOICE' || type === 'FILE')) {
+        this.showAttachmentPreview('Upload failed! Please try again.', 'ri-error-warning-line');
+        return;
+      }
+      this.clearAttachment();
+    }
 
     const payload = {
       conversation_id: this.activeConversation.id,
-      message: text || `[${type} Message]`,
+      message: text || (mediaFileId ? `[${type}]` : null),
       message_type: type,
-      media_file_id: null
+      media_file_id: mediaFileId
     };
 
     // Emit send_message via WebSocket
     if (this.socket && this.socket.connected) {
-      this.socket.emit('send_message', payload, (response) => {
-        console.log('✉️ Sent message acknowledgment:', response);
-      });
-
       // Optimistically append outgoing message to chat room
       const tempMsg = {
         id: 'temp-' + Date.now(),
@@ -639,6 +722,7 @@ class BizzDealChatClient {
         sender_id: this.currentUser.id,
         message: payload.message,
         message_type: type,
+        media_file_id: mediaFileId,
         created_at: new Date().toISOString(),
         is_read: false,
         status: 'SENT'
@@ -649,6 +733,27 @@ class BizzDealChatClient {
       this.scrollToBottom();
       this.messageInput.value = '';
       this.stopTyping();
+
+      this.socket.emit('send_message', payload, (response) => {
+        console.log('✉️ Sent message acknowledgment:', response);
+        if (response && response.message_id) {
+          const idx = this.messages.findIndex(m => m.id === tempMsg.id);
+          if (idx !== -1) {
+            const currentMsg = this.messages[idx];
+            const respMsg = response.message || {};
+            const realMsg = {
+              ...currentMsg,
+              ...respMsg,
+              id: response.message_id,
+              created_at: response.created_at || currentMsg.created_at,
+              is_read: currentMsg.is_read || respMsg.is_read || false,
+              status: (currentMsg.status === 'READ' || currentMsg.status === 'DELIVERED' || currentMsg.is_read) ? (currentMsg.is_read ? 'READ' : currentMsg.status) : (respMsg.status || 'SENT')
+            };
+            this.messages[idx] = realMsg;
+          }
+          this.renderMessages();
+        }
+      });
     } else {
       // Fallback: send via REST POST /chat/messages
       try {
@@ -696,6 +801,77 @@ class BizzDealChatClient {
         receiver_id: partnerId
       });
       this.isTyping = false;
+    }
+  }
+
+  async editMessage(msgId, newText) {
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('edit_message', { message_id: msgId, message: newText }, (res) => {
+        console.log('✏️ Edit message acknowledgment:', res);
+        if (res && res.status === 'EDITED') {
+          this.handleMessageEdited(res.message);
+        }
+      });
+    } else {
+      try {
+        const res = await this.fetchWithAuth(`/chat/messages/${msgId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: newText })
+        });
+        if (res.ok) {
+          const updatedMsg = await res.json();
+          this.handleMessageEdited(updatedMsg);
+        } else {
+          const err = await res.json();
+          alert(err.message || 'Failed to edit message');
+        }
+      } catch (err) {
+        console.error('Error editing message:', err);
+      }
+    }
+  }
+
+  async deleteMessage(msgId) {
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('delete_message', { message_id: msgId }, (res) => {
+        console.log('🗑️ Delete message acknowledgment:', res);
+        if (res && res.status === 'DELETED') {
+          this.handleMessageDeleted({ message_id: msgId, is_deleted: true });
+        }
+      });
+    } else {
+      try {
+        const res = await this.fetchWithAuth(`/chat/messages/${msgId}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          this.handleMessageDeleted({ message_id: msgId, is_deleted: true });
+        } else {
+          const err = await res.json();
+          alert(err.message || 'Failed to delete message');
+        }
+      } catch (err) {
+        console.error('Error deleting message:', err);
+      }
+    }
+  }
+
+  handleMessageEdited(updatedMsg) {
+    const idx = this.messages.findIndex(m => m.id === updatedMsg.id);
+    if (idx !== -1) {
+      this.messages[idx] = { ...this.messages[idx], ...updatedMsg };
+      this.renderMessages();
+    }
+  }
+
+  handleMessageDeleted(data) {
+    const idx = this.messages.findIndex(m => m.id === data.message_id);
+    if (idx !== -1) {
+      this.messages[idx].is_deleted = true;
+      this.messages[idx].message = null;
+      this.messages[idx].media_file_id = null;
+      this.renderMessages();
     }
   }
 
@@ -765,6 +941,10 @@ class BizzDealChatClient {
     this.noChatSelected.classList.remove('active');
     this.activeChatRoom.classList.remove('hidden');
     
+    // Automatically close mobile sidebar drawer when conversation is selected
+    if (this.sidebarPanel) this.sidebarPanel.classList.remove('open');
+    if (this.sidebarBackdrop) this.sidebarBackdrop.classList.add('hidden');
+    
     const partnerId = this.getPartnerId(conv);
     const partnerName = this.getPartnerName(partnerId);
     this.partnerName.textContent = partnerName;
@@ -799,16 +979,8 @@ class BizzDealChatClient {
     bubble.className = `message-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`;
     bubble.dataset.msgId = msg.id;
 
-    // Format type icon
-    let typeIcon = '';
-    if (msg.message_type === 'IMAGE') typeIcon = '<span class="msg-type-badge"><i class="ri-image-line"></i> Image</span>';
-    else if (msg.message_type === 'VOICE') typeIcon = '<span class="msg-type-badge"><i class="ri-mic-line"></i> Voice Note</span>';
-    else if (msg.message_type === 'FILE') typeIcon = '<span class="msg-type-badge"><i class="ri-attachment-line"></i> File</span>';
-
-    // Format time
     const timeStr = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
 
-    // Ticks formatting for outgoing messages
     let ticksHtml = '';
     if (isOutgoing) {
       if (msg.is_read || msg.status === 'READ') {
@@ -820,14 +992,86 @@ class BizzDealChatClient {
       }
     }
 
+    if (msg.is_deleted) {
+      bubble.innerHTML = `
+        <div class="deleted-msg-text"><i class="ri-prohibited-line"></i> This message was deleted</div>
+        <div class="msg-meta">
+          <span>${timeStr}</span>
+          ${ticksHtml}
+        </div>
+      `;
+      this.messagesContainer.appendChild(bubble);
+      return;
+    }
+
+    // Format type icon
+    let typeIcon = '';
+    if (msg.message_type === 'IMAGE') typeIcon = '<span class="msg-type-badge"><i class="ri-image-line"></i> Image</span>';
+    else if (msg.message_type === 'VOICE') typeIcon = '<span class="msg-type-badge"><i class="ri-mic-line"></i> Voice Note</span>';
+    else if (msg.message_type === 'FILE') typeIcon = '<span class="msg-type-badge"><i class="ri-attachment-line"></i> File</span>';
+
+    let mediaHtml = '';
+    if (msg.media_file_id) {
+      if (this.mediaCache && this.mediaCache.has(msg.media_file_id)) {
+        mediaHtml = this.renderMediaContent(this.mediaCache.get(msg.media_file_id), msg.message_type);
+      } else {
+        mediaHtml = `<div class="media-placeholder" data-media-id="${msg.media_file_id}" data-msg-type="${msg.message_type}" style="font-size: 13px; opacity: 0.8; margin-top: 6px;"><i class="ri-loader-4-line ri-spin"></i> Loading attachment...</div>`;
+        this.fetchAndRenderMedia(msg.media_file_id);
+      }
+    }
+
+    let textHtml = '';
+    if (msg.message && !msg.message.match(/^\[(IMAGE|VOICE|FILE)\]$/i)) {
+      textHtml = `<div class="msg-text">${this.escapeHTML(msg.message)}</div>`;
+    }
+
+    const editedHtml = msg.is_edited ? '<span class="edited-badge">(edited)</span>' : '';
+
+    let actionsHtml = '';
+    if (isOutgoing && !msg.id.startsWith('temp-')) {
+      actionsHtml = `
+        <div class="msg-actions">
+          <button type="button" class="msg-action-btn btn-edit-msg" title="Edit message"><i class="ri-edit-line"></i></button>
+          <button type="button" class="msg-action-btn btn-delete-msg" title="Delete message"><i class="ri-delete-bin-line"></i></button>
+        </div>
+      `;
+    }
+
     bubble.innerHTML = `
+      ${actionsHtml}
       ${typeIcon}
-      <div class="msg-text">${this.escapeHTML(msg.message || '')}</div>
+      ${mediaHtml}
+      ${textHtml}
       <div class="msg-meta">
+        ${editedHtml}
         <span>${timeStr}</span>
         ${ticksHtml}
       </div>
     `;
+
+    if (isOutgoing && !msg.id.startsWith('temp-')) {
+      const editBtn = bubble.querySelector('.btn-edit-msg');
+      if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const currentText = msg.message && !msg.message.match(/^\[(IMAGE|VOICE|FILE)\]$/i) ? msg.message : '';
+          const newText = prompt('Edit your message:', currentText);
+          if (newText !== null && newText.trim() !== '' && newText.trim() !== currentText) {
+            this.editMessage(msg.id, newText.trim());
+          }
+        });
+      }
+
+      const deleteBtn = bubble.querySelector('.btn-delete-msg');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm('Are you sure you want to delete this message?')) {
+            this.deleteMessage(msg.id);
+          }
+        });
+      }
+    }
 
     this.messagesContainer.appendChild(bubble);
   }
@@ -858,6 +1102,114 @@ class BizzDealChatClient {
     const p = document.createElement('p');
     p.textContent = str;
     return p.innerHTML;
+  }
+
+  showAttachmentPreview(name, iconClass = 'ri-attachment-line') {
+    if (this.attachmentName) this.attachmentName.textContent = name;
+    if (this.attachmentIcon) this.attachmentIcon.className = iconClass;
+    if (this.attachmentPreview) this.attachmentPreview.classList.remove('hidden');
+  }
+
+  clearAttachment() {
+    this.selectedFile = null;
+    if (this.mediaFileInput) this.mediaFileInput.value = '';
+    if (this.attachmentPreview) this.attachmentPreview.classList.add('hidden');
+  }
+
+  async toggleVoiceRecording() {
+    if (this.isRecording) {
+      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
+      }
+      this.isRecording = false;
+      this.btnVoiceRecord.classList.remove('voice-recording');
+      this.btnVoiceRecord.innerHTML = '<i class="ri-mic-line"></i>';
+      this.btnVoiceRecord.title = 'Record voice note';
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this.mediaRecorder = new MediaRecorder(stream);
+        this.audioChunks = [];
+        this.mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) this.audioChunks.push(e.data);
+        };
+        this.mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+          this.selectedFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+          this.showAttachmentPreview('Voice Note Recording (Ready)', 'ri-mic-fill');
+          stream.getTracks().forEach(t => t.stop());
+        };
+        this.mediaRecorder.start();
+        this.isRecording = true;
+        this.btnVoiceRecord.classList.add('voice-recording');
+        this.btnVoiceRecord.innerHTML = '<i class="ri-stop-circle-fill"></i>';
+        this.btnVoiceRecord.title = 'Stop recording';
+        this.showAttachmentPreview('Recording Voice Note... Click microphone to stop', 'ri-mic-fill');
+      } catch (err) {
+        alert('Could not access microphone: ' + err.message);
+      }
+    }
+  }
+
+  async uploadMediaFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/chat/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.id) {
+        if (!this.mediaCache) this.mediaCache = new Map();
+        this.mediaCache.set(data.id, data);
+        return data.id;
+      } else {
+        throw new Error(data.message || 'Upload failed');
+      }
+    } catch (err) {
+      console.error('File upload error:', err);
+      alert('Failed to upload attachment: ' + err.message);
+      return null;
+    }
+  }
+
+  renderMediaContent(media, msgType) {
+    if (!media || !media.file_url) return '';
+    const url = media.file_url;
+    if (msgType === 'IMAGE' || media.file_type === 'IMAGE') {
+      return `<img src="${url}" class="msg-media-img" alt="Attached Image" onclick="window.open('${url}', '_blank')">`;
+    } else if (msgType === 'VOICE' || media.file_type === 'AUDIO') {
+      return `<audio controls src="${url}" class="msg-media-audio"></audio>`;
+    } else if (media.file_type === 'VIDEO') {
+      return `<video controls src="${url}" class="msg-media-img"></video>`;
+    } else {
+      const sizeStr = media.file_size ? ` (${Math.round(media.file_size / 1024)} KB)` : '';
+      return `<a href="${url}" target="_blank" class="msg-media-file"><i class="ri-download-cloud-2-line"></i> Download File${sizeStr}</a>`;
+    }
+  }
+
+  async fetchAndRenderMedia(mediaId) {
+    try {
+      const res = await this.fetchWithAuth(`/media/${mediaId}`);
+      const data = await res.json();
+      if (res.ok && data.id) {
+        if (!this.mediaCache) this.mediaCache = new Map();
+        this.mediaCache.set(data.id, data);
+        document.querySelectorAll(`.media-placeholder[data-media-id="${data.id}"]`).forEach(el => {
+          const msgType = el.dataset.msgType || 'FILE';
+          el.outerHTML = this.renderMediaContent(data, msgType);
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching media details:', err);
+      document.querySelectorAll(`.media-placeholder[data-media-id="${mediaId}"]`).forEach(el => {
+        el.innerHTML = '<span style="color: var(--danger); font-size: 12px;"><i class="ri-error-warning-line"></i> Failed to load media</span>';
+      });
+    }
   }
 }
 

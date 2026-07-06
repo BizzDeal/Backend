@@ -3,31 +3,52 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
+import { MediaService } from '../media/media.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { User } from '../users/entities/user.entity';
-import { MessageType } from '../../common/enums';
-import { CreateConversationDto, SendMessageDto } from './dto/chat-rest.dto';
+import { MessageType, MediaPurpose } from '../../common/enums';
+import {
+  CreateConversationDto,
+  SendMessageDto,
+  EditMessageDto,
+} from './dto/chat-rest.dto';
+import {
+  createConversationSchema,
+  sendMessageSchema,
+  editMessageSchema,
+} from './schemas/chat.schema';
 
 @ApiTags('Chat')
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   @Post('conversations')
   @HttpCode(HttpStatus.CREATED)
@@ -41,7 +62,8 @@ export class ChatController {
     description: 'Conversation returned successfully.',
   })
   async createConversation(
-    @Body() body: CreateConversationDto,
+    @Body(new ZodValidationPipe(createConversationSchema))
+    body: CreateConversationDto,
     @CurrentUser() user: User,
   ) {
     return this.chatService.createConversation(body.target_user_id, user);
@@ -123,7 +145,10 @@ export class ChatController {
       'Sends a message to a conversation via HTTP REST API and triggers push notifications if recipient is offline.',
   })
   @ApiResponse({ status: 201, description: 'Message sent successfully.' })
-  async sendMessage(@Body() body: SendMessageDto, @CurrentUser() user: User) {
+  async sendMessage(
+    @Body(new ZodValidationPipe(sendMessageSchema)) body: SendMessageDto,
+    @CurrentUser() user: User,
+  ) {
     return this.chatService.sendMessage(
       body.conversation_id,
       body.message || null,
@@ -147,5 +172,88 @@ export class ChatController {
   @ApiResponse({ status: 404, description: 'Message not found.' })
   async getMessageById(@Param('id') id: string, @CurrentUser() user: User) {
     return this.chatService.getMessageById(id, user);
+  }
+
+  @Put('messages/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Edit Message',
+    description:
+      'Edits the text content of an existing chat message. Only the sender of the message is permitted to edit it.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Message edited successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot edit a deleted message or invalid input.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the sender can edit this message.',
+  })
+  @ApiResponse({ status: 404, description: 'Message not found.' })
+  async editMessage(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(editMessageSchema)) body: EditMessageDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.chatService.editMessage(id, body.message, user);
+  }
+
+  @Delete('messages/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete Message',
+    description:
+      'Soft-deletes a chat message by setting is_deleted to true and clearing content. Only the sender of the message is permitted to delete it.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Message deleted successfully.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the sender can delete this message.',
+  })
+  @ApiResponse({ status: 404, description: 'Message not found.' })
+  async deleteMessage(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.chatService.deleteMessage(id, user);
+  }
+
+  @Post('upload')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Upload Chat Media File',
+    description:
+      'Uploads an image, document, or voice note for use in chat messages. Returns the media file metadata including the UUID to pass as media_file_id when sending a message.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'The media file (image, voice note, document) to upload',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Chat media file uploaded successfully.',
+  })
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: User,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.mediaService.saveFile(file, user.id, MediaPurpose.GENERAL);
   }
 }

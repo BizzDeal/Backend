@@ -53,6 +53,12 @@ export class ChatMessage {
   @Column({ type: 'timestamp', nullable: true })
   read_at: Date | null;
 
+  @Column({ type: 'boolean', default: false })
+  is_edited: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  is_deleted: boolean;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

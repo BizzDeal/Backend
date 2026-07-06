@@ -20,6 +20,8 @@ import {
   MessageDeliveredWsSchema,
   MarkAsReadWsSchema,
   TypingWsSchema,
+  EditMessageWsSchema,
+  DeleteMessageWsSchema,
 } from './dto/chat-ws.dto';
 import { User } from '../users/entities/user.entity';
 
@@ -132,6 +134,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         status: 'SENT',
         message_id: message.id,
         created_at: message.created_at,
+        message: message,
       };
     } catch (error) {
       throw new WsException(
@@ -199,13 +202,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
 
       // Emit Blue Ticks to conversation partner
-      if (result.updated_count > 0) {
-        this.server.to(`user_${partnerId}`).emit('messages_read', {
-          conversation_id: data.conversation_id,
-          read_by: user.id,
-          read_at: result.read_at,
-        });
-      }
+      this.server.to(`user_${partnerId}`).emit('messages_read', {
+        conversation_id: data.conversation_id,
+        read_by: user.id,
+        read_at: result.read_at,
+      });
 
       return { status: 'READ', ...result };
     } catch (error) {
@@ -261,6 +262,80 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       throw new WsException(
         error instanceof Error ? error.message : 'Invalid typing payload',
+      );
+    }
+  }
+
+  @SubscribeMessage('edit_message')
+  async handleEditMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: unknown,
+  ) {
+    try {
+      const authClient = client as AuthenticatedSocket;
+      const user = authClient.data.user;
+      if (!user) {
+        throw new WsException('Unauthorized');
+      }
+      const data = EditMessageWsSchema.parse(payload);
+      const message = await this.chatService.editMessage(
+        data.message_id,
+        data.message,
+        user,
+      );
+      const conv = await this.chatService.getConversationById(
+        message.conversation_id,
+        user,
+      );
+      const recipientId =
+        conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
+
+      this.server.to(`user_${recipientId}`).emit('message_edited', message);
+      this.server.to(`user_${user.id}`).emit('message_edited', message);
+
+      return { status: 'EDITED', message };
+    } catch (error) {
+      throw new WsException(
+        error instanceof Error ? error.message : 'Failed to edit message',
+      );
+    }
+  }
+
+  @SubscribeMessage('delete_message')
+  async handleDeleteMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: unknown,
+  ) {
+    try {
+      const authClient = client as AuthenticatedSocket;
+      const user = authClient.data.user;
+      if (!user) {
+        throw new WsException('Unauthorized');
+      }
+      const data = DeleteMessageWsSchema.parse(payload);
+      const message = await this.chatService.deleteMessage(
+        data.message_id,
+        user,
+      );
+      const conv = await this.chatService.getConversationById(
+        message.conversation_id,
+        user,
+      );
+      const recipientId =
+        conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
+
+      const deletePayload = {
+        message_id: message.id,
+        conversation_id: message.conversation_id,
+        is_deleted: true,
+      };
+      this.server.to(`user_${recipientId}`).emit('message_deleted', deletePayload);
+      this.server.to(`user_${user.id}`).emit('message_deleted', deletePayload);
+
+      return { status: 'DELETED', message_id: message.id };
+    } catch (error) {
+      throw new WsException(
+        error instanceof Error ? error.message : 'Failed to delete message',
       );
     }
   }

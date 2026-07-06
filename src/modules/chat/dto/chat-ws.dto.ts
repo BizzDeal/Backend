@@ -60,3 +60,16 @@ export const TypingWsSchema = z.object({
 });
 
 export type TypingWsDto = z.infer<typeof TypingWsSchema>;
+
+export const EditMessageWsSchema = z.object({
+  message_id: z.string().uuid({ message: 'message_id must be a valid UUID' }),
+  message: z.string().min(1, { message: 'Message cannot be empty' }),
+});
+
+export type EditMessageWsDto = z.infer<typeof EditMessageWsSchema>;
+
+export const DeleteMessageWsSchema = z.object({
+  message_id: z.string().uuid({ message: 'message_id must be a valid UUID' }),
+});
+
+export type DeleteMessageWsDto = z.infer<typeof DeleteMessageWsSchema>;

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -199,6 +200,44 @@ export class ChatService {
       updated_count: result.affected || 0,
       read_at: readAt,
     };
+  }
+
+  async editMessage(
+    messageId: string,
+    newText: string,
+    user: User,
+  ): Promise<ChatMessage> {
+    const msg = await this.messageRepository.findOne({
+      where: { id: messageId },
+    });
+    if (!msg) {
+      throw new NotFoundException('Message not found');
+    }
+    if (msg.sender_id !== user.id) {
+      throw new ForbiddenException('Only the sender can edit this message');
+    }
+    if (msg.is_deleted) {
+      throw new BadRequestException('Cannot edit a deleted message');
+    }
+    msg.message = newText;
+    msg.is_edited = true;
+    return this.messageRepository.save(msg);
+  }
+
+  async deleteMessage(messageId: string, user: User): Promise<ChatMessage> {
+    const msg = await this.messageRepository.findOne({
+      where: { id: messageId },
+    });
+    if (!msg) {
+      throw new NotFoundException('Message not found');
+    }
+    if (msg.sender_id !== user.id && user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only the sender can delete this message');
+    }
+    msg.is_deleted = true;
+    msg.message = null;
+    msg.media_file_id = null;
+    return this.messageRepository.save(msg);
   }
 
   private async notifyOfflineRecipient(

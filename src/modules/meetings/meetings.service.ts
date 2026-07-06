@@ -2,13 +2,21 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Meeting } from './entities/meeting.entity';
 import { MeetingAttendee } from './entities/meeting-attendee.entity';
 import { User } from '../users/entities/user.entity';
-import { UserRole, MeetingStatus, AttendeeStatus } from '../../common/enums';
+import {
+  UserRole,
+  MeetingStatus,
+  AttendeeStatus,
+  NotificationType,
+} from '../../common/enums';
+import { NotificationsService } from '../notifications/notifications.service';
+import { MeetingQueryDto } from './dto/meetings.dto';
 
 @Injectable()
 export class MeetingsService {
@@ -17,31 +25,73 @@ export class MeetingsService {
     private readonly meetingRepository: Repository<Meeting>,
     @InjectRepository(MeetingAttendee)
     private readonly attendeeRepository: Repository<MeetingAttendee>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
-  async findAll(user: User): Promise<Meeting[]> {
-    if (user.role === UserRole.ADMIN) {
-      return this.meetingRepository.find({ order: { meeting_date: 'DESC' } });
+  private checkNotCustomer(user: User): void {
+    if (user.role === UserRole.CUSTOMER) {
+      throw new ForbiddenException('Customers cannot access meetings');
     }
-    const myAttendees = await this.attendeeRepository.find({
-      where: { user_id: user.id },
-    });
-    const meetingIds = myAttendees.map((a) => a.meeting_id);
+  }
 
-    return this.meetingRepository.find({
-      where: [
-        { created_by_id: user.id },
-        ...(meetingIds.length > 0 ? [{ id: In(meetingIds) }] : []),
-      ],
-      order: { meeting_date: 'DESC' },
-    });
+  private checkAdminRole(user: User): void {
+    if (user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admin can perform this action');
+    }
+  }
+
+  async findAll(query: MeetingQueryDto, user: User): Promise<Meeting[]> {
+    this.checkNotCustomer(user);
+
+    const qb = this.meetingRepository.createQueryBuilder('meeting');
+
+    if (user.role !== UserRole.ADMIN) {
+      const myAttendees = await this.attendeeRepository.find({
+        where: { user_id: user.id },
+      });
+      const meetingIds = myAttendees.map((a) => a.meeting_id);
+
+      if (meetingIds.length > 0) {
+        qb.andWhere(
+          '(meeting.created_by_id = :userId OR meeting.id IN (:...meetingIds))',
+          { userId: user.id, meetingIds },
+        );
+      } else {
+        qb.andWhere('meeting.created_by_id = :userId', { userId: user.id });
+      }
+    }
+
+    if (query.status) {
+      qb.andWhere('meeting.status = :status', { status: query.status });
+    }
+    if (query.business_id) {
+      qb.andWhere('meeting.business_id = :businessId', {
+        businessId: query.business_id,
+      });
+    }
+    if (query.from_date) {
+      qb.andWhere('meeting.meeting_date >= :fromDate', {
+        fromDate: new Date(query.from_date),
+      });
+    }
+    if (query.to_date) {
+      qb.andWhere('meeting.meeting_date <= :toDate', {
+        toDate: new Date(query.to_date),
+      });
+    }
+
+    qb.orderBy('meeting.meeting_date', 'DESC');
+    return qb.getMany();
   }
 
   async findOne(id: string, user: User): Promise<Meeting> {
+    this.checkNotCustomer(user);
+
     const meeting = await this.meetingRepository.findOne({ where: { id } });
     if (!meeting) {
       throw new NotFoundException('Meeting not found');
     }
+
     if (user.role !== UserRole.ADMIN && meeting.created_by_id !== user.id) {
       const attendee = await this.attendeeRepository.findOne({
         where: { meeting_id: id, user_id: user.id },
@@ -50,6 +100,7 @@ export class MeetingsService {
         throw new ForbiddenException('No permission to view this meeting');
       }
     }
+
     return meeting;
   }
 
@@ -64,6 +115,8 @@ export class MeetingsService {
     },
     user: User,
   ): Promise<Meeting> {
+    this.checkAdminRole(user);
+
     const meeting = this.meetingRepository.create({
       created_by_id: user.id,
       business_id: data.business_id || null,
@@ -75,6 +128,7 @@ export class MeetingsService {
       status: MeetingStatus.SCHEDULED,
     });
     const saved = await this.meetingRepository.save(meeting);
+
     await this.attendeeRepository.save(
       this.attendeeRepository.create({
         meeting_id: saved.id,
@@ -82,7 +136,68 @@ export class MeetingsService {
         status: AttendeeStatus.ACCEPTED,
       }),
     );
+
     return saved;
+  }
+
+  async update(
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      meeting_date?: string | Date;
+      location?: string;
+      meeting_link?: string;
+      status?: MeetingStatus;
+    },
+    user: User,
+  ): Promise<Meeting> {
+    this.checkAdminRole(user);
+    const meeting = await this.findOne(id, user);
+
+    const oldStatus = meeting.status;
+
+    if (data.title !== undefined) meeting.title = data.title;
+    if (data.description !== undefined)
+      meeting.description = data.description || null;
+    if (data.meeting_date !== undefined)
+      meeting.meeting_date = new Date(data.meeting_date);
+    if (data.location !== undefined) meeting.location = data.location || null;
+    if (data.meeting_link !== undefined)
+      meeting.meeting_link = data.meeting_link || null;
+    if (data.status !== undefined) meeting.status = data.status;
+
+    const saved = await this.meetingRepository.save(meeting);
+
+    if (
+      saved.status === MeetingStatus.CANCELLED &&
+      oldStatus !== MeetingStatus.CANCELLED
+    ) {
+      const attendees = await this.attendeeRepository.find({
+        where: { meeting_id: saved.id },
+      });
+      for (const attendee of attendees) {
+        if (attendee.user_id !== user.id) {
+          await this.notificationsService.create({
+            user_id: attendee.user_id,
+            title: 'Meeting Cancelled',
+            message: `Meeting "${saved.title}" has been cancelled.`,
+            type: NotificationType.MEETING,
+            data: { meeting_id: saved.id },
+          });
+        }
+      }
+    }
+
+    return saved;
+  }
+
+  async remove(id: string, user: User): Promise<{ message: string }> {
+    this.checkAdminRole(user);
+    const meeting = await this.findOne(id, user);
+
+    await this.meetingRepository.remove(meeting);
+    return { message: 'Meeting deleted successfully' };
   }
 
   async addAttendee(
@@ -90,15 +205,13 @@ export class MeetingsService {
     targetUserId: string,
     user: User,
   ): Promise<MeetingAttendee> {
+    this.checkAdminRole(user);
     const meeting = await this.findOne(meetingId, user);
-    if (user.role !== UserRole.ADMIN && meeting.created_by_id !== user.id) {
-      throw new ForbiddenException(
-        'Only meeting creator or Admin can add attendees',
-      );
-    }
+
     let attendee = await this.attendeeRepository.findOne({
       where: { meeting_id: meetingId, user_id: targetUserId },
     });
+
     if (!attendee) {
       attendee = this.attendeeRepository.create({
         meeting_id: meetingId,
@@ -106,25 +219,113 @@ export class MeetingsService {
         status: AttendeeStatus.INVITED,
       });
       attendee = await this.attendeeRepository.save(attendee);
+
+      if (targetUserId !== user.id) {
+        await this.notificationsService.create({
+          user_id: targetUserId,
+          title: 'Meeting Invitation',
+          message: `You have been invited to meeting "${meeting.title}".`,
+          type: NotificationType.MEETING,
+          data: { meeting_id: meeting.id, attendee_id: attendee.id },
+        });
+      }
     }
+
     return attendee;
+  }
+
+  async updateAttendeeStatus(
+    meetingId: string,
+    attendeeId: string,
+    status: AttendeeStatus,
+    user: User,
+  ): Promise<MeetingAttendee> {
+    this.checkNotCustomer(user);
+    await this.findOne(meetingId, user);
+
+    const attendee = await this.attendeeRepository.findOne({
+      where: { id: attendeeId },
+    });
+    if (!attendee) {
+      throw new NotFoundException('Meeting attendee not found');
+    }
+    if (attendee.meeting_id !== meetingId) {
+      throw new BadRequestException(
+        'Attendee does not belong to this meeting',
+      );
+    }
+
+    if (user.role === UserRole.ADMIN) {
+      attendee.status = status;
+      if (status === AttendeeStatus.ATTENDED) {
+        attendee.attended_at = new Date();
+      } else {
+        attendee.attended_at = null;
+      }
+    } else {
+      if (attendee.user_id !== user.id) {
+        throw new ForbiddenException(
+          'You can only update your own attendance status',
+        );
+      }
+      if (
+        status !== AttendeeStatus.ACCEPTED &&
+        status !== AttendeeStatus.REJECTED
+      ) {
+        throw new ForbiddenException(
+          'Members can only RSVP as ACCEPTED or REJECTED',
+        );
+      }
+      attendee.status = status;
+    }
+
+    return this.attendeeRepository.save(attendee);
+  }
+
+  async removeAttendee(
+    meetingId: string,
+    attendeeId: string,
+    user: User,
+  ): Promise<{ message: string }> {
+    this.checkAdminRole(user);
+    await this.findOne(meetingId, user);
+
+    const attendee = await this.attendeeRepository.findOne({
+      where: { id: attendeeId },
+    });
+    if (!attendee) {
+      throw new NotFoundException('Meeting attendee not found');
+    }
+    if (attendee.meeting_id !== meetingId) {
+      throw new BadRequestException(
+        'Attendee does not belong to this meeting',
+      );
+    }
+
+    await this.attendeeRepository.remove(attendee);
+    return { message: 'Attendee removed successfully' };
   }
 
   async getAttendees(
     meetingId: string,
     user: User,
   ): Promise<MeetingAttendee[]> {
+    this.checkNotCustomer(user);
     await this.findOne(meetingId, user);
+
     return this.attendeeRepository.find({
       where: { meeting_id: meetingId },
     });
   }
 
   async getAttendeeById(id: string, user: User): Promise<MeetingAttendee> {
+    this.checkNotCustomer(user);
+
     const attendee = await this.attendeeRepository.findOne({ where: { id } });
     if (!attendee) {
       throw new NotFoundException('Meeting attendee not found');
     }
+
     await this.findOne(attendee.meeting_id, user);
     return attendee;
   }

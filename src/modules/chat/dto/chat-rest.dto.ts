@@ -40,3 +40,12 @@ export class SendMessageDto {
   })
   media_file_id?: string;
 }
+
+export class EditMessageDto {
+  @ApiProperty({
+    description: 'Updated text content of the message',
+    type: String,
+    example: 'Updated message text here',
+  })
+  message: string;
+}

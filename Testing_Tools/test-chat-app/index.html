@@ -131,9 +131,11 @@
 
   <!-- MAIN CHAT APPLICATION -->
   <div id="main-app" class="app-container hidden">
+    <!-- Sidebar Backdrop for Mobile -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
     
     <!-- LEFT SIDEBAR: CONVERSATIONS -->
-    <aside class="sidebar glass-panel">
+    <aside class="sidebar glass-panel" id="sidebar-panel">
       <!-- Sidebar Header -->
       <header class="sidebar-header">
         <div class="user-profile">
@@ -152,6 +154,9 @@
           </button>
           <button class="icon-btn danger" id="btn-logout" title="Logout & Disconnect">
             <i class="ri-logout-box-r-line"></i>
+          </button>
+          <button class="icon-btn sidebar-close-btn" id="btn-close-sidebar" title="Close Contacts">
+            <i class="ri-close-line"></i>
           </button>
         </div>
       </header>
@@ -177,6 +182,12 @@
     <main class="chat-main glass-panel">
       <!-- Empty State when no conversation selected -->
       <div id="no-chat-selected" class="no-chat-state active">
+        <div class="mobile-header-bar">
+          <button type="button" class="icon-btn sidebar-toggle-btn" id="btn-toggle-sidebar-empty" title="Open Contact List">
+            <i class="ri-menu-2-line"></i>
+          </button>
+          <span class="mobile-header-title"><i class="ri-contacts-book-line"></i> Contacts & Chats</span>
+        </div>
         <div class="welcome-box">
           <div class="glow-icon">
             <i class="ri-message-3-fill"></i>
@@ -195,18 +206,23 @@
       <div id="active-chat-room" class="chat-room hidden">
         <!-- Chat Header -->
         <header class="chat-header">
-          <div class="partner-profile">
-            <div class="avatar-wrapper">
-              <div class="avatar" id="partner-avatar">P</div>
-              <span class="status-dot offline" id="partner-status-dot"></span>
-            </div>
-            <div class="partner-info">
-              <h3 id="partner-name">Partner Name</h3>
-              <div class="status-line">
-                <span id="partner-status-text">Offline</span>
-                <span id="partner-typing-indicator" class="typing-indicator hidden">
-                  <span class="dot"></span><span class="dot"></span><span class="dot"></span> typing...
-                </span>
+          <div class="chat-header-left">
+            <button type="button" class="icon-btn sidebar-toggle-btn" id="btn-toggle-sidebar-active" title="Open Contact List">
+              <i class="ri-menu-2-line"></i>
+            </button>
+            <div class="partner-profile">
+              <div class="avatar-wrapper">
+                <div class="avatar" id="partner-avatar">P</div>
+                <span class="status-dot offline" id="partner-status-dot"></span>
+              </div>
+              <div class="partner-info">
+                <h3 id="partner-name">Partner Name</h3>
+                <div class="status-line">
+                  <span id="partner-status-text">Offline</span>
+                  <span id="partner-typing-indicator" class="typing-indicator hidden">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span> typing...
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -228,15 +244,21 @@
 
         <!-- Chat Input Footer -->
         <footer class="chat-footer">
-          <form id="form-send-message" class="message-form">
-            <div class="msg-type-select">
-              <select id="msg-type" title="Message Type">
-                <option value="TEXT">💬 Text</option>
-                <option value="IMAGE">📷 Image</option>
-                <option value="VOICE">🎤 Voice</option>
-                <option value="FILE">📎 File</option>
-              </select>
+          <div id="attachment-preview" class="attachment-preview hidden">
+            <div class="attachment-info">
+              <i class="ri-attachment-line" id="attachment-icon"></i>
+              <span id="attachment-name">filename.jpg</span>
             </div>
+            <button type="button" class="attachment-close" id="btn-clear-attachment">&times;</button>
+          </div>
+          <form id="form-send-message" class="message-form">
+            <input type="file" id="media-file-input" style="display: none;">
+            <button type="button" class="icon-btn" id="btn-attach" title="Attach any file">
+              <i class="ri-attachment-2"></i>
+            </button>
+            <button type="button" class="icon-btn" id="btn-voice-record" title="Record voice note">
+              <i class="ri-mic-line"></i>
+            </button>
             <div class="input-area">
               <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
             </div>

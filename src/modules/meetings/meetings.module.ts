@@ -6,6 +6,7 @@ import { MeetingAttendee } from './entities/meeting-attendee.entity';
 import { User } from '../users/entities/user.entity';
 import { MeetingsService } from './meetings.service';
 import { MeetingsController } from './meetings.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { MeetingsController } from './meetings.controller';
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
     }),
+    NotificationsModule,
   ],
   controllers: [MeetingsController],
   providers: [MeetingsService],
