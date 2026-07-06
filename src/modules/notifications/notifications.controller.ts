@@ -5,6 +5,7 @@ import {
   Put,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -19,7 +20,18 @@ import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
-import { DeviceType, NotificationType } from '../../common/enums';
+import { NotificationType } from '../../common/enums';
+import {
+  CreateNotificationDto,
+  RegisterDeviceDto,
+  NotificationQueryDto,
+} from './dto/notifications.dto';
+import {
+  createNotificationSchema,
+  registerDeviceSchema,
+  notificationQuerySchema,
+} from './schemas/notifications.schema';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
 @ApiTags('Notifications')
 @Controller('notifications')
@@ -33,35 +45,34 @@ export class NotificationsController {
   @ApiOperation({
     summary: 'List Notifications',
     description:
-      'Retrieves all notifications for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
+      'Retrieves all notifications for the authenticated user without pagination. Supports optional filtering by read status and notification type. Returns only foreign key IDs without nested relational objects.',
   })
   @ApiResponse({
     status: 200,
     description: 'Notifications list returned successfully.',
   })
-  async findAll(@CurrentUser() user: User) {
-    return this.notificationsService.findAll(user);
+  async findAll(
+    @Query(new ZodValidationPipe(notificationQuerySchema))
+    query: NotificationQueryDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.notificationsService.findAll(user, query);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create Notification',
-    description: 'Creates a notification for a user.',
+    summary: 'Create Notification & Dispatch FCM Push',
+    description:
+      'Creates a notification alert in the database and automatically dispatches a universal Firebase Cloud Messaging (FCM) push notification to all active devices of the target user.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Notification created successfully.',
+    description: 'Notification created and FCM push dispatched successfully.',
   })
   async create(
-    @Body()
-    body: {
-      user_id: string;
-      title: string;
-      message: string;
-      type?: NotificationType;
-      data?: Record<string, any>;
-    },
+    @Body(new ZodValidationPipe(createNotificationSchema))
+    body: CreateNotificationDto,
   ) {
     return this.notificationsService.create({
       user_id: body.user_id,
@@ -77,7 +88,7 @@ export class NotificationsController {
   @ApiOperation({
     summary: 'List Registered Devices',
     description:
-      'Retrieves all registered push notification devices for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
+      'Retrieves all registered push notification devices (FCM tokens) for the authenticated user without pagination. Returns only foreign key IDs without nested relational objects.',
   })
   @ApiResponse({
     status: 200,
@@ -90,13 +101,17 @@ export class NotificationsController {
   @Post('devices')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Register Device',
-    description: 'Registers a device for push notifications.',
+    summary: 'Register Push Device (FCM Token)',
+    description:
+      'Registers or updates a client device FCM registration token for receiving background/terminated OS-level push notifications.',
   })
-  @ApiResponse({ status: 201, description: 'Device registered successfully.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Device registered successfully for push notifications.',
+  })
   async registerDevice(
-    @Body()
-    body: { fcm_token: string; device_type: DeviceType; device_name?: string },
+    @Body(new ZodValidationPipe(registerDeviceSchema))
+    body: RegisterDeviceDto,
     @CurrentUser() user: User,
   ) {
     return this.notificationsService.registerDevice(

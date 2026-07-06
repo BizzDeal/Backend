@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,24 +10,38 @@ import { Notification } from './entities/notification.entity';
 import { UserDevice } from './entities/user-device.entity';
 import { User } from '../users/entities/user.entity';
 import { UserRole, NotificationType, DeviceType } from '../../common/enums';
+import { FirebaseService } from '../../common/firebase/firebase.service';
+import { NotificationQueryDto } from './dto/notifications.dto';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
     @InjectRepository(UserDevice)
     private readonly deviceRepository: Repository<UserDevice>,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
-  async findAll(user: User): Promise<Notification[]> {
-    if (user.role === UserRole.ADMIN) {
-      return this.notificationRepository.find({
-        order: { created_at: 'DESC' },
-      });
+  async findAll(
+    user: User,
+    query?: NotificationQueryDto,
+  ): Promise<Notification[]> {
+    const whereCondition: any = {};
+    if (user.role !== UserRole.ADMIN) {
+      whereCondition.user_id = user.id;
     }
+    if (query?.is_read !== undefined) {
+      whereCondition.is_read = query.is_read;
+    }
+    if (query?.type !== undefined) {
+      whereCondition.type = query.type;
+    }
+
     return this.notificationRepository.find({
-      where: { user_id: user.id },
+      where: whereCondition,
       order: { created_at: 'DESC' },
     });
   }
@@ -56,7 +71,51 @@ export class NotificationsService {
       type: data.type || NotificationType.GENERAL,
       data: data.data || null,
     });
-    return this.notificationRepository.save(notif);
+    const savedNotif = await this.notificationRepository.save(notif);
+
+    // Dispatch universal FCM push notification asynchronously
+    this.dispatchFcmPush(savedNotif).catch((err) => {
+      this.logger.error(
+        `Error in background FCM push dispatch for notification ${savedNotif.id}: ${err instanceof Error ? err.message : err}`,
+      );
+    });
+
+    return savedNotif;
+  }
+
+  private async dispatchFcmPush(notification: Notification): Promise<void> {
+    const activeDevices = await this.deviceRepository.find({
+      where: { user_id: notification.user_id, is_active: true },
+    });
+
+    if (!activeDevices || activeDevices.length === 0) {
+      return;
+    }
+
+    const tokens = activeDevices.map((d) => d.fcm_token);
+    const result = await this.firebaseService.sendPushNotification(
+      tokens,
+      notification.title,
+      notification.message,
+      {
+        notification_id: notification.id,
+        type: notification.type,
+        ...(notification.data || {}),
+      },
+    );
+
+    // Automatic cleanup of stale or invalid FCM registration tokens
+    if (result.staleTokens && result.staleTokens.length > 0) {
+      for (const staleToken of result.staleTokens) {
+        await this.deviceRepository.delete({
+          user_id: notification.user_id,
+          fcm_token: staleToken,
+        });
+        this.logger.warn(
+          `Removed stale/invalid FCM registration token for user ${notification.user_id}`,
+        );
+      }
+    }
   }
 
   async markAsRead(id: string, user: User): Promise<Notification> {
@@ -69,7 +128,7 @@ export class NotificationsService {
   async registerDevice(
     fcmToken: string,
     deviceType: DeviceType,
-    deviceName: string | null,
+    deviceName: string | null | undefined,
     user: User,
   ): Promise<UserDevice> {
     let device = await this.deviceRepository.findOne({
@@ -86,6 +145,10 @@ export class NotificationsService {
       });
     } else {
       device.is_active = true;
+      device.device_type = deviceType || device.device_type;
+      if (deviceName !== undefined) {
+        device.device_name = deviceName || null;
+      }
       device.last_used_at = new Date();
     }
     return this.deviceRepository.save(device);

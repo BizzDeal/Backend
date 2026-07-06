@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BizzDeal • Push Notification & FCM Test Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-background">
+    <div class="gradient-sphere sphere-1"></div>
+    <div class="gradient-sphere sphere-2"></div>
+    <div class="grid-overlay"></div>
+  </div>
+
+  <header class="app-header glass-panel">
+    <div class="logo-container">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">
+        <h1>BizzDeal <span>FCM Engine</span></h1>
+        <p>Universal Push Notification & Alert Testing Suite</p>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="status-pill" id="apiStatusPill">
+        <span class="status-dot"></span>
+        <span class="status-label" id="apiStatusText">API: Disconnected</span>
+      </div>
+      <div class="status-pill" id="authStatusPill">
+        <span class="status-dot"></span>
+        <span class="status-label" id="authStatusText">Auth: Guest</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container">
+    <!-- Left Column: Settings, Auth & Device Registration -->
+    <div class="left-col">
+      <!-- Section 1: Authentication & API Configuration -->
+      <section class="card glass-panel" id="authSection">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-icon">🔐</span>
+            <h2>Authentication & API</h2>
+          </div>
+          <span class="badge badge-primary">Step 1</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label for="apiUrl">Backend API Base URL</label>
+            <div class="input-with-icon">
+              <span class="input-icon">🌐</span>
+              <input type="text" id="apiUrl" value="http://localhost:3000" placeholder="e.g. http://localhost:3000">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="jwtToken">JWT Bearer Token</label>
+            <div class="input-with-icon">
+              <span class="input-icon">🔑</span>
+              <input type="password" id="jwtToken" placeholder="Paste your JWT access token here...">
+              <button class="icon-btn" id="toggleTokenVisibility" title="Show/Hide Token">👁️</button>
+            </div>
+            <small class="helper-text">Required to authenticate notification & device API requests.</small>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-primary" id="connectBtn">
+              <span class="btn-icon">⚡</span> Connect & Verify
+            </button>
+            <button class="btn btn-outline" id="clearAuthBtn">Clear</button>
+          </div>
+          <div class="user-profile-card hidden" id="userProfileCard">
+            <div class="avatar">👤</div>
+            <div class="user-details">
+              <div class="user-id" id="displayUserId">UUID: Loading...</div>
+              <div class="user-role badge badge-accent" id="displayUserRole">MEMBER</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: FCM Device Registration -->
+      <section class="card glass-panel" id="deviceSection">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-icon">📱</span>
+            <h2>FCM Device Registration</h2>
+          </div>
+          <span class="badge badge-accent">Step 2</span>
+        </div>
+        <div class="card-body">
+          <p class="section-desc">Register an FCM device token to receive OS-level background and terminated push notifications.</p>
+          
+          <div class="form-group">
+            <label>Device Platform Type</label>
+            <div class="platform-cards">
+              <label class="platform-card active">
+                <input type="radio" name="deviceType" value="WEB" checked>
+                <span class="platform-icon">🌐</span>
+                <span class="platform-name">Web Browser</span>
+              </label>
+              <label class="platform-card">
+                <input type="radio" name="deviceType" value="ANDROID">
+                <span class="platform-icon">🤖</span>
+                <span class="platform-name">Android OS</span>
+              </label>
+              <label class="platform-card">
+                <input type="radio" name="deviceType" value="IOS">
+                <span class="platform-icon">🍎</span>
+                <span class="platform-name">Apple iOS</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="deviceName">Device Name / Model</label>
+            <input type="text" id="deviceName" value="Chrome Web Simulator" placeholder="e.g. Samsung Galaxy S23 Ultra">
+          </div>
+
+          <div class="form-group">
+            <label for="fcmToken">FCM Registration Token</label>
+            <div class="token-input-wrapper">
+              <textarea id="fcmToken" rows="3" placeholder="Paste FCM registration token or generate a simulated token..."></textarea>
+            </div>
+            <div class="token-actions">
+              <button class="btn btn-xs btn-secondary" id="generateTokenBtn">✨ Generate Simulated FCM Token</button>
+              <button class="btn btn-xs btn-outline" id="pasteClipboardBtn">📋 Paste</button>
+            </div>
+          </div>
+
+          <button class="btn btn-gradient w-100" id="registerDeviceBtn">
+            <span class="btn-icon">📲</span> Register Push Device
+          </button>
+
+          <!-- Registered Devices List -->
+          <div class="registered-devices-wrapper">
+            <div class="wrapper-header">
+              <h3>Registered Devices (<span id="deviceCount">0</span>)</h3>
+              <button class="icon-btn-small" id="refreshDevicesBtn" title="Refresh Devices List">🔄</button>
+            </div>
+            <div class="devices-list" id="devicesList">
+              <div class="empty-state">No devices registered yet. Register a token above!</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Right Column: Trigger Simulator & Live Notification Feed -->
+    <div class="right-col">
+      <!-- Section 3: Universal Notification Dispatcher -->
+      <section class="card glass-panel" id="dispatchSection">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-icon">🚀</span>
+            <h2>Universal Push Dispatcher</h2>
+          </div>
+          <span class="badge badge-warning">Trigger Engine</span>
+        </div>
+        <div class="card-body">
+          <p class="section-desc">Trigger backend notifications that automatically broadcast via FCM multicast push to all registered devices.</p>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="targetUserId">Target Recipient UUID</label>
+              <div class="input-with-action">
+                <input type="text" id="targetUserId" placeholder="UUID of recipient...">
+                <button class="btn btn-xs btn-outline" id="useMyIdBtn" title="Use my logged-in ID">Self</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="notificationType">Notification Category</label>
+              <select id="notificationType" class="custom-select">
+                <option value="GENERAL">📢 General Alert</option>
+                <option value="OFFER">🎁 Special Offer</option>
+                <option value="VOUCHER">🎫 Voucher & Coupon</option>
+                <option value="WALLET">💰 Wallet Transaction</option>
+                <option value="MEETING">📅 Meeting & Invite</option>
+                <option value="CHAT">💬 Chat Message</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="notifTitle">Alert Title</label>
+            <input type="text" id="notifTitle" value="🔥 Exclusive Offer Unlocked!" placeholder="Enter engaging notification title...">
+          </div>
+
+          <div class="form-group">
+            <label for="notifMessage">Message Content</label>
+            <textarea id="notifMessage" rows="2" placeholder="Enter notification description...">Congratulations! You have received an instant ₹500 discount voucher on your next BizzDeal purchase.</textarea>
+          </div>
+
+          <!-- Quick Templates -->
+          <div class="form-group">
+            <label>Quick Presets</label>
+            <div class="preset-chips">
+              <button class="chip" data-preset="offer">🎁 50% Offer</button>
+              <button class="chip" data-preset="wallet">💰 ₹1,000 Credited</button>
+              <button class="chip" data-preset="meeting">📅 Meeting Invite</button>
+              <button class="chip" data-preset="chat">💬 New Message</button>
+              <button class="chip" data-preset="voucher">🎫 Voucher Redeemed</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="notifData">Custom JSON Metadata Payload (Optional)</label>
+            <textarea id="notifData" rows="2" class="code-font" placeholder='{"offer_id": "89a01234-b56c-78d9-e012-345678901234", "discount": 50}'>{"action": "OPEN_OFFER", "discount": 50, "code": "BIZZ500"}</textarea>
+          </div>
+
+          <button class="btn btn-accent-gradient w-100 btn-lg" id="sendNotifBtn">
+            <span class="btn-icon">🚀</span> Dispatch FCM Push Alert
+          </button>
+        </div>
+      </section>
+
+      <!-- Section 4: Live Notification Inbox / Feed -->
+      <section class="card glass-panel" id="inboxSection">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-icon">🔔</span>
+            <h2>Live Notification Center</h2>
+          </div>
+          <div class="header-actions">
+            <span class="unread-badge" id="unreadBadge">0 Unread</span>
+            <button class="btn btn-xs btn-outline" id="refreshFeedBtn">🔄 Refresh</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="feed-controls">
+            <div class="filter-tabs">
+              <button class="tab-btn active" data-filter="ALL">All</button>
+              <button class="tab-btn" data-filter="UNREAD">Unread</button>
+              <button class="tab-btn" data-filter="OFFER">Offers</button>
+              <button class="tab-btn" data-filter="WALLET">Wallet</button>
+              <button class="tab-btn" data-filter="MEETING">Meetings</button>
+            </div>
+          </div>
+
+          <div class="notifications-list" id="notificationsList">
+            <div class="empty-state-container">
+              <div class="empty-icon">🔔</div>
+              <h3>No Notifications Found</h3>
+              <p>Your notification inbox is currently empty. Dispatch a test notification above to see it arrive in real-time!</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Toast Notification Container for Feedback -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
