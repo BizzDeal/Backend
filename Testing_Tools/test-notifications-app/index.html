@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <!-- Firebase Web SDK (compat mode for vanilla JS) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
 </head>
 <body>
   <div class="app-background">
@@ -152,8 +155,16 @@
               <textarea id="fcmToken" rows="3" placeholder="Paste FCM registration token or generate a simulated token..."></textarea>
             </div>
             <div class="token-actions">
-              <button class="btn btn-xs btn-secondary" id="generateTokenBtn">✨ Generate Simulated FCM Token</button>
+              <button class="btn btn-xs btn-accent-gradient" id="getRealTokenBtn">🔥 Get Real FCM Token</button>
+              <button class="btn btn-xs btn-secondary" id="generateTokenBtn">✨ Simulated Token</button>
               <button class="btn btn-xs btn-outline" id="pasteClipboardBtn">📋 Paste</button>
+            </div>
+          </div>
+
+          <div id="fcmStatusBox" class="fcm-status-box hidden">
+            <div class="fcm-status-header">
+              <span class="fcm-status-icon">🔥</span>
+              <span class="fcm-status-text" id="fcmStatusText">Firebase not initialized</span>
             </div>
           </div>
 

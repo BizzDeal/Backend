@@ -3,6 +3,90 @@
  * Standalone Client Application Engine
  */
 
+// --- FIREBASE WEB CLIENT SDK INITIALIZATION ---
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBp9WgJDnBHZfrV0wLn117cAFqu-SiOyFo",
+  authDomain: "bizzdeal.firebaseapp.com",
+  projectId: "bizzdeal",
+  storageBucket: "bizzdeal.firebasestorage.app",
+  messagingSenderId: "733354093584",
+  appId: "1:733354093584:web:7c509cd64322de17422e95"
+};
+const VAPID_KEY = 'BHEy1txHRyCHUscg6xrngg8rHQ9aCUX03JrqKoO4Nw7wFCF1d4P4zTmDNC56IlwQ579PNz84zfNMhlgA8i_xBGg';
+
+let firebaseApp = null;
+let firebaseMessaging = null;
+let swRegistration = null;
+
+async function initFirebaseMessaging() {
+  if (firebaseMessaging) return firebaseMessaging;
+
+  try {
+    // Initialize Firebase app
+    firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    console.log('[BizzDeal FCM] Firebase app initialized:', firebaseApp.name);
+
+    // Register service worker for background push
+    if ('serviceWorker' in navigator) {
+      swRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+      console.log('[BizzDeal FCM] Service worker registered, scope:', swRegistration.scope);
+    }
+
+    // Get messaging instance
+    firebaseMessaging = firebase.messaging();
+
+    // Listen for foreground messages (when tab is active)
+    firebaseMessaging.onMessage((payload) => {
+      console.log('[BizzDeal FCM] 🔔 Foreground push received:', payload);
+      const title = payload.notification?.title || payload.data?.title || 'BizzDeal Push';
+      const body = payload.notification?.body || payload.data?.message || 'New notification';
+
+      // Show OS notification banner
+      if (Notification.permission === 'granted') {
+        new Notification(title, {
+          body: body,
+          requireInteraction: true,
+          silent: false,
+          tag: 'fcm_foreground_' + Date.now()
+        });
+      }
+
+      // Show in-app toast
+      if (typeof showToast === 'function') {
+        showToast('success', '🔔 ' + title, body);
+      }
+    });
+
+    return firebaseMessaging;
+  } catch (err) {
+    console.error('[BizzDeal FCM] Firebase init error:', err);
+    throw err;
+  }
+}
+
+async function getRealFcmToken() {
+  const messaging = await initFirebaseMessaging();
+
+  // Request notification permission
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    throw new Error('Notification permission denied. Click the lock icon in your address bar → Site settings → Notifications → Allow');
+  }
+
+  // Get real FCM registration token
+  const token = await messaging.getToken({
+    vapidKey: VAPID_KEY,
+    serviceWorkerRegistration: swRegistration
+  });
+
+  if (!token) {
+    throw new Error('Failed to get FCM token. Check your Firebase project config and VAPID key.');
+  }
+
+  console.log('[BizzDeal FCM] ✅ Real FCM token obtained:', token);
+  return token;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   let defaultUrl = localStorage.getItem('bizzdeal_fcm_api_url') || 'http://localhost:3000/bizzdeal/api';
   if (defaultUrl === 'http://localhost:3000' || defaultUrl === 'http://localhost:3000/') {
@@ -44,6 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const deviceNameInput = document.getElementById('deviceName');
   const fcmTokenInput = document.getElementById('fcmToken');
   const generateTokenBtn = document.getElementById('generateTokenBtn');
+  const getRealTokenBtn = document.getElementById('getRealTokenBtn');
+  const fcmStatusBox = document.getElementById('fcmStatusBox');
+  const fcmStatusText = document.getElementById('fcmStatusText');
   const pasteClipboardBtn = document.getElementById('pasteClipboardBtn');
   const registerDeviceBtn = document.getElementById('registerDeviceBtn');
   const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
@@ -107,12 +194,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (testOsPushBtn) {
-    testOsPushBtn.addEventListener('click', () => {
-      if (!window.Notification) {
-        return showToast('error', 'Not Supported', 'HTML5 Notifications are not supported in this browser.');
+    testOsPushBtn.addEventListener('click', async () => {
+      // Step 1: Check if Notification API exists
+      if (!('Notification' in window)) {
+        alert('❌ DIAGNOSTIC: window.Notification does NOT exist in this browser. Notifications API is not available.');
+        return showToast('error', 'Not Supported', 'HTML5 Notifications API is not available in this browser.');
       }
-      if (Notification.permission !== 'granted') {
-        Notification.requestPermission().then(perm => {
+
+      // Step 2: Show current permission state
+      const currentPerm = Notification.permission;
+      console.log('[BizzDeal Diagnostic] Notification.permission =', currentPerm);
+
+      // Step 3: If not granted, request it
+      if (currentPerm === 'denied') {
+        alert('❌ DIAGNOSTIC: Notification.permission = "denied"\n\nYour browser has BLOCKED notifications for this site.\n\nFix: Click the 🔒 lock icon in your browser address bar → Site settings → Notifications → Allow');
+        return showToast('error', 'Blocked by Browser', 'Notifications are DENIED. Click the lock icon in address bar → Site Settings → Notifications → Allow');
+      }
+
+      if (currentPerm === 'default') {
+        showToast('info', 'Requesting Permission...', 'A browser popup should appear asking to allow notifications.');
+        try {
+          const perm = await Notification.requestPermission();
           if (perm === 'granted') {
             if (enableOsPushBtn) {
               enableOsPushBtn.innerHTML = '✅ OS Popups Active';
@@ -120,26 +222,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             triggerTestPopup();
           } else {
-            showToast('error', 'Permission Denied', 'Please allow notifications in browser site settings.');
+            alert('❌ DIAGNOSTIC: You clicked Deny (or browser auto-denied).\nNotification.permission = "' + perm + '"\n\nFix: Click the 🔒 lock icon in address bar → Site settings → Notifications → Allow');
+            showToast('error', 'Permission Denied', 'You denied the notification permission. Click lock icon in address bar to change.');
           }
-        });
-      } else {
-        triggerTestPopup();
+        } catch (err) {
+          alert('❌ DIAGNOSTIC: requestPermission() threw error: ' + err.message);
+        }
+        return;
       }
+
+      // Step 4: Permission is "granted" — fire it
+      triggerTestPopup();
     });
   }
 
   function triggerTestPopup() {
+    console.log('[BizzDeal Diagnostic] triggerTestPopup() called. Notification.permission =', Notification.permission);
     try {
       const n = new Notification('🚀 BizzDeal OS Push Test', {
-        body: 'Success! Your Windows desktop notification popup is 100% working!',
-        requireInteraction: true
+        body: 'If you see this popup on your Windows desktop, notifications are 100% working!',
+        requireInteraction: true,
+        silent: false
       });
+      n.onshow = () => {
+        console.log('[BizzDeal Diagnostic] ✅ Notification.onshow fired — banner should be visible!');
+      };
+      n.onerror = (evt) => {
+        console.error('[BizzDeal Diagnostic] ❌ Notification.onerror fired:', evt);
+        alert('❌ DIAGNOSTIC: Notification was created but onerror fired.\nThis means Windows or Chrome blocked the actual display.\n\nFix: Open Windows Settings → System → Notifications → Make sure Google Chrome (or Edge) toggle is ON and "Show notification banners" is checked.');
+      };
       n.onclick = () => { window.focus(); n.close(); };
-      showToast('success', 'Popup Sent!', 'Check your Windows desktop bottom right corner or Notification Center.');
+      showToast('success', 'Popup Created!', 'Notification.permission = "granted". If you don\'t see the Windows popup, check: Windows Settings → System → Notifications → Chrome/Edge is ON.');
     } catch (err) {
-      console.error('Test notification failed:', err);
-      showToast('error', 'OS Blocked', 'Windows or browser site settings blocked the popup: ' + err.message);
+      console.error('[BizzDeal Diagnostic] new Notification() threw:', err);
+      alert('❌ DIAGNOSTIC: new Notification() threw an error:\n' + err.message + '\n\nThis usually means the browser does not allow Notification from this origin.');
+      showToast('error', 'Constructor Error', err.message);
     }
   }
 
@@ -233,6 +350,63 @@ document.addEventListener('DOMContentLoaded', () => {
     fcmTokenInput.value = simToken;
     showToast('info', 'Token Generated', 'Simulated FCM registration token ready to register!');
   });
+
+  if (getRealTokenBtn) {
+    getRealTokenBtn.addEventListener('click', async () => {
+      getRealTokenBtn.disabled = true;
+      getRealTokenBtn.innerHTML = '<span class="btn-icon">⏳</span> Initializing Firebase...';
+      
+      if (fcmStatusBox) fcmStatusBox.classList.remove('hidden');
+      if (fcmStatusText) fcmStatusText.textContent = '⏳ Initializing Firebase Web SDK...';
+
+      try {
+        // Step 1: Init Firebase + Service Worker
+        if (fcmStatusText) fcmStatusText.textContent = '⏳ Registering Service Worker...';
+        await initFirebaseMessaging();
+        if (fcmStatusText) fcmStatusText.textContent = '⏳ Requesting notification permission...';
+
+        // Step 2: Get real FCM token (this requests permission + talks to Google servers)
+        getRealTokenBtn.innerHTML = '<span class="btn-icon">⏳</span> Getting token from Google...';
+        const realToken = await getRealFcmToken();
+
+        // Step 3: Fill it into the textarea
+        fcmTokenInput.value = realToken;
+        
+        // Auto-select WEB platform
+        const webRadio = document.querySelector('input[name="deviceType"][value="WEB"]');
+        if (webRadio) {
+          webRadio.checked = true;
+          document.querySelectorAll('.platform-card').forEach(c => c.classList.remove('active'));
+          webRadio.closest('.platform-card')?.classList.add('active');
+        }
+
+        // Update device name
+        deviceNameInput.value = navigator.userAgent.includes('Chrome') ? 'Chrome Browser' : 
+                                 navigator.userAgent.includes('Firefox') ? 'Firefox Browser' : 
+                                 navigator.userAgent.includes('Edge') ? 'Edge Browser' : 'Web Browser';
+
+        if (fcmStatusText) fcmStatusText.textContent = '✅ Real FCM token obtained! Firebase ready for push.';
+        if (fcmStatusBox) fcmStatusBox.classList.add('fcm-status-success');
+
+        showToast('success', '🔥 Real FCM Token Obtained!', 'Your browser is now registered with Google FCM. Click "Register Push Device" to save it to the backend, then send a notification to test!');
+
+        // Update OS Popups button since permission is now granted
+        if (enableOsPushBtn) {
+          enableOsPushBtn.innerHTML = '✅ OS Popups Active';
+          enableOsPushBtn.classList.add('badge-success');
+        }
+
+      } catch (err) {
+        console.error('[BizzDeal FCM] getRealFcmToken error:', err);
+        if (fcmStatusText) fcmStatusText.textContent = '❌ Error: ' + err.message;
+        if (fcmStatusBox) fcmStatusBox.classList.add('fcm-status-error');
+        showToast('error', 'FCM Token Failed', err.message);
+      } finally {
+        getRealTokenBtn.disabled = false;
+        getRealTokenBtn.innerHTML = '🔥 Get Real FCM Token';
+      }
+    });
+  }
 
   pasteClipboardBtn.addEventListener('click', async () => {
     try {
