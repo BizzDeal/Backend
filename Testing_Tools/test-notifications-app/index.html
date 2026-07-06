@@ -51,8 +51,8 @@
           </div>
           <span class="badge badge-primary">Step 1</span>
         </div>
-        <div class="card-body">
-          <div class="form-group">
+        <div class="card-body" style="gap: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
             <label for="apiUrl">Backend API Base URL</label>
             <div class="input-with-icon">
               <span class="input-icon">🌐</span>
@@ -61,51 +61,50 @@
           </div>
 
           <!-- Phone + PIN Quick Login Card -->
-          <div class="login-box-card">
-            <div class="login-box-header">
-              <span class="login-box-icon">📱</span>
-              <div class="login-box-title">
-                <h4>Quick Phone + PIN Login</h4>
-                <p>Login directly to auto-fetch & connect your JWT access token</p>
+          <div class="login-box-card" style="padding: 12px; gap: 8px;">
+            <div class="login-box-header" style="justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="login-box-icon">📱</span>
+                <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">Quick Phone + PIN Login</span>
               </div>
+              <span style="font-size: 11px; color: var(--text-muted);">Auto-connects JWT</span>
             </div>
-            <div class="form-row">
+            <div class="form-row" style="gap: 8px;">
               <div class="form-group mb-0 flex-1">
-                <input type="text" id="loginPhone" placeholder="Phone (e.g. 9876543210)" autocomplete="tel">
+                <input type="text" id="loginPhone" placeholder="Phone (e.g. 9876543210)" autocomplete="tel" style="padding: 8px 12px; font-size: 13px;">
               </div>
-              <div class="form-group mb-0 flex-1">
-                <input type="password" id="loginPin" placeholder="PIN (e.g. 1234)">
+              <div class="form-group mb-0" style="width: 100px;">
+                <input type="password" id="loginPin" placeholder="PIN (1234)" style="padding: 8px 12px; font-size: 13px;">
               </div>
+              <button class="btn btn-accent-gradient" id="phoneLoginBtn" style="padding: 8px 16px; font-size: 13px; white-space: nowrap;">
+                🚀 Login
+              </button>
             </div>
-            <button class="btn btn-accent-gradient w-100 mt-2" id="phoneLoginBtn">
-              <span class="btn-icon">🚀</span> Login & Auto-Connect
-            </button>
           </div>
 
-          <div class="divider-line">
-            <span>OR MANUALLY ENTER TOKEN</span>
+          <div class="divider-line" style="margin: 4px 0;">
+            <span style="font-size: 10px;">OR MANUAL JWT TOKEN</span>
           </div>
 
-          <div class="form-group">
-            <label for="jwtToken">JWT Bearer Token</label>
-            <div class="input-with-icon">
-              <span class="input-icon">🔑</span>
-              <input type="password" id="jwtToken" placeholder="Paste your JWT access token here...">
-              <button class="icon-btn" id="toggleTokenVisibility" title="Show/Hide Token">👁️</button>
+          <div class="form-row" style="align-items: center; gap: 8px;">
+            <div class="form-group mb-0 flex-1">
+              <div class="input-with-icon">
+                <span class="input-icon" style="left: 10px; font-size: 14px;">🔑</span>
+                <input type="password" id="jwtToken" placeholder="Paste JWT token..." style="padding: 8px 34px 8px 32px; font-size: 13px;">
+                <button class="icon-btn" id="toggleTokenVisibility" title="Show/Hide Token" style="right: 6px;">👁️</button>
+              </div>
             </div>
-            <small class="helper-text">Required to authenticate notification & device API requests.</small>
-          </div>
-          <div class="btn-group">
-            <button class="btn btn-primary" id="connectBtn">
-              <span class="btn-icon">⚡</span> Connect & Verify
+            <button class="btn btn-primary" id="connectBtn" style="padding: 8px 14px; font-size: 13px; white-space: nowrap;">
+              ⚡ Verify
             </button>
-            <button class="btn btn-outline" id="clearAuthBtn">Clear</button>
+            <button class="btn btn-outline" id="clearAuthBtn" style="padding: 8px 12px; font-size: 13px;">Clear</button>
           </div>
-          <div class="user-profile-card hidden" id="userProfileCard">
-            <div class="avatar">👤</div>
-            <div class="user-details">
-              <div class="user-id" id="displayUserId">UUID: Loading...</div>
-              <div class="user-role badge badge-accent" id="displayUserRole">MEMBER</div>
+
+          <div class="user-profile-card hidden" id="userProfileCard" style="margin-top: 4px; padding: 8px 12px;">
+            <div class="avatar" style="width: 32px; height: 32px; font-size: 16px;">👤</div>
+            <div class="user-details" style="flex-direction: row; align-items: center; justify-content: space-between; width: 100%;">
+              <div class="user-id" id="displayUserId" style="font-size: 11px;">UUID: Loading...</div>
+              <div class="user-role badge badge-accent" id="displayUserRole" style="padding: 2px 8px; font-size: 10px;">MEMBER</div>
             </div>
           </div>
         </div>
@@ -120,66 +119,70 @@
           </div>
           <span class="badge badge-accent">Step 2</span>
         </div>
-        <div class="card-body">
-          <p class="section-desc">Register an FCM device token to receive OS-level background and terminated push notifications.</p>
+        <div class="card-body" style="gap: 12px;">
+          <p class="section-desc" style="margin-bottom: 0;">Register an FCM device token to receive OS-level background and terminated push notifications.</p>
           
-          <div class="form-group">
-            <label>Device Platform Type</label>
-            <div class="platform-cards">
-              <label class="platform-card active">
-                <input type="radio" name="deviceType" value="WEB" checked>
-                <span class="platform-icon">🌐</span>
-                <span class="platform-name">Web Browser</span>
-              </label>
-              <label class="platform-card">
-                <input type="radio" name="deviceType" value="ANDROID">
-                <span class="platform-icon">🤖</span>
-                <span class="platform-name">Android OS</span>
-              </label>
-              <label class="platform-card">
-                <input type="radio" name="deviceType" value="IOS">
-                <span class="platform-icon">🍎</span>
-                <span class="platform-name">Apple iOS</span>
-              </label>
+          <div class="form-row" style="gap: 12px;">
+            <div class="form-group mb-0 flex-1">
+              <label>Device Platform Type</label>
+              <div class="platform-cards" style="gap: 6px;">
+                <label class="platform-card active" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
+                  <input type="radio" name="deviceType" value="WEB" checked>
+                  <span class="platform-icon" style="font-size: 16px;">🌐</span>
+                  <span class="platform-name" style="font-size: 11px;">Web</span>
+                </label>
+                <label class="platform-card" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
+                  <input type="radio" name="deviceType" value="ANDROID">
+                  <span class="platform-icon" style="font-size: 16px;">🤖</span>
+                  <span class="platform-name" style="font-size: 11px;">Android</span>
+                </label>
+                <label class="platform-card" style="flex-direction: row; padding: 8px 6px; justify-content: center; gap: 4px;">
+                  <input type="radio" name="deviceType" value="IOS">
+                  <span class="platform-icon" style="font-size: 16px;">🍎</span>
+                  <span class="platform-name" style="font-size: 11px;">iOS</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group mb-0 flex-1">
+              <label for="deviceName">Device Name / Model</label>
+              <input type="text" id="deviceName" value="Chrome Web Simulator" placeholder="e.g. Samsung S23" style="padding: 8px 12px; font-size: 13px;">
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="deviceName">Device Name / Model</label>
-            <input type="text" id="deviceName" value="Chrome Web Simulator" placeholder="e.g. Samsung Galaxy S23 Ultra">
-          </div>
-
-          <div class="form-group">
-            <label for="fcmToken">FCM Registration Token</label>
+          <div class="form-group" style="margin-bottom: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label for="fcmToken">FCM Registration Token</label>
+              <div class="token-actions" style="margin-top: 0; gap: 4px;">
+                <button class="btn btn-xs btn-accent-gradient" id="getRealTokenBtn" style="padding: 4px 8px; font-size: 11px;">🔥 Real Token</button>
+                <button class="btn btn-xs btn-secondary" id="generateTokenBtn" style="padding: 4px 8px; font-size: 11px;">✨ Simulated</button>
+                <button class="btn btn-xs btn-outline" id="pasteClipboardBtn" style="padding: 4px 8px; font-size: 11px;">📋 Paste</button>
+              </div>
+            </div>
             <div class="token-input-wrapper">
-              <textarea id="fcmToken" rows="3" placeholder="Paste FCM registration token or generate a simulated token..."></textarea>
-            </div>
-            <div class="token-actions">
-              <button class="btn btn-xs btn-accent-gradient" id="getRealTokenBtn">🔥 Get Real FCM Token</button>
-              <button class="btn btn-xs btn-secondary" id="generateTokenBtn">✨ Simulated Token</button>
-              <button class="btn btn-xs btn-outline" id="pasteClipboardBtn">📋 Paste</button>
+              <textarea id="fcmToken" rows="2" placeholder="Paste FCM registration token or generate a simulated token..." style="padding: 8px 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace;"></textarea>
             </div>
           </div>
 
-          <div id="fcmStatusBox" class="fcm-status-box hidden">
-            <div class="fcm-status-header">
+          <div id="fcmStatusBox" class="fcm-status-box hidden" style="padding: 6px 12px; margin-bottom: 0;">
+            <div class="fcm-status-header" style="font-size: 11px;">
               <span class="fcm-status-icon">🔥</span>
               <span class="fcm-status-text" id="fcmStatusText">Firebase not initialized</span>
             </div>
           </div>
 
-          <button class="btn btn-gradient w-100" id="registerDeviceBtn">
+          <button class="btn btn-gradient w-100" id="registerDeviceBtn" style="padding: 10px; font-size: 13px;">
             <span class="btn-icon">📲</span> Register Push Device
           </button>
 
           <!-- Registered Devices List -->
-          <div class="registered-devices-wrapper">
+          <div class="registered-devices-wrapper" style="margin-top: 4px; padding-top: 10px; gap: 8px;">
             <div class="wrapper-header">
-              <h3>Registered Devices (<span id="deviceCount">0</span>)</h3>
-              <button class="icon-btn-small" id="refreshDevicesBtn" title="Refresh Devices List">🔄</button>
+              <h3 style="font-size: 13px;">Registered Devices (<span id="deviceCount">0</span>)</h3>
+              <button class="icon-btn-small" id="refreshDevicesBtn" title="Refresh Devices List" style="width: 24px; height: 24px;">🔄</button>
             </div>
-            <div class="devices-list" id="devicesList">
-              <div class="empty-state">No devices registered yet. Register a token above!</div>
+            <div class="devices-list" id="devicesList" style="max-height: 120px; gap: 6px;">
+              <div class="empty-state" style="padding: 10px; font-size: 12px;">No devices registered yet. Register a token above!</div>
             </div>
           </div>
         </div>
