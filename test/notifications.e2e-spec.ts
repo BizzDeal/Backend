@@ -59,6 +59,7 @@ describe('NotificationsController (e2e)', () => {
     findOne: jest.fn().mockResolvedValue(mockNotification),
     create: jest.fn().mockReturnValue(mockNotification),
     save: jest.fn().mockResolvedValue(mockNotification),
+    remove: jest.fn().mockResolvedValue(mockNotification),
   };
 
   const mockDeviceRepo = {
@@ -176,6 +177,17 @@ describe('NotificationsController (e2e)', () => {
       return request(app.getHttpServer())
         .put(`/notifications/${mockNotification.id}/read`)
         .expect(HttpStatus.OK);
+    });
+  });
+
+  describe('DELETE /notifications/:id', () => {
+    it('should delete notification', () => {
+      return request(app.getHttpServer())
+        .delete(`/notifications/${mockNotification.id}`)
+        .expect(HttpStatus.OK)
+        .expect((res) => {
+          expect(res.body.message).toBe('Notification deleted successfully');
+        });
     });
   });
 });

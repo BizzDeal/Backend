@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -163,5 +164,19 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Notification marked as read.' })
   async markAsRead(@Param('id') id: string, @CurrentUser() user: User) {
     return this.notificationsService.markAsRead(id, user);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete Notification',
+    description:
+      'Deletes a specific notification by UUID. Users can delete their own notifications; Admins can delete any notification.',
+  })
+  @ApiResponse({ status: 200, description: 'Notification deleted successfully.' })
+  @ApiResponse({ status: 404, description: 'Notification not found.' })
+  async remove(@Param('id') id: string, @CurrentUser() user: User) {
+    await this.notificationsService.remove(id, user);
+    return { message: 'Notification deleted successfully' };
   }
 }

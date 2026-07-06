@@ -21,6 +21,7 @@ export const registerDeviceSchema = z.object({
 });
 
 export const notificationQuerySchema = z.object({
+  user_id: z.string().uuid().optional(),
   is_read: z
     .union([z.boolean(), z.string()])
     .optional()

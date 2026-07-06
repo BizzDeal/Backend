@@ -67,6 +67,7 @@ describe('NotificationsService', () => {
             save: jest.fn(),
             find: jest.fn(),
             findOne: jest.fn(),
+            remove: jest.fn(),
           },
         },
         {
@@ -182,9 +183,18 @@ describe('NotificationsService', () => {
         order: { created_at: 'DESC' },
       });
     });
+
+    it('should filter by query.user_id for admin users when specified', async () => {
+      notificationRepo.find.mockResolvedValue([mockNotification]);
+      await service.findAll(mockAdmin, { user_id: mockUser.id });
+      expect(notificationRepo.find).toHaveBeenCalledWith({
+        where: { user_id: mockUser.id },
+        order: { created_at: 'DESC' },
+      });
+    });
   });
 
-  describe('findOne and markAsRead', () => {
+  describe('findOne, markAsRead, and remove', () => {
     it('should return notification if user is owner', async () => {
       notificationRepo.findOne.mockResolvedValue(mockNotification);
       const result = await service.findOne(mockNotification.id, mockUser);
@@ -206,6 +216,14 @@ describe('NotificationsService', () => {
       const result = await service.markAsRead(mockNotification.id, mockUser);
       expect(result.is_read).toBe(true);
       expect(result.read_at).toBeInstanceOf(Date);
+    });
+
+    it('should remove notification', async () => {
+      notificationRepo.findOne.mockResolvedValue(mockNotification);
+      notificationRepo.remove.mockResolvedValue(mockNotification);
+
+      await service.remove(mockNotification.id, mockUser);
+      expect(notificationRepo.remove).toHaveBeenCalledWith(mockNotification);
     });
   });
 

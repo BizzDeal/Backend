@@ -65,6 +65,14 @@ export class RegisterDeviceDto {
 
 export class NotificationQueryDto {
   @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description: 'Filter notifications by recipient user UUID (Admin only)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  user_id?: string;
+
+  @ApiPropertyOptional({
     type: Boolean,
     description: 'Filter notifications by read status (true for read, false for unread)',
     example: false,

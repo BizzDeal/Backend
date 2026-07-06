@@ -32,6 +32,8 @@ export class NotificationsService {
     const whereCondition: any = {};
     if (user.role !== UserRole.ADMIN) {
       whereCondition.user_id = user.id;
+    } else if (query?.user_id) {
+      whereCondition.user_id = query.user_id;
     }
     if (query?.is_read !== undefined) {
       whereCondition.is_read = query.is_read;
@@ -123,6 +125,11 @@ export class NotificationsService {
     notif.is_read = true;
     notif.read_at = new Date();
     return this.notificationRepository.save(notif);
+  }
+
+  async remove(id: string, user: User): Promise<void> {
+    const notif = await this.findOne(id, user);
+    await this.notificationRepository.remove(notif);
   }
 
   async registerDevice(
