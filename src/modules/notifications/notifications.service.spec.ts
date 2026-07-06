@@ -17,6 +17,7 @@ describe('NotificationsService', () => {
   let service: NotificationsService;
   let notificationRepo: jest.Mocked<Repository<Notification>>;
   let deviceRepo: jest.Mocked<Repository<UserDevice>>;
+  let userRepo: jest.Mocked<Repository<User>>;
   let firebaseService: jest.Mocked<FirebaseService>;
 
   const mockUser: User = {
@@ -81,6 +82,13 @@ describe('NotificationsService', () => {
           },
         },
         {
+          provide: getRepositoryToken(User),
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+          },
+        },
+        {
           provide: FirebaseService,
           useValue: {
             sendPushNotification: jest.fn(),
@@ -92,6 +100,7 @@ describe('NotificationsService', () => {
     service = module.get<NotificationsService>(NotificationsService);
     notificationRepo = module.get(getRepositoryToken(Notification));
     deviceRepo = module.get(getRepositoryToken(UserDevice));
+    userRepo = module.get(getRepositoryToken(User));
     firebaseService = module.get(FirebaseService);
   });
 
@@ -263,4 +272,46 @@ describe('NotificationsService', () => {
       expect(result).toEqual([mockDevice]);
     });
   });
+
+  describe('broadcast', () => {
+    it('should forbid non-admin from broadcasting by target_role', async () => {
+      await expect(
+        service.broadcast(
+          {
+            target_role: UserRole.MEMBER,
+            title: 'Test',
+            message: 'Message',
+            type: NotificationType.GENERAL,
+          },
+          mockUser,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should broadcast notifications to user_ids successfully', async () => {
+      notificationRepo.create.mockReturnValue(mockNotification);
+      notificationRepo.save.mockResolvedValue([mockNotification]);
+      deviceRepo.find.mockResolvedValue([mockDevice]);
+      firebaseService.sendPushNotification.mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+        staleTokens: [],
+      });
+
+      const result = await service.broadcast(
+        {
+          user_ids: [mockUser.id],
+          title: 'Test',
+          message: 'Message',
+          type: NotificationType.GENERAL,
+        },
+        mockAdmin,
+      );
+
+      expect(result.count).toBe(1);
+      expect(result.user_ids).toContain(mockUser.id);
+      expect(notificationRepo.save).toHaveBeenCalled();
+    });
+  });
 });
+

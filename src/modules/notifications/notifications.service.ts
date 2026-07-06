@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { UserDevice } from './entities/user-device.entity';
 import { User } from '../users/entities/user.entity';
@@ -22,6 +22,8 @@ export class NotificationsService {
     private readonly notificationRepository: Repository<Notification>,
     @InjectRepository(UserDevice)
     private readonly deviceRepository: Repository<UserDevice>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly firebaseService: FirebaseService,
   ) {}
 
@@ -116,6 +118,127 @@ export class NotificationsService {
         this.logger.warn(
           `Removed stale/invalid FCM registration token for user ${notification.user_id}`,
         );
+      }
+    }
+  }
+
+  async broadcast(
+    data: {
+      user_ids?: string[];
+      target_role?: UserRole;
+      title: string;
+      message: string;
+      type: NotificationType;
+      data?: Record<string, any>;
+    },
+    actor: User,
+  ): Promise<{ count: number; user_ids: string[]; message: string }> {
+    if (data.target_role && actor.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'Only administrators can broadcast notifications platform-wide by user role.',
+      );
+    }
+
+    let targetUserIds: string[] = [];
+
+    if (data.user_ids && data.user_ids.length > 0) {
+      targetUserIds = [...data.user_ids];
+    }
+
+    if (data.target_role) {
+      const usersWithRole = await this.userRepository.find({
+        where: { role: data.target_role },
+        select: ['id'],
+      });
+      const roleUserIds = usersWithRole.map((u) => u.id);
+      targetUserIds = Array.from(new Set([...targetUserIds, ...roleUserIds]));
+    }
+
+    if (targetUserIds.length === 0) {
+      return {
+        count: 0,
+        user_ids: [],
+        message: 'No recipients found matching the criteria.',
+      };
+    }
+
+    const notificationsToSave = targetUserIds.map((userId) =>
+      this.notificationRepository.create({
+        user_id: userId,
+        title: data.title,
+        message: data.message,
+        type: data.type || NotificationType.GENERAL,
+        data: data.data || null,
+      }),
+    );
+
+    const savedNotifications = await this.notificationRepository.save(
+      notificationsToSave,
+    );
+
+    this.dispatchBulkFcmPush(savedNotifications).catch((err) => {
+      this.logger.error(
+        `Error in background bulk FCM push dispatch: ${err instanceof Error ? err.message : err}`,
+      );
+    });
+
+    return {
+      count: savedNotifications.length,
+      user_ids: targetUserIds,
+      message: `Successfully created notifications and initiated FCM push dispatch for ${savedNotifications.length} user(s).`,
+    };
+  }
+
+  private async dispatchBulkFcmPush(
+    notifications: Notification[],
+  ): Promise<void> {
+    if (!notifications || notifications.length === 0) {
+      return;
+    }
+
+    const userIds = Array.from(new Set(notifications.map((n) => n.user_id)));
+    const activeDevices = await this.deviceRepository.find({
+      where: { user_id: In(userIds), is_active: true },
+    });
+
+    if (!activeDevices || activeDevices.length === 0) {
+      return;
+    }
+
+    const devicesByUser = new Map<string, string[]>();
+    for (const d of activeDevices) {
+      const existing = devicesByUser.get(d.user_id) || [];
+      existing.push(d.fcm_token);
+      devicesByUser.set(d.user_id, existing);
+    }
+
+    for (const notif of notifications) {
+      const userTokens = devicesByUser.get(notif.user_id);
+      if (userTokens && userTokens.length > 0) {
+        await this.firebaseService
+          .sendPushNotification(userTokens, notif.title, notif.message, {
+            notification_id: notif.id,
+            type: notif.type,
+            ...(notif.data || {}),
+          })
+          .then(async (result) => {
+            if (result.staleTokens && result.staleTokens.length > 0) {
+              for (const staleToken of result.staleTokens) {
+                await this.deviceRepository.delete({
+                  user_id: notif.user_id,
+                  fcm_token: staleToken,
+                });
+                this.logger.warn(
+                  `Removed stale/invalid FCM registration token for user ${notif.user_id}`,
+                );
+              }
+            }
+          })
+          .catch((err) => {
+            this.logger.error(
+              `Failed to dispatch push to user ${notif.user_id}: ${err instanceof Error ? err.message : err}`,
+            );
+          });
       }
     }
   }

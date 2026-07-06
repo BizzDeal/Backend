@@ -24,11 +24,13 @@ import { User } from '../users/entities/user.entity';
 import { NotificationType } from '../../common/enums';
 import {
   CreateNotificationDto,
+  BroadcastNotificationDto,
   RegisterDeviceDto,
   NotificationQueryDto,
 } from './dto/notifications.dto';
 import {
   createNotificationSchema,
+  broadcastNotificationSchema,
   registerDeviceSchema,
   notificationQuerySchema,
 } from './schemas/notifications.schema';
@@ -82,6 +84,36 @@ export class NotificationsController {
       type: body.type || NotificationType.GENERAL,
       data: body.data,
     });
+  }
+
+  @Post('broadcast')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Broadcast Push Notification to Multiple Members/Customers',
+    description:
+      'Creates notification alerts in the database and automatically dispatches universal Firebase Cloud Messaging (FCM) push notifications to multiple target users (by specific user_ids array or platform-wide by target_role like MEMBER or CUSTOMER). Returns only foreign key IDs without nested relational objects.',
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Bulk notifications created and FCM push dispatch initiated successfully.',
+  })
+  async broadcast(
+    @Body(new ZodValidationPipe(broadcastNotificationSchema))
+    body: BroadcastNotificationDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.notificationsService.broadcast(
+      {
+        user_ids: body.user_ids,
+        target_role: body.target_role,
+        title: body.title,
+        message: body.message,
+        type: body.type || NotificationType.GENERAL,
+        data: body.data,
+      },
+      user,
+    );
   }
 
   @Get('devices')
