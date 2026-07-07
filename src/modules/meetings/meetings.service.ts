@@ -250,9 +250,7 @@ export class MeetingsService {
       throw new NotFoundException('Meeting attendee not found');
     }
     if (attendee.meeting_id !== meetingId) {
-      throw new BadRequestException(
-        'Attendee does not belong to this meeting',
-      );
+      throw new BadRequestException('Attendee does not belong to this meeting');
     }
 
     if (user.role === UserRole.ADMIN) {
@@ -297,9 +295,7 @@ export class MeetingsService {
       throw new NotFoundException('Meeting attendee not found');
     }
     if (attendee.meeting_id !== meetingId) {
-      throw new BadRequestException(
-        'Attendee does not belong to this meeting',
-      );
+      throw new BadRequestException('Attendee does not belong to this meeting');
     }
 
     await this.attendeeRepository.remove(attendee);

@@ -26,4 +26,3 @@ import { MediaModule } from '../media/media.module';
   exports: [ChatService],
 })
 export class ChatModule {}
-

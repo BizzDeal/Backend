@@ -78,8 +78,7 @@ export class ChatWsDocsController {
   @ApiBody({ type: MarkAsReadWsSwaggerDto })
   @ApiResponse({
     status: 200,
-    description:
-      'Server emits `messages_read` event to conversation partner.',
+    description: 'Server emits `messages_read` event to conversation partner.',
   })
   async documentMarkAsRead(@Body() _body: MarkAsReadWsSwaggerDto) {
     return { status: 'REFERENCE_ONLY' };

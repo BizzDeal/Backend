@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, FindOptionsWhere } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { UserDevice } from './entities/user-device.entity';
 import { User } from '../users/entities/user.entity';
@@ -31,7 +31,7 @@ export class NotificationsService {
     user: User,
     query?: NotificationQueryDto,
   ): Promise<Notification[]> {
-    const whereCondition: any = {};
+    const whereCondition: FindOptionsWhere<Notification> = {};
     if (user.role !== UserRole.ADMIN) {
       whereCondition.user_id = user.id;
     } else if (query?.user_id) {
@@ -148,9 +148,8 @@ export class NotificationsService {
       }),
     );
 
-    const savedNotifications = await this.notificationRepository.save(
-      notificationsToSave,
-    );
+    const savedNotifications =
+      await this.notificationRepository.save(notificationsToSave);
 
     this.dispatchBulkFcmPush(savedNotifications).catch((err) => {
       this.logger.error(
@@ -205,9 +204,8 @@ export class NotificationsService {
       }),
     );
 
-    const savedNotifications = await this.notificationRepository.save(
-      notificationsToSave,
-    );
+    const savedNotifications =
+      await this.notificationRepository.save(notificationsToSave);
 
     this.dispatchBulkFcmPush(savedNotifications).catch((err) => {
       this.logger.error(
@@ -297,6 +295,14 @@ export class NotificationsService {
     let device = await this.deviceRepository.findOne({
       where: { user_id: user.id, fcm_token: fcmToken },
     });
+    const isNewOrReactivated = !device || !device.is_active;
+    let otherActiveDevicesCount = 0;
+    if (isNewOrReactivated) {
+      otherActiveDevicesCount = await this.deviceRepository.count({
+        where: { user_id: user.id, is_active: true },
+      });
+    }
+
     if (!device) {
       device = this.deviceRepository.create({
         user_id: user.id,
@@ -314,7 +320,28 @@ export class NotificationsService {
       }
       device.last_used_at = new Date();
     }
-    return this.deviceRepository.save(device);
+    const savedDevice = await this.deviceRepository.save(device);
+
+    if (isNewOrReactivated && otherActiveDevicesCount >= 1) {
+      const deviceDisplayName =
+        savedDevice.device_name || savedDevice.device_type || 'Unknown Device';
+      const totalActiveDevices = otherActiveDevicesCount + 1;
+      await this.create({
+        user_id: user.id,
+        title: 'Security Alert: New Device Registered',
+        message: `A new device (${deviceDisplayName}) was registered to your BizzDeal account. You now have ${totalActiveDevices} active devices receiving notifications.`,
+        type: NotificationType.GENERAL,
+        data: {
+          event: 'multiple_devices_registered',
+          device_id: savedDevice.id,
+          device_type: savedDevice.device_type,
+          device_name: savedDevice.device_name || '',
+          total_active_devices: totalActiveDevices,
+        },
+      });
+    }
+
+    return savedDevice;
   }
 
   async getDevices(user: User): Promise<UserDevice[]> {

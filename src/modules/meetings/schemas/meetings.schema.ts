@@ -4,11 +4,9 @@ import { MeetingStatus, AttendeeStatus } from '../../../common/enums';
 export const createMeetingSchema = z.object({
   title: z.string().min(1, { message: 'Title is required' }),
   description: z.string().optional(),
-  meeting_date: z
-    .string()
-    .refine((val) => !isNaN(Date.parse(val)), {
-      message: 'meeting_date must be a valid date-time string',
-    }),
+  meeting_date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: 'meeting_date must be a valid date-time string',
+  }),
   location: z.string().optional(),
   meeting_link: z.string().optional(),
   business_id: z

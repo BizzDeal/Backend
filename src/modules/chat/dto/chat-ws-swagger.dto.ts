@@ -10,7 +10,8 @@ export class SendMessageWsSwaggerDto {
   conversation_id: string;
 
   @ApiPropertyOptional({
-    description: 'Text content of the message (required if message_type is TEXT)',
+    description:
+      'Text content of the message (required if message_type is TEXT)',
     type: String,
     example: 'Hello! Checking in on the deal.',
   })

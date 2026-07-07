@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 jest.mock('../../common/firebase/firebase.service', () => ({
   FirebaseService: jest.fn(),
 }));
@@ -5,7 +6,7 @@ jest.mock('../../common/firebase/firebase.service', () => ({
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { Notification } from './entities/notification.entity';
 import { UserDevice } from './entities/user-device.entity';
@@ -17,7 +18,6 @@ describe('NotificationsService', () => {
   let service: NotificationsService;
   let notificationRepo: jest.Mocked<Repository<Notification>>;
   let deviceRepo: jest.Mocked<Repository<UserDevice>>;
-  let userRepo: jest.Mocked<Repository<User>>;
   let firebaseService: jest.Mocked<FirebaseService>;
 
   const mockUser: User = {
@@ -32,9 +32,10 @@ describe('NotificationsService', () => {
     phone: '9999999999',
   } as User;
 
-  const mockNotification = {
+  const mockNotification: Notification = {
     id: '223e4567-e89b-12d3-a456-426614174000',
     user_id: mockUser.id,
+    user: mockUser,
     title: 'Test Alert',
     message: 'Hello World',
     type: NotificationType.GENERAL,
@@ -43,11 +44,12 @@ describe('NotificationsService', () => {
     read_at: null,
     created_at: new Date(),
     updated_at: new Date(),
-  } as Notification;
+  };
 
-  const mockDevice = {
+  const mockDevice: UserDevice = {
     id: '323e4567-e89b-12d3-a456-426614174000',
     user_id: mockUser.id,
+    user: mockUser,
     fcm_token: 'fcm_token_sample_123',
     device_type: DeviceType.ANDROID,
     device_name: 'Test Phone',
@@ -55,7 +57,7 @@ describe('NotificationsService', () => {
     last_used_at: new Date(),
     created_at: new Date(),
     updated_at: new Date(),
-  } as UserDevice;
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -79,6 +81,7 @@ describe('NotificationsService', () => {
             find: jest.fn(),
             findOne: jest.fn(),
             delete: jest.fn(),
+            count: jest.fn().mockResolvedValue(0),
           },
         },
         {
@@ -100,7 +103,6 @@ describe('NotificationsService', () => {
     service = module.get<NotificationsService>(NotificationsService);
     notificationRepo = module.get(getRepositoryToken(Notification));
     deviceRepo = module.get(getRepositoryToken(UserDevice));
-    userRepo = module.get(getRepositoryToken(User));
     firebaseService = module.get(FirebaseService);
   });
 
@@ -211,16 +213,24 @@ describe('NotificationsService', () => {
     });
 
     it('should throw ForbiddenException if non-owner tries to view', async () => {
-      const otherUser = { id: '99999999-9999-9999-9999-999999999999', role: UserRole.MEMBER } as User;
+      const otherUser = {
+        id: '99999999-9999-9999-9999-999999999999',
+        role: UserRole.MEMBER,
+      } as User;
       notificationRepo.findOne.mockResolvedValue(mockNotification);
-      await expect(service.findOne(mockNotification.id, otherUser)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.findOne(mockNotification.id, otherUser),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should mark notification as read', async () => {
-      notificationRepo.findOne.mockResolvedValue({ ...mockNotification, is_read: false });
-      notificationRepo.save.mockImplementation(async (notif) => notif as Notification);
+      notificationRepo.findOne.mockResolvedValue({
+        ...mockNotification,
+        is_read: false,
+      });
+      notificationRepo.save.mockImplementation((notif) =>
+        Promise.resolve(notif as Notification),
+      );
 
       const result = await service.markAsRead(mockNotification.id, mockUser);
       expect(result.is_read).toBe(true);
@@ -254,9 +264,12 @@ describe('NotificationsService', () => {
 
     it('should update existing device if token already exists', async () => {
       deviceRepo.findOne.mockResolvedValue(mockDevice);
-      deviceRepo.save.mockResolvedValue({ ...mockDevice, last_used_at: new Date() });
+      deviceRepo.save.mockResolvedValue({
+        ...mockDevice,
+        last_used_at: new Date(),
+      });
 
-      const result = await service.registerDevice(
+      await service.registerDevice(
         'fcm_token_sample_123',
         DeviceType.ANDROID,
         'Test Phone',
@@ -270,6 +283,66 @@ describe('NotificationsService', () => {
       deviceRepo.find.mockResolvedValue([mockDevice]);
       const result = await service.getDevices(mockUser);
       expect(result).toEqual([mockDevice]);
+    });
+
+    it('should send security alert to all devices when registering a 2nd device (otherActiveDevicesCount >= 1)', async () => {
+      deviceRepo.findOne.mockResolvedValue(null);
+      deviceRepo.count.mockResolvedValue(1);
+      deviceRepo.create.mockReturnValue(mockDevice);
+      deviceRepo.save.mockResolvedValue(mockDevice);
+      notificationRepo.create.mockReturnValue(mockNotification);
+      notificationRepo.save.mockResolvedValue(mockNotification);
+      deviceRepo.find.mockResolvedValue([mockDevice]);
+      firebaseService.sendPushNotification.mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+        staleTokens: [],
+      });
+
+      await service.registerDevice(
+        'fcm_token_sample_123',
+        DeviceType.ANDROID,
+        'Test Phone',
+        mockUser,
+      );
+
+      expect(notificationRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: mockUser.id,
+          title: 'Security Alert: New Device Registered',
+        }),
+      );
+    });
+
+    it('should not send security alert when registering the 1st device (otherActiveDevicesCount === 0)', async () => {
+      deviceRepo.findOne.mockResolvedValue(null);
+      deviceRepo.count.mockResolvedValue(0);
+      deviceRepo.create.mockReturnValue(mockDevice);
+      deviceRepo.save.mockResolvedValue(mockDevice);
+
+      await service.registerDevice(
+        'fcm_token_sample_123',
+        DeviceType.ANDROID,
+        'Test Phone',
+        mockUser,
+      );
+
+      expect(notificationRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('should not send security alert when re-registering an already active device even if multiple devices exist', async () => {
+      deviceRepo.findOne.mockResolvedValue({ ...mockDevice, is_active: true });
+      deviceRepo.count.mockResolvedValue(5);
+      deviceRepo.save.mockResolvedValue(mockDevice);
+
+      await service.registerDevice(
+        'fcm_token_sample_123',
+        DeviceType.ANDROID,
+        'Test Phone',
+        mockUser,
+      );
+
+      expect(notificationRepo.create).not.toHaveBeenCalled();
     });
   });
 
@@ -290,7 +363,9 @@ describe('NotificationsService', () => {
 
     it('should send bulk notifications to user_ids successfully', async () => {
       notificationRepo.create.mockReturnValue(mockNotification);
-      notificationRepo.save.mockResolvedValue([mockNotification]);
+      notificationRepo.save.mockResolvedValue([
+        mockNotification,
+      ] as unknown as Notification);
       deviceRepo.find.mockResolvedValue([mockDevice]);
       firebaseService.sendPushNotification.mockResolvedValue({
         successCount: 1,
@@ -311,4 +386,3 @@ describe('NotificationsService', () => {
     });
   });
 });
-

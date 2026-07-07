@@ -134,7 +134,8 @@ export class MeetingQueryDto {
   from_date?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter meetings scheduled on or before this date (ISO format)',
+    description:
+      'Filter meetings scheduled on or before this date (ISO format)',
     type: String,
     format: 'date-time',
     example: '2026-08-31T23:59:59Z',

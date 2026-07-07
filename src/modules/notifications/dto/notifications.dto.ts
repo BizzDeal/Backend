@@ -44,7 +44,10 @@ export class SendBulkNotificationDto {
   @ApiProperty({
     type: [String],
     description: 'Array of target recipient user UUIDs',
-    example: ['123e4567-e89b-12d3-a456-426614174000', '223e4567-e89b-12d3-a456-426614174001'],
+    example: [
+      '123e4567-e89b-12d3-a456-426614174000',
+      '223e4567-e89b-12d3-a456-426614174001',
+    ],
   })
   user_ids: string[];
 
@@ -89,7 +92,8 @@ export class BroadcastRoleNotificationDto {
   @ApiProperty({
     type: String,
     description: 'Detailed notification message content',
-    example: 'Enjoy an exclusive weekend discount across all BizzDeal partner stores!',
+    example:
+      'Enjoy an exclusive weekend discount across all BizzDeal partner stores!',
   })
   message: string;
 
@@ -112,7 +116,8 @@ export class BroadcastRoleNotificationDto {
 export class RegisterDeviceDto {
   @ApiProperty({
     type: String,
-    description: 'Firebase Cloud Messaging (FCM) registration token from client device',
+    description:
+      'Firebase Cloud Messaging (FCM) registration token from client device',
     example: 'cE9...fcm_token_string...xY0',
   })
   fcm_token: string;
@@ -143,7 +148,8 @@ export class NotificationQueryDto {
 
   @ApiPropertyOptional({
     type: Boolean,
-    description: 'Filter notifications by read status (true for read, false for unread)',
+    description:
+      'Filter notifications by read status (true for read, false for unread)',
     example: false,
   })
   is_read?: boolean;

@@ -260,7 +260,10 @@ export class NotificationsController {
     description:
       'Deletes a specific notification by UUID. Users can delete their own notifications; Admins can delete any notification.',
   })
-  @ApiResponse({ status: 200, description: 'Notification deleted successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification deleted successfully.',
+  })
   @ApiResponse({ status: 404, description: 'Notification not found.' })
   async remove(@Param('id') id: string, @CurrentUser() user: User) {
     await this.notificationsService.remove(id, user);
