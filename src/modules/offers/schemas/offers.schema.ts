@@ -208,6 +208,7 @@ export const offerQuerySchema = z.object({
   offer_type: z.nativeEnum(OfferType).optional(),
   status: z.nativeEnum(OfferStatus).optional(),
   search: z.string().optional(),
+  q: z.string().optional(),
 });
 
 export class OfferQueryDto {
@@ -231,9 +232,15 @@ export class OfferQueryDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Search term matching title or description',
+    description: 'Search term matching title, description, or business name',
   })
   search?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Alias search term matching title, description, or business name',
+  })
+  q?: string;
 }
 
 export const offerActionSchema = z.object({

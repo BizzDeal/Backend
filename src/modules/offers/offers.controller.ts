@@ -94,7 +94,7 @@ export class OffersController {
   })
   async findAll(@Query() query: any, @CurrentUser() user?: User) {
     try {
-      const parsedQuery = offerQuerySchema.parse(query);
+      const parsedQuery = offerQuerySchema.parse(query || {});
       return await this.offersService.findAll(parsedQuery, user);
     } catch (err: any) {
       throw new BadRequestException({
@@ -102,6 +102,39 @@ export class OffersController {
         errors: err.errors || err.message,
       });
     }
+  }
+
+  @Get('search')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Search Offers and Deals',
+    description:
+      'Searches active promotional offers and deals by keyword matching offer title, description, or business name.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Search results returned successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid query parameters.',
+  })
+  async search(
+    @Query() queryParams: OfferQueryDto,
+    @CurrentUser() user?: User,
+  ) {
+    let query: OfferQueryDto = {};
+    try {
+      query = offerQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.offersService.findAll(query, user);
   }
 
   @Put('approve')

@@ -63,4 +63,13 @@ export async function seedBusinessCategories(
       logger.log(`Business category "${item.name}" already exists. Skipping.`);
     }
   }
+
+  const officialSlugs = BUSINESS_CATEGORIES.map((c) => c.slug);
+  await categoryRepository
+    .createQueryBuilder()
+    .update(BusinessCategory)
+    .set({ is_active: false })
+    .where('slug NOT IN (:...slugs)', { slugs: officialSlugs })
+    .execute();
+  logger.log('Deactivated non-official / test business categories.');
 }

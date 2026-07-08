@@ -112,13 +112,17 @@ export class OffersService {
       });
     }
 
-    if (query.search) {
+    const searchKeyword = query.q || query.search;
+    if (searchKeyword) {
       qb.andWhere(
         new Brackets((qbInner) => {
           qbInner
-            .where('offer.title ILIKE :search', { search: `%${query.search}%` })
+            .where('offer.title ILIKE :search', { search: `%${searchKeyword}%` })
             .orWhere('offer.description ILIKE :search', {
-              search: `%${query.search}%`,
+              search: `%${searchKeyword}%`,
+            })
+            .orWhere('business.name ILIKE :search', {
+              search: `%${searchKeyword}%`,
             });
         }),
       );

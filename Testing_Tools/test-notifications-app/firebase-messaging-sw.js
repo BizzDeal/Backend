@@ -22,8 +22,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || payload.data?.title || 'BizzDeal Notification';
   const notificationOptions = {
     body: payload.notification?.body || payload.data?.message || 'You have a new notification',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/BizzDeal.ico',
+    badge: '/BizzDeal.ico',
     data: payload.data || {},
     requireInteraction: true,
     tag: payload.data?.notification_id || 'bizzdeal_push_' + Date.now()
