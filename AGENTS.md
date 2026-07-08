@@ -212,6 +212,7 @@ Before changing backend code:
 4. Follow existing backend folder patterns.
 5. Reuse existing models, schemas, services, and utilities.
 6. After changes, summarize changed files and reason.
+7. **Always check for build and typescript errors**: When finishing an implementation, you MUST verify that there are no active build, compilation, or TypeScript errors before marking the task as complete. Do not assume the build succeeded without checking the terminal output or running a build command.
 
 ## Output Rule for AI Coding Assistants
 
