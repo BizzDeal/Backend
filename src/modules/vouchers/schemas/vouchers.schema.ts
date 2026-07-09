@@ -4,9 +4,9 @@ import { VoucherStatus } from '../../../common/enums';
 
 export const issueVoucherSchema = z.object({
   offer_id: z.string().uuid({ message: 'Valid offer_id UUID is required' }),
-  customer_id: z
+  customer_phone: z
     .string()
-    .uuid({ message: 'Valid customer_id UUID is required' })
+    .min(10, { message: 'Valid customer phone number is required' })
     .optional(),
 });
 
@@ -21,10 +21,10 @@ export class IssueVoucherDto {
   @ApiPropertyOptional({
     type: String,
     description:
-      'UUID of the customer to issue the voucher to (required when issued by Member/Admin; ignored or restricted for Customer)',
-    example: '321e4567-e89b-12d3-a456-426614174000',
+      'Phone number of the customer to issue the voucher to (required when issued by Member/Admin; ignored or restricted for Customer)',
+    example: '9876543210',
   })
-  customer_id?: string;
+  customer_phone?: string;
 }
 
 export const redeemVoucherSchema = z.object({

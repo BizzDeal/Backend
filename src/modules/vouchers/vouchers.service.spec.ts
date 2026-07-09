@@ -175,7 +175,7 @@ describe('VouchersService', () => {
 
       await expect(
         service.issueVoucher(
-          { offer_id: 'offer-id', customer_id: 'other-customer-id' },
+          { offer_id: 'offer-id', customer_phone: 'other-phone' },
           mockUser,
         ),
       ).rejects.toThrow(ForbiddenException);
@@ -196,7 +196,7 @@ describe('VouchersService', () => {
       });
 
       const res = await service.issueVoucher(
-        { offer_id: 'offer-id', customer_id: 'target-customer-id' },
+        { offer_id: 'offer-id', customer_phone: '1234567890' },
         mockMember,
       );
       expect(res.customer_id).toBe('target-customer-id');
@@ -217,7 +217,7 @@ describe('VouchersService', () => {
 
       await expect(
         service.issueVoucher(
-          { offer_id: 'offer-id', customer_id: 'target-customer-id' },
+          { offer_id: 'offer-id', customer_phone: '1234567890' },
           mockMember,
         ),
       ).rejects.toThrow(ForbiddenException);

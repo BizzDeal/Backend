@@ -87,20 +87,20 @@ export class VouchersService {
     let targetCustomerId = user.id;
 
     if (user.role === UserRole.CUSTOMER) {
-      if (dto.customer_id && dto.customer_id !== user.id) {
+      if (dto.customer_phone && dto.customer_phone !== user.phone) {
         throw new ForbiddenException(
           'Customers can only claim vouchers for themselves',
         );
       }
       targetCustomerId = user.id;
     } else {
-      if (!dto.customer_id) {
+      if (!dto.customer_phone) {
         throw new BadRequestException(
-          'customer_id is required when issuing a voucher as a Member or Admin',
+          'customer_phone is required when issuing a voucher as a Member or Admin',
         );
       }
       const targetCustomer = await this.userRepository.findOne({
-        where: { id: dto.customer_id },
+        where: { phone: dto.customer_phone },
       });
       if (!targetCustomer) {
         throw new NotFoundException('Customer not found');

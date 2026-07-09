@@ -45,7 +45,7 @@ export class VouchersController {
   @ApiOperation({
     summary: 'Issue Voucher',
     description:
-      'Issues a new voucher for an active, approved promotional offer. Customers can self-claim vouchers for themselves. Members (for their own businesses) and Admins can also issue vouchers to specific customers by providing customer_id. Customers cannot claim vouchers for other users.',
+      'Issues a new voucher for an active, approved promotional offer. Customers can self-claim vouchers for themselves. Members (for their own businesses) and Admins can also issue vouchers to specific customers by providing customer_phone. Customers cannot claim vouchers for other users.',
   })
   @ApiResponse({
     status: 201,
@@ -54,7 +54,7 @@ export class VouchersController {
   @ApiResponse({
     status: 400,
     description:
-      'Bad Request: Offer is unapproved/inactive/expired, or customer_id missing/invalid for Member/Admin.',
+      'Bad Request: Offer is unapproved/inactive/expired, or customer_phone missing/invalid for Member/Admin.',
   })
   @ApiResponse({
     status: 403,
