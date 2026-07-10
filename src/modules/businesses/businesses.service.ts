@@ -542,6 +542,52 @@ export class BusinessesService {
     };
   }
 
+  async updateStatus(
+    businessId: string,
+    status: BusinessStatus,
+    adminId: string,
+    ipAddress?: string,
+  ) {
+    if (!this.isUUID(businessId)) {
+      throw new BadRequestException('Invalid business ID format');
+    }
+
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const oldStatus = business.status;
+    await this.businessRepository.update(businessId, {
+      status,
+    });
+
+    await this.auditService.createLog({
+      user_id: adminId,
+      action: 'BUSINESS_STATUS_UPDATED',
+      entity_type: 'Business',
+      entity_id: businessId,
+      old_data: { status: oldStatus },
+      new_data: { status },
+      ip_address: ipAddress,
+    });
+
+    const updated = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
+    const enriched = await this.enrichBusinessesWithMediaAndCategory(
+      updated ? [updated] : [business],
+    );
+
+    return {
+      success: true,
+      message: `Business status updated to ${status} successfully`,
+      data: enriched[0],
+    };
+  }
+
   async featureBusiness(
     businessId: string,
     isFeatured: boolean,

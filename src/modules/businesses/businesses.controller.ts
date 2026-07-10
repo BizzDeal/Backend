@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -39,6 +40,8 @@ import {
   BusinessQueryDto,
   featureBusinessSchema,
   FeatureBusinessDto,
+  updateBusinessStatusSchema,
+  UpdateBusinessStatusDto,
 } from './schemas/businesses.schema';
 
 @ApiTags('Businesses')
@@ -217,6 +220,36 @@ export class BusinessesController {
       user.id,
       ip,
     );
+  }
+
+  @Patch(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update Business Status (Admin Only)',
+    description: 'Allows administrators to approve, reject, or suspend a business listing.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Business status updated successfully.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: Requires Admin role.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found.',
+  })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateBusinessStatusSchema))
+    dto: UpdateBusinessStatusDto,
+    @CurrentUser() user: User,
+    @Ip() ip?: string,
+  ) {
+    return this.businessesService.updateStatus(id, dto.status, user.id, ip);
   }
 
   @Put(':id')

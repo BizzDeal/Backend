@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BusinessStatus } from '../../../common/enums';
 
 export const updateBusinessSchema = z.object({
   name: z.string().min(2).optional(),
@@ -47,6 +48,19 @@ export class UpdateBusinessDto {
     description: 'Replacement business logo file image',
   })
   business_logo?: any;
+}
+
+export const updateBusinessStatusSchema = z.object({
+  status: z.nativeEnum(BusinessStatus),
+});
+
+export class UpdateBusinessStatusDto {
+  @ApiProperty({
+    enum: BusinessStatus,
+    description: 'New status for the business',
+    example: BusinessStatus.ACTIVE,
+  })
+  status: BusinessStatus;
 }
 
 export const businessQuerySchema = z.object({
