@@ -17,6 +17,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuditModule } from './modules/audit/audit.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { MeetingsModule } from './modules/meetings/meetings.module';
+import { LocationModule } from './modules/location/location.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { MeetingsModule } from './modules/meetings/meetings.module';
     AuditModule,
     ChatModule,
     MeetingsModule,
+    LocationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

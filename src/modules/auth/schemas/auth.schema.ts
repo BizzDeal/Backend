@@ -27,6 +27,8 @@ export const registerMemberSchema = z.object({
   whatsapp: z.string().min(10, 'Valid WhatsApp number is required'),
   email: z.string().email('Invalid email address'),
   address: z.string().min(5, 'Address is required'),
+  state_id: z.string().uuid('Valid state UUID is required'),
+  district_id: z.string().uuid('Valid district UUID is required'),
   business_name: z.string().min(2, 'Business name is required'),
   category_id: z.string().uuid('Valid business category UUID is required'),
   business_description: z.string().min(5, 'Business description is required'),
@@ -77,6 +79,20 @@ export class RegisterMemberDto {
     example: '123 Business Street, Tech Park, Hyderabad',
   })
   address: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'UUID of the selected state',
+    example: 'a1111111-2222-3333-4444-555555555555',
+  })
+  state_id: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'UUID of the selected district',
+    example: 'b2222222-3333-4444-5555-666666666666',
+  })
+  district_id: string;
 
   @ApiProperty({
     type: String,

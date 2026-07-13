@@ -22,6 +22,8 @@ export const updateProfileSchema = z.object({
   whatsapp: z.string().optional().nullable(),
   email: z.string().email('Invalid email address').optional().nullable(),
   address: z.string().optional().nullable(),
+  state_id: z.string().uuid().optional().nullable(),
+  district_id: z.string().uuid().optional().nullable(),
   category_id: z.string().uuid().optional(),
   business_name: z.string().min(2).optional(),
   business_description: z.string().min(5).optional(),
@@ -64,6 +66,20 @@ export class UpdateProfileDto {
     example: '123 Business Street, Tech Park, Hyderabad',
   })
   address?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'UUID of the state',
+    example: 'a1111111-2222-3333-4444-555555555555',
+  })
+  state_id?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'UUID of the district',
+    example: 'b2222222-3333-4444-5555-666666666666',
+  })
+  district_id?: string;
 
   @ApiPropertyOptional({
     type: String,

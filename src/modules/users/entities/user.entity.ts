@@ -8,6 +8,8 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { UserRole, UserStatus } from '../../../common/enums';
+import { State } from '../../location/entities/state.entity';
+import { District } from '../../location/entities/district.entity';
 
 @Entity('users')
 export class User {
@@ -28,6 +30,20 @@ export class User {
 
   @Column({ type: 'text', nullable: true })
   address: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  state_id: string | null;
+
+  @ManyToOne(() => State, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'state_id' })
+  state: State | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  district_id: string | null;
+
+  @ManyToOne(() => District, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'district_id' })
+  district: District | null;
 
   @Column({ type: 'varchar', length: 255, select: false })
   pin_hash?: string;

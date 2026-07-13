@@ -16,6 +16,7 @@ import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/businesses.service';
 import { FirebaseService } from '../../common/firebase/firebase.service';
 import { MediaService } from '../media/media.service';
+import { LocationService } from '../location/services/location.service';
 import {
   UserRole,
   UserStatus,
@@ -41,6 +42,7 @@ export class AuthService {
     private readonly firebaseService: FirebaseService,
     private readonly jwtService: JwtService,
     private readonly mediaService: MediaService,
+    private readonly locationService: LocationService,
   ) {}
 
   private hashToken(token: string): string {
@@ -182,6 +184,25 @@ export class AuthService {
       );
     }
 
+    // Validate State and District existence and mapping
+    const state = await this.locationService.getStateById(dto.state_id);
+    if (!state) {
+      throw new BadRequestException('Selected state ID does not exist');
+    }
+
+    const district = await this.locationService.getDistrictById(
+      dto.district_id,
+    );
+    if (!district) {
+      throw new BadRequestException('Selected district ID does not exist');
+    }
+
+    if (district.stateId !== dto.state_id) {
+      throw new BadRequestException(
+        'Selected district does not belong to the selected state',
+      );
+    }
+
     // Verify phone token via Firebase Auth
     await this.verifyPhoneMatch(dto.phone, dto.firebaseToken);
 
@@ -193,6 +214,8 @@ export class AuthService {
       whatsapp: dto.whatsapp,
       email: dto.email,
       address: dto.address,
+      state_id: dto.state_id,
+      district_id: dto.district_id,
       pin_hash: pinHash,
       role: UserRole.MEMBER,
       status: UserStatus.PENDING, // Members are pending by default until Admin approves

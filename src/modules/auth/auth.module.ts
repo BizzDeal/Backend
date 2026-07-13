@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { BusinessesModule } from '../businesses/businesses.module';
 import { FirebaseModule } from '../../common/firebase/firebase.module';
 import { MediaModule } from '../media/media.module';
+import { LocationModule } from '../location/location.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MediaModule } from '../media/media.module';
     BusinessesModule,
     FirebaseModule,
     MediaModule,
+    LocationModule,
   ],
   controllers: [AuthController],
   providers: [AuthService],

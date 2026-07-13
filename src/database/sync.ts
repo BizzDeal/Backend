@@ -6,6 +6,7 @@ import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 import { BusinessCategory } from '../modules/businesses/entities/business-category.entity';
 import { seedBusinessCategories } from './seeds/business-categories.seed';
+import { seedLocations } from './seeds/locations.seed';
 
 dotenv.config();
 
@@ -37,8 +38,16 @@ async function fixEnumsBeforeSync() {
     await ds.query(
       `UPDATE businesses SET status = 'PENDING' WHERE status::text = 'REGISTERED';`,
     );
+    // Remove unnecessary/deprecated location & sync tables in Supabase / PostgreSQL
+    logger.log('Cleaning up unnecessary location & sync tables in database...');
+    await ds.query(`
+      DROP TABLE IF EXISTS "village_pincode_mappings", "villages", "sub_districts", "urban_pincode_mappings", "urban_local_bodies", "location_sync_file_jobs", "location_sync_jobs" CASCADE;
+    `);
+    await ds.query(`
+      DROP TYPE IF EXISTS "public"."location_sync_jobs_status_enum" CASCADE;
+    `);
     await ds.query(`NOTIFY pgrst, 'reload schema';`);
-    logger.log('Pre-sync adjustments successful.');
+    logger.log('Pre-sync adjustments and schema cleanup successful.');
   } catch (err: any) {
     logger.warn(`Notice during pre-sync adjustments: ${err.message}`);
   } finally {
@@ -59,6 +68,7 @@ async function bootstrap() {
   try {
     const categoryRepo = app.get(getRepositoryToken(BusinessCategory));
     await seedBusinessCategories(categoryRepo);
+    await seedLocations(app.get(DataSource));
     logger.log(
       'Database synchronization & all individual seed scripts completed successfully.',
     );
