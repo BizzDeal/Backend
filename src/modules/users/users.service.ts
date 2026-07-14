@@ -20,6 +20,8 @@ import {
   MediaPurpose,
 } from '../../common/enums';
 import { UpdateProfileDto } from './schemas/users.schema';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { LocationService } from '../location/services/location.service';
 
 @Injectable()
 export class UsersService {
@@ -33,6 +35,8 @@ export class UsersService {
     private readonly auditService: AuditService,
     private readonly mediaService: MediaService,
     private readonly businessesService: BusinessesService,
+    private readonly analyticsService: AnalyticsService,
+    private readonly locationService: LocationService,
   ) {}
 
   async findAll(): Promise<
@@ -83,7 +87,11 @@ export class UsersService {
 
   async create(userData: Partial<User>): Promise<User> {
     const user = this.usersRepository.create(userData);
-    return this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
+    if (savedUser && savedUser.role) {
+      await this.analyticsService.trackUserCreated(savedUser.role);
+    }
+    return savedUser;
   }
 
   async update(id: string, updateData: Partial<User>): Promise<User> {
@@ -102,9 +110,13 @@ export class UsersService {
     return { exists: !!user };
   }
 
-  async findMembers() {
+  async findMembers(status?: UserStatus) {
+    const whereCondition: any = { role: UserRole.MEMBER };
+    if (status) {
+      whereCondition.status = status;
+    }
     const members = await this.usersRepository.find({
-      where: { role: UserRole.MEMBER },
+      where: whereCondition,
       order: { created_at: 'DESC' },
     });
 
@@ -206,49 +218,81 @@ export class UsersService {
     };
   }
 
-  async getProfile(userId: string) {
-    const user = await this.findOneById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
+  private async buildUserProfileData(user: User) {
     const mediaFiles = await this.mediaRepository.find({
       where: {
-        uploaded_by_id: userId,
-        purpose: In([MediaPurpose.PROFILE_PIC, MediaPurpose.PAYMENT_RECEIPT]),
+        uploaded_by_id: user.id,
+        purpose: In([
+          MediaPurpose.PROFILE_PIC,
+          MediaPurpose.PAYMENT_RECEIPT,
+          MediaPurpose.BUSINESS_LOGO,
+        ]),
       },
     });
 
     let profile_pic_url: string | null = null;
     let payment_receipt_url: string | null = null;
+    let business_logo_url: string | null = null;
 
     mediaFiles.forEach((m) => {
       if (m.purpose === MediaPurpose.PROFILE_PIC) {
         profile_pic_url = m.file_url;
       } else if (m.purpose === MediaPurpose.PAYMENT_RECEIPT) {
         payment_receipt_url = m.file_url;
+      } else if (m.purpose === MediaPurpose.BUSINESS_LOGO) {
+        business_logo_url = m.file_url;
       }
     });
 
     let business: Business | null = null;
     if (user.role === UserRole.MEMBER) {
       business = await this.businessRepository.findOne({
-        where: { owner_id: userId },
+        where: { owner_id: user.id },
       });
+      if (business?.logo_id && !business_logo_url) {
+        const logoFile = await this.mediaRepository.findOne({
+          where: { id: business.logo_id },
+        });
+        if (logoFile) business_logo_url = logoFile.file_url;
+      }
     }
 
     const { pin_hash: _pin_hash, ...userWithoutPin } = user;
     return {
+      ...userWithoutPin,
+      state_id: user.state_id || null,
+      district_id: user.district_id || null,
+      profile_pic_url,
+      payment_receipt_url:
+        user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
+      business_id:
+        user.role === UserRole.MEMBER ? business?.id || null : undefined,
+      category_id:
+        user.role === UserRole.MEMBER ? business?.category_id || null : undefined,
+      business_name:
+        user.role === UserRole.MEMBER ? business?.name || null : undefined,
+      business_description:
+        user.role === UserRole.MEMBER ? business?.description || null : undefined,
+      website:
+        user.role === UserRole.MEMBER ? business?.website || null : undefined,
+      gst_number:
+        user.role === UserRole.MEMBER ? business?.gst_number || null : undefined,
+      business_logo_url:
+        user.role === UserRole.MEMBER ? business_logo_url : undefined,
+    };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.findOneById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const data = await this.buildUserProfileData(user);
+    return {
       success: true,
       message: 'Profile fetched successfully',
-      data: {
-        ...userWithoutPin,
-        profile_pic_url,
-        payment_receipt_url:
-          user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
-        business_id:
-          user.role === UserRole.MEMBER ? business?.id || null : undefined,
-      },
+      data,
     };
   }
 
@@ -258,43 +302,11 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const mediaFiles = await this.mediaRepository.find({
-      where: {
-        uploaded_by_id: userId,
-        purpose: In([MediaPurpose.PROFILE_PIC, MediaPurpose.PAYMENT_RECEIPT]),
-      },
-    });
-
-    let profile_pic_url: string | null = null;
-    let payment_receipt_url: string | null = null;
-
-    mediaFiles.forEach((m) => {
-      if (m.purpose === MediaPurpose.PROFILE_PIC) {
-        profile_pic_url = m.file_url;
-      } else if (m.purpose === MediaPurpose.PAYMENT_RECEIPT) {
-        payment_receipt_url = m.file_url;
-      }
-    });
-
-    let business: Business | null = null;
-    if (user.role === UserRole.MEMBER) {
-      business = await this.businessRepository.findOne({
-        where: { owner_id: userId },
-      });
-    }
-
-    const { pin_hash: _pin_hash, ...userWithoutPin } = user;
+    const data = await this.buildUserProfileData(user);
     return {
       success: true,
       message: 'User details fetched successfully',
-      data: {
-        ...userWithoutPin,
-        profile_pic_url,
-        payment_receipt_url:
-          user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
-        business_id:
-          user.role === UserRole.MEMBER ? business?.id || null : undefined,
-      },
+      data,
     };
   }
 
@@ -326,6 +338,34 @@ export class UsersService {
     if (dto.whatsapp !== undefined) updateData.whatsapp = dto.whatsapp;
     if (dto.email !== undefined) updateData.email = dto.email;
     if (dto.address !== undefined) updateData.address = dto.address;
+
+    if (dto.state_id !== undefined) {
+      if (dto.state_id && dto.state_id !== '') {
+        const state = await this.locationService.getStateById(dto.state_id);
+        if (!state) {
+          throw new BadRequestException('Selected state ID does not exist');
+        }
+        updateData.state_id = dto.state_id;
+      } else {
+        updateData.state_id = null;
+      }
+    }
+
+    if (dto.district_id !== undefined) {
+      if (dto.district_id && dto.district_id !== '') {
+        const district = await this.locationService.getDistrictById(dto.district_id);
+        if (!district) {
+          throw new BadRequestException('Selected district ID does not exist');
+        }
+        const checkStateId = updateData.state_id !== undefined ? updateData.state_id : user.state_id;
+        if (checkStateId && district.stateId !== checkStateId) {
+          throw new BadRequestException('Selected district does not belong to the selected state');
+        }
+        updateData.district_id = dto.district_id;
+      } else {
+        updateData.district_id = null;
+      }
+    }
 
     if (Object.keys(updateData).length > 0) {
       await this.usersRepository.update(userId, updateData);
@@ -436,6 +476,10 @@ export class UsersService {
       ip_address: ipAddress,
     });
 
+    if (oldStatus !== UserStatus.ACTIVE) {
+      await this.analyticsService.trackMemberApproved();
+    }
+
     return {
       success: true,
       message: 'Member approved successfully',
@@ -474,6 +518,10 @@ export class UsersService {
       ip_address: ipAddress,
     });
 
+    if (oldStatus === UserStatus.ACTIVE) {
+      await this.analyticsService.trackMemberRejectedOrSuspended();
+    }
+
     return {
       success: true,
       message: 'Member rejected successfully',
@@ -511,6 +559,10 @@ export class UsersService {
       new_data: { status: UserStatus.SUSPENDED },
       ip_address: ipAddress,
     });
+
+    if (oldStatus === UserStatus.ACTIVE) {
+      await this.analyticsService.trackMemberRejectedOrSuspended();
+    }
 
     return {
       success: true,

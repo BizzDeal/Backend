@@ -8,12 +8,14 @@ import { Repository } from 'typeorm';
 import { Referral } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
 import { UserRole, ReferralStatus } from '../../common/enums';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 @Injectable()
 export class ReferralsService {
   constructor(
     @InjectRepository(Referral)
     private readonly referralRepository: Repository<Referral>,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
   async findAll(user: User): Promise<Referral[]> {
@@ -52,6 +54,10 @@ export class ReferralsService {
       reward_amount: data.reward_amount || 0,
       status: ReferralStatus.PENDING,
     });
-    return this.referralRepository.save(referral);
+    const saved = await this.referralRepository.save(referral);
+    if (saved) {
+      await this.analyticsService.trackReferralCreated();
+    }
+    return saved;
   }
 }

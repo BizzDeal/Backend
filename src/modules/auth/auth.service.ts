@@ -140,11 +140,11 @@ export class AuthService {
     // Update last login timestamp
     await this.usersService.update(user.id, { last_login_at: new Date() });
 
-    const { pin_hash: _pin_hash, ...userWithoutPin } = user;
+    const profileRes = await this.usersService.getProfile(user.id);
     return {
       ...tokens,
       user: {
-        ...userWithoutPin,
+        ...profileRes.data,
         last_login_at: new Date(),
       },
     };
@@ -259,10 +259,10 @@ export class AuthService {
 
     const tokens = await this.generateTokens(newUser);
 
-    const { pin_hash: _pin_hash, ...userWithoutPin } = newUser;
+    const profileRes = await this.usersService.getProfile(newUser.id);
     return {
       ...tokens,
-      user: userWithoutPin,
+      user: profileRes.data,
     };
   }
 
@@ -286,11 +286,11 @@ export class AuthService {
     const pinHash = await bcrypt.hash(dto.pin, 10);
 
     const newUser = await this.usersService.create({
-      full_name: dto.full_name,
+      full_name: dto.full_name || null,
       phone: dto.phone,
-      whatsapp: dto.whatsapp,
-      email: dto.email,
-      address: dto.address,
+      whatsapp: dto.whatsapp || null,
+      email: dto.email || null,
+      address: dto.address || null,
       pin_hash: pinHash,
       role: UserRole.CUSTOMER,
       status: UserStatus.ACTIVE, // Customers are active by default

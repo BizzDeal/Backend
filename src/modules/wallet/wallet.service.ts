@@ -20,6 +20,7 @@ import {
   WalletReferenceType,
   UserRole,
 } from '../../common/enums';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 @Injectable()
 export class WalletService {
@@ -32,6 +33,7 @@ export class WalletService {
     private readonly transactionRepository: Repository<WalletTransaction>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
   async getBalance(userId?: string, currentUser?: User): Promise<Wallet> {
@@ -179,6 +181,10 @@ export class WalletService {
         reference_id: dto.reference_id || null,
       });
       const savedTx = await manager.save(WalletTransaction, tx);
+      await this.analyticsService.trackWalletTransaction(
+        WalletTransactionType.CREDIT,
+        Number(dto.amount),
+      );
 
       return { wallet: savedWallet, transaction: savedTx };
     });
@@ -224,6 +230,10 @@ export class WalletService {
         reference_id: dto.reference_id || null,
       });
       const savedTx = await manager.save(WalletTransaction, tx);
+      await this.analyticsService.trackWalletTransaction(
+        WalletTransactionType.DEBIT,
+        Number(dto.amount),
+      );
 
       return { wallet: savedWallet, transaction: savedTx };
     });

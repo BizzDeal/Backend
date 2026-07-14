@@ -24,6 +24,7 @@ import {
   UpdateBusinessDto,
   BusinessQueryDto,
 } from './schemas/businesses.schema';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 @Injectable()
 export class BusinessesService {
@@ -39,6 +40,7 @@ export class BusinessesService {
     private readonly mediaRepository: Repository<MediaFile>,
     private readonly mediaService: MediaService,
     private readonly auditService: AuditService,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
   private isUUID(str: string): boolean {
@@ -75,7 +77,16 @@ export class BusinessesService {
 
   async createBusiness(data: Partial<Business>): Promise<Business> {
     const business = this.businessRepository.create(data);
-    return this.businessRepository.save(business);
+    const saved = await this.businessRepository.save(business);
+    if (saved) {
+      let categoryName = 'General';
+      if (saved.category_id) {
+        const cat = await this.categoryRepository.findOne({ where: { id: saved.category_id } });
+        if (cat) categoryName = cat.name;
+      }
+      await this.analyticsService.trackBusinessCreated(saved.category_id, categoryName);
+    }
+    return saved;
   }
 
   private async enrichBusinessesWithMediaAndCategory(businesses: Business[]) {

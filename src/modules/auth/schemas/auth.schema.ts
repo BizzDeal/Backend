@@ -160,21 +160,21 @@ export class RegisterMemberDto {
 }
 
 export const registerCustomerSchema = z.object({
-  full_name: z.string().min(2, 'Full name must be at least 2 characters'),
+  full_name: z.string().min(2, 'Full name must be at least 2 characters').optional().nullable(),
   phone: z.string().min(10, 'Valid phone number is required'),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
-  whatsapp: z.string().min(10, 'Valid WhatsApp number is required'),
-  email: z.string().email('Invalid email address'),
-  address: z.string().min(5, 'Address is required'),
+  whatsapp: z.string().min(10, 'Valid WhatsApp number is required').optional().nullable(),
+  email: z.string().email('Invalid email address').optional().nullable(),
+  address: z.string().min(5, 'Address is required').optional().nullable(),
   firebaseToken: z.string().min(1, 'Firebase authentication token is required'),
 });
 
 export class RegisterCustomerDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'The full name of the customer',
     example: 'Jane Smith',
   })
-  full_name: string;
+  full_name?: string | null;
 
   @ApiProperty({
     description: 'The unique phone number of the customer',
@@ -188,23 +188,23 @@ export class RegisterCustomerDto {
   })
   pin: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'The WhatsApp number of the customer',
     example: '9876543211',
   })
-  whatsapp: string;
+  whatsapp?: string | null;
 
-  @ApiProperty({
-    description: 'The mandatory email address of the customer',
+  @ApiPropertyOptional({
+    description: 'The email address of the customer',
     example: 'jane.smith@example.com',
   })
-  email: string;
+  email?: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'The physical address of the customer',
     example: '456 Customer Lane, Hyderabad',
   })
-  address: string;
+  address?: string | null;
 
   @ApiProperty({
     description:

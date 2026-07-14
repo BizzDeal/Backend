@@ -17,18 +17,19 @@ export const updateProfileSchema = z.object({
   full_name: z
     .string()
     .min(2, 'Full name must be at least 2 characters')
-    .optional(),
-  phone: z.string().min(10, 'Valid phone number is required').optional(),
-  whatsapp: z.string().optional().nullable(),
-  email: z.string().email('Invalid email address').optional().nullable(),
-  address: z.string().optional().nullable(),
-  state_id: z.string().uuid().optional().nullable(),
-  district_id: z.string().uuid().optional().nullable(),
-  category_id: z.string().uuid().optional(),
-  business_name: z.string().min(2).optional(),
-  business_description: z.string().min(5).optional(),
-  website: z.string().optional().nullable(),
-  gst_number: z.string().optional().nullable(),
+    .optional()
+    .or(z.literal('')),
+  phone: z.string().min(10, 'Valid phone number is required').optional().or(z.literal('')),
+  whatsapp: z.string().optional().nullable().or(z.literal('')),
+  email: z.string().email('Invalid email address').optional().nullable().or(z.literal('')),
+  address: z.string().optional().nullable().or(z.literal('')),
+  state_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  district_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  category_id: z.string().uuid().optional().or(z.literal('')),
+  business_name: z.string().min(2).optional().or(z.literal('')),
+  business_description: z.string().min(5).optional().or(z.literal('')),
+  website: z.string().optional().nullable().or(z.literal('')),
+  gst_number: z.string().optional().nullable().or(z.literal('')),
 });
 
 export class UpdateProfileDto {

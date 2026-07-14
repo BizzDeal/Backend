@@ -7,6 +7,7 @@ import { Business } from '../businesses/entities/business.entity';
 import { AuditModule } from '../audit/audit.module';
 import { MediaModule } from '../media/media.module';
 import { BusinessesModule } from '../businesses/businesses.module';
+import { LocationModule } from '../location/location.module';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 
@@ -19,6 +20,7 @@ import { UsersController } from './users.controller';
     AuditModule,
     MediaModule,
     BusinessesModule,
+    LocationModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

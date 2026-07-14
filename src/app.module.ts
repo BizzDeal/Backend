@@ -18,6 +18,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { MeetingsModule } from './modules/meetings/meetings.module';
 import { LocationModule } from './modules/location/location.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { LocationModule } from './modules/location/location.module';
     }),
     DatabaseModule,
     FirebaseModule,
+    AnalyticsModule,
     UsersModule,
     AuthModule,
     MediaModule,

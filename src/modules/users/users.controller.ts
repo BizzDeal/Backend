@@ -39,7 +39,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { UserRole } from '../../common/enums';
+import { UserRole, UserStatus } from '../../common/enums';
 
 @ApiTags('Users')
 @Controller('users')
@@ -98,8 +98,8 @@ export class UsersController {
     status: 200,
     description: 'List of members returned successfully.',
   })
-  async findMembers() {
-    return this.usersService.findMembers();
+  async findMembers(@Query('status') status?: UserStatus) {
+    return this.usersService.findMembers(status);
   }
 
   @Get('customers')

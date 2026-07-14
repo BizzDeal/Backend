@@ -29,6 +29,7 @@ import {
   WalletTransactionType,
   WalletReferenceType,
 } from '../../common/enums';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 @Injectable()
 export class VouchersService {
@@ -43,6 +44,7 @@ export class VouchersService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
   private generateVoucherCode(): string {
@@ -126,6 +128,7 @@ export class VouchersService {
     });
 
     const savedVoucher = await this.voucherRepository.save(voucher);
+    await this.analyticsService.trackVoucherIssued();
     delete (savedVoucher as any).offer;
     delete (savedVoucher as any).business;
     delete (savedVoucher as any).customer;
@@ -295,6 +298,10 @@ export class VouchersService {
           await manager.save(WalletTransaction, debitTx);
         }
       }
+
+      await this.analyticsService.trackVoucherRedeemed(
+        calculatedAmount || Number(offer.discount_value || 0),
+      );
 
       delete (savedVoucher as any).offer;
       delete (savedVoucher as any).business;
