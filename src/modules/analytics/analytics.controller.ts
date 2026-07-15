@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -51,5 +51,19 @@ export class AnalyticsController {
   })
   async getDetailed() {
     return this.analyticsService.getDetailedAnalytics();
+  }
+
+  @Post('sync')
+  @ApiOperation({
+    summary: 'Sync/Recalculate Analytics Data',
+    description: 'Fully recalculates all analytics KPIs and time-series data from primary tables.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Analytics synced successfully.',
+  })
+  async syncAnalytics() {
+    await this.analyticsService.syncExistingData();
+    return { success: true, message: 'Analytics synced successfully' };
   }
 }

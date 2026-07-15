@@ -436,7 +436,101 @@ export class AnalyticsService implements OnModuleInit {
       await this.categoryRepo.save(metric);
     }
 
-    // Ensure current month metric exists
+    // --- FULLY RECALCULATE MONTHLY METRICS ---
+    this.logger.log('Recalculating all historical monthly metrics from source tables...');
+    await this.monthlyRepo.clear();
+
+    const monthlyData = new Map<string, any>();
+    const getMonthData = (month: string) => {
+      if (!monthlyData.has(month)) {
+        monthlyData.set(month, {
+          period_month: month,
+          new_customers: 0,
+          new_members: 0,
+          vouchers_issued: 0,
+          vouchers_redeemed: 0,
+          wallet_credits: 0,
+          wallet_debits: 0,
+          revenue: 0,
+        });
+      }
+      return monthlyData.get(month);
+    };
+
+    // 1. User stats per month
+    const userStats = await this.userRepo
+      .createQueryBuilder('user')
+      .select("TO_CHAR(user.created_at, 'YYYY-MM')", 'month')
+      .addSelect("SUM(CASE WHEN user.role = :customer THEN 1 ELSE 0 END)", 'customers')
+      .addSelect("SUM(CASE WHEN user.role = :member THEN 1 ELSE 0 END)", 'members')
+      .setParameters({ customer: UserRole.CUSTOMER, member: UserRole.MEMBER })
+      .groupBy("TO_CHAR(user.created_at, 'YYYY-MM')")
+      .getRawMany();
+
+    for (const stat of userStats) {
+      if (!stat.month) continue;
+      const data = getMonthData(stat.month);
+      data.new_customers += Number(stat.customers || 0);
+      data.new_members += Number(stat.members || 0);
+    }
+
+    // 2. Vouchers Issued per month
+    const voucherIssued = await this.voucherRepo
+      .createQueryBuilder('v')
+      .select("TO_CHAR(v.created_at, 'YYYY-MM')", 'month')
+      .addSelect("COUNT(*)", 'issued')
+      .groupBy("TO_CHAR(v.created_at, 'YYYY-MM')")
+      .getRawMany();
+
+    for (const stat of voucherIssued) {
+      if (!stat.month) continue;
+      const data = getMonthData(stat.month);
+      data.vouchers_issued += Number(stat.issued || 0);
+    }
+
+    // 3. Vouchers Redeemed per month
+    const voucherRedeemed = await this.voucherRepo
+      .createQueryBuilder('v')
+      .select("TO_CHAR(v.redeemed_at, 'YYYY-MM')", 'month')
+      .addSelect("COUNT(*)", 'redeemed')
+      .where("v.status = :status", { status: VoucherStatus.REDEEMED })
+      .andWhere("v.redeemed_at IS NOT NULL")
+      .groupBy("TO_CHAR(v.redeemed_at, 'YYYY-MM')")
+      .getRawMany();
+
+    for (const stat of voucherRedeemed) {
+      if (!stat.month) continue;
+      const data = getMonthData(stat.month);
+      data.vouchers_redeemed += Number(stat.redeemed || 0);
+    }
+
+    // 4. Wallet Transactions per month
+    const walletStats = await this.txRepo
+      .createQueryBuilder('tx')
+      .select("TO_CHAR(tx.created_at, 'YYYY-MM')", 'month')
+      .addSelect("SUM(CASE WHEN tx.type = :credit THEN tx.amount ELSE 0 END)", 'credits')
+      .addSelect("SUM(CASE WHEN tx.type = :debit THEN tx.amount ELSE 0 END)", 'debits')
+      .setParameters({ credit: WalletTransactionType.CREDIT, debit: WalletTransactionType.DEBIT })
+      .groupBy("TO_CHAR(tx.created_at, 'YYYY-MM')")
+      .getRawMany();
+
+    for (const stat of walletStats) {
+      if (!stat.month) continue;
+      const data = getMonthData(stat.month);
+      data.wallet_credits += Number(stat.credits || 0);
+      data.wallet_debits += Number(stat.debits || 0);
+      // Assuming revenue is total credits
+      data.revenue += Number(stat.credits || 0); 
+    }
+
+    // Save all constructed monthly metrics
+    const metricsArray = Array.from(monthlyData.values());
+    if (metricsArray.length > 0) {
+      const metricsToSave = this.monthlyRepo.create(metricsArray);
+      await this.monthlyRepo.save(metricsToSave);
+    }
+
+    // Ensure current month metric exists even if empty
     await this.getOrCreateMonthlyMetric();
 
     this.logger.log('Analytics reconciliation completed successfully.');

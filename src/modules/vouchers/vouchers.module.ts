@@ -7,6 +7,7 @@ import { Business } from '../businesses/entities/business.entity';
 import { User } from '../users/entities/user.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
+import { MediaFile } from '../media/entities/media-file.entity';
 import { VouchersService } from './vouchers.service';
 import { VouchersController } from './vouchers.controller';
 
@@ -19,6 +20,7 @@ import { VouchersController } from './vouchers.controller';
       User,
       Wallet,
       WalletTransaction,
+      MediaFile,
     ]),
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',

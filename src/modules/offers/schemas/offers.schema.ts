@@ -209,6 +209,7 @@ export const offerQuerySchema = z.object({
   status: z.nativeEnum(OfferStatus).optional(),
   search: z.string().optional(),
   q: z.string().optional(),
+  my_offers: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
 });
 
 export class OfferQueryDto {
@@ -241,6 +242,12 @@ export class OfferQueryDto {
     description: 'Alias search term matching title, description, or business name',
   })
   q?: string;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'If true, returns only offers created by the logged-in member business owner',
+  })
+  my_offers?: boolean;
 }
 
 export const offerActionSchema = z.object({

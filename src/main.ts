@@ -3,6 +3,10 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { SWAGGER_AUTH_SCRIPT } from './common/utils/swagger-auth.script';
 
+// Ensure India Time Zone (Asia/Kolkata, UTC+05:30) for Node process and PostgreSQL driver
+process.env.TZ = process.env.TZ || 'Asia/Kolkata';
+process.env.PGTZ = process.env.PGTZ || 'Asia/Kolkata';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 

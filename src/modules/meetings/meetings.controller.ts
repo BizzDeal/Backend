@@ -31,6 +31,7 @@ import {
   AddAttendeeDto,
   UpdateAttendeeStatusDto,
   MeetingQueryDto,
+  RsvpDto,
 } from './dto/meetings.dto';
 import {
   createMeetingSchema,
@@ -38,6 +39,7 @@ import {
   addAttendeeSchema,
   updateAttendeeStatusSchema,
   meetingQuerySchema,
+  rsvpSchema,
 } from './schemas/meetings.schema';
 
 @ApiTags('Meetings')
@@ -285,5 +287,36 @@ export class MeetingsController {
       attendeeId,
       user,
     );
+  }
+
+  @Put(':id/rsvp')
+  @Roles(UserRole.MEMBER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Submit RSVP for Meeting',
+    description: 'Members use this to provide their RSVP (ACCEPTED or REJECTED) to a meeting. Upserts the attendee record.',
+  })
+  @ApiResponse({ status: 200, description: 'RSVP updated successfully.' })
+  async rsvpMeeting(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(rsvpSchema)) body: RsvpDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.meetingsService.rsvpMeeting(id, body.status, user);
+  }
+
+  @Get(':id/attendee-report')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Attendee Report (Admin Only)',
+    description: 'Retrieves a list of all relevant members for a meeting along with their RSVP status (including PENDING).',
+  })
+  @ApiResponse({ status: 200, description: 'Report returned successfully.' })
+  async getAttendeeReport(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.meetingsService.getMeetingAttendeeReport(id, user);
   }
 }

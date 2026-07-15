@@ -106,11 +106,31 @@ export class BusinessesService {
 
     return businesses.map((b) => {
       const { ...biz } = b;
+      const categoryName = b.category ? b.category.name : 'General';
+      const phone = b.owner ? (b.owner.phone || '') : '';
+      const whatsapp = b.owner ? ((b.owner as any).whatsapp || b.owner.phone || '') : '';
+      const owner_name = b.owner ? ((b.owner as any).full_name || '') : '';
+      const owner_email = b.owner ? ((b.owner as any).email || '') : '';
+      const initials = (b.name || 'BI')
+        .split(' ')
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+
       delete (biz as any).category;
       delete (biz as any).owner;
       return {
         ...biz,
+        categoryName,
+        category_name: categoryName,
+        phone,
+        whatsapp,
+        owner_name,
+        owner_email,
+        initials,
         logo_url: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
+        logoUrl: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
       };
     });
   }
@@ -159,10 +179,17 @@ export class BusinessesService {
       !!query.slug ||
       !!query.category_description;
 
-    if (needsOwnerJoin) {
+    const hasOwnerJoin = qb.expressionMap.joinAttributes.some(
+      (j) => j.alias.name === 'owner',
+    );
+    const hasCategoryJoin = qb.expressionMap.joinAttributes.some(
+      (j) => j.alias.name === 'category',
+    );
+
+    if (needsOwnerJoin && !hasOwnerJoin) {
       qb.leftJoin('business.owner', 'owner');
     }
-    if (needsCategoryJoin) {
+    if (needsCategoryJoin && !hasCategoryJoin) {
       qb.leftJoin('business.category', 'category');
     }
 
@@ -251,6 +278,8 @@ export class BusinessesService {
     currentUser?: { id: string; role: UserRole },
   ) {
     const qb = this.businessRepository.createQueryBuilder('business');
+    qb.leftJoinAndSelect('business.category', 'category');
+    qb.leftJoinAndSelect('business.owner', 'owner');
 
     // Filter by visibility rights
     if (!currentUser || currentUser.role === UserRole.CUSTOMER) {
@@ -267,6 +296,12 @@ export class BusinessesService {
       );
     }
     // Admin sees all statuses unless specifically filtered
+
+    if (query.exclude_owner_id) {
+      qb.andWhere('business.owner_id != :exOwnerId', {
+        exOwnerId: query.exclude_owner_id,
+      });
+    }
 
     this.applySearchFilters(qb, query);
 
@@ -311,6 +346,8 @@ export class BusinessesService {
     currentUser?: { id: string; role: UserRole },
   ) {
     const qb = this.businessRepository.createQueryBuilder('business');
+    qb.leftJoinAndSelect('business.category', 'category');
+    qb.leftJoinAndSelect('business.owner', 'owner');
 
     // Filter by visibility rights
     if (!currentUser || currentUser.role === UserRole.CUSTOMER) {
@@ -390,7 +427,10 @@ export class BusinessesService {
       throw new BadRequestException('Invalid business ID format');
     }
 
-    const business = await this.businessRepository.findOne({ where: { id } });
+    const business = await this.businessRepository.findOne({ 
+      where: { id },
+      relations: { category: true, owner: true }
+    });
     if (!business) {
       throw new NotFoundException('Business not found');
     }

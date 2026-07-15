@@ -90,15 +90,13 @@ export class OffersService {
     });
 
     const savedOffer = await this.offerRepository.save(offer);
-    delete (savedOffer as any).business;
-    delete (savedOffer as any).image;
-    delete (savedOffer as any).approved_by;
-    return savedOffer;
+    return this.transformOfferAsync(savedOffer);
   }
 
   async findAll(query: OfferQueryDto, user?: User): Promise<Offer[]> {
     const qb = this.offerRepository.createQueryBuilder('offer');
-    qb.leftJoin('offer.business', 'business');
+    qb.leftJoinAndSelect('offer.business', 'business');
+    qb.leftJoinAndSelect('offer.image', 'image');
 
     if (query.business_id) {
       qb.andWhere('offer.business_id = :businessId', {
@@ -131,7 +129,12 @@ export class OffersService {
     const now = new Date();
     const isCustomerOrGuest = !user || user.role === UserRole.CUSTOMER;
 
-    if (isCustomerOrGuest) {
+    if (query.my_offers && user) {
+      qb.andWhere('business.owner_id = :userId', { userId: user.id });
+      if (query.status) {
+        qb.andWhere('offer.status = :status', { status: query.status });
+      }
+    } else if (isCustomerOrGuest) {
       qb.andWhere('offer.status = :approvedStatus', {
         approvedStatus: OfferStatus.APPROVED,
       });
@@ -158,7 +161,8 @@ export class OffersService {
     }
 
     qb.orderBy('offer.created_at', 'DESC');
-    return qb.getMany();
+    const offers = await qb.getMany();
+    return Promise.all(offers.map((o) => this.transformOfferAsync(o)));
   }
 
   async findOne(id: string, user?: User): Promise<Offer> {
@@ -180,11 +184,7 @@ export class OffersService {
       );
     }
 
-    delete (offer as any).business;
-    delete (offer as any).image;
-    delete (offer as any).approved_by;
-
-    return offer;
+    return this.transformOfferAsync(offer);
   }
 
   async update(
@@ -195,7 +195,7 @@ export class OffersService {
   ): Promise<Offer> {
     const offer = await this.offerRepository.findOne({
       where: { id },
-      relations: { business: true },
+      relations: { business: true, image: true },
     });
 
     if (!offer) {
@@ -227,6 +227,7 @@ export class OffersService {
         MediaPurpose.OFFER_IMAGE,
       );
       offer.image_id = media.id;
+      offer.image = media;
     }
 
     if (dto.title !== undefined) offer.title = dto.title;
@@ -256,10 +257,43 @@ export class OffersService {
     }
 
     const savedOffer = await this.offerRepository.save(offer);
-    delete (savedOffer as any).business;
-    delete (savedOffer as any).image;
-    delete (savedOffer as any).approved_by;
-    return savedOffer;
+    return this.transformOfferAsync(savedOffer);
+  }
+
+  private async transformOfferAsync(offer: Offer): Promise<any> {
+    const o: any = { ...offer };
+    if (offer.image) {
+      o.imageUrl = offer.image.file_url;
+      o.image_url = offer.image.file_url;
+      delete o.image;
+    } else if (offer.image_id) {
+      try {
+        const m = await this.mediaService.getFileById(offer.image_id);
+        if (m) {
+          o.imageUrl = m.file_url;
+          o.image_url = m.file_url;
+        }
+      } catch {
+        o.imageUrl = null;
+        o.image_url = null;
+      }
+    } else {
+      o.imageUrl = null;
+      o.image_url = null;
+    }
+    if (offer.business) {
+      o.businessName = offer.business.name;
+      o.business_name = offer.business.name;
+      o.businessLogoUrl = (offer.business as any).logoUrl || (offer.business as any).logo_url || null;
+      o.owner_id = offer.business.owner_id;
+      o.ownerId = offer.business.owner_id;
+      o.business = {
+        id: offer.business.id,
+        name: offer.business.name
+      };
+    }
+    delete o.approved_by;
+    return o;
   }
 
   async delete(id: string, user: User): Promise<{ success: boolean }> {

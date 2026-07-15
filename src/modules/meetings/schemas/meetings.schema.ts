@@ -40,6 +40,12 @@ export const updateAttendeeStatusSchema = z.object({
   }),
 });
 
+export const rsvpSchema = z.object({
+  status: z.nativeEnum(AttendeeStatus, {
+    message: 'status must be ACCEPTED or REJECTED',
+  }),
+});
+
 export const meetingQuerySchema = z.object({
   status: z.nativeEnum(MeetingStatus).optional(),
   business_id: z

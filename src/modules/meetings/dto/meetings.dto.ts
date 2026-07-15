@@ -110,6 +110,15 @@ export class UpdateAttendeeStatusDto {
   status: AttendeeStatus;
 }
 
+export class RsvpDto {
+  @ApiProperty({
+    description: 'RSVP status (ACCEPTED or REJECTED)',
+    enum: AttendeeStatus,
+    example: AttendeeStatus.ACCEPTED,
+  })
+  status: AttendeeStatus;
+}
+
 export class MeetingQueryDto {
   @ApiPropertyOptional({
     description: 'Filter meetings by status',

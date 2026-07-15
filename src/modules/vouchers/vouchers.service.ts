@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { randomBytes } from 'crypto';
 import { Voucher } from './entities/voucher.entity';
 import { Offer } from '../offers/entities/offer.entity';
@@ -14,6 +14,7 @@ import { Business } from '../businesses/entities/business.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
 import { User } from '../users/entities/user.entity';
+import { MediaFile } from '../media/entities/media-file.entity';
 import {
   IssueVoucherDto,
   RedeemVoucherDto,
@@ -28,6 +29,7 @@ import {
   DiscountType,
   WalletTransactionType,
   WalletReferenceType,
+  MediaPurpose,
 } from '../../common/enums';
 import { AnalyticsService } from '../analytics/analytics.service';
 
@@ -44,6 +46,8 @@ export class VouchersService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(MediaFile)
+    private readonly mediaRepository: Repository<MediaFile>,
     private readonly analyticsService: AnalyticsService,
   ) {}
 
@@ -311,9 +315,10 @@ export class VouchersService {
     });
   }
 
-  async findAll(query: VoucherQueryDto, user?: User): Promise<Voucher[]> {
+  async findAll(query: VoucherQueryDto, user?: User): Promise<any[]> {
     const qb = this.voucherRepository.createQueryBuilder('voucher');
     qb.leftJoin('voucher.business', 'business');
+    qb.leftJoinAndSelect('voucher.customer', 'customer');
 
     if (query.status) {
       qb.andWhere('voucher.status = :status', { status: query.status });
@@ -344,7 +349,38 @@ export class VouchersService {
     }
 
     qb.orderBy('voucher.created_at', 'DESC');
-    return qb.getMany();
+    const vouchers = await qb.getMany();
+    
+    // Fetch customer avatars
+    const customerIds = vouchers.map((v) => v.customer_id).filter((id) => id);
+    const profilePics = customerIds.length > 0 ? await this.mediaRepository.find({
+      where: {
+        uploaded_by_id: In(customerIds),
+        purpose: MediaPurpose.PROFILE_PIC,
+      },
+    }) : [];
+
+    const profilePicMap = new Map<string, string>();
+    profilePics.forEach((pic) => {
+      if (pic.uploaded_by_id) {
+        profilePicMap.set(pic.uploaded_by_id, pic.file_url);
+      }
+    });
+
+    return vouchers.map((v) => {
+      const { ...voucherData } = v;
+      const customer_name = v.customer ? (v.customer as any).full_name : 'Unknown';
+      const customer_phone = v.customer ? (v.customer as any).phone : null;
+      const customer_avatar = profilePicMap.get(v.customer_id) || null;
+      
+      delete (voucherData as any).customer;
+      return {
+        ...voucherData,
+        customer_name,
+        customer_phone,
+        customer_avatar
+      };
+    });
   }
 
   async findOne(id: string, user?: User): Promise<Voucher> {

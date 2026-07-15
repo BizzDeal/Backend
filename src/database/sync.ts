@@ -10,6 +10,10 @@ import { seedLocations } from './seeds/locations.seed';
 
 dotenv.config();
 
+// Ensure India Time Zone (Asia/Kolkata, UTC+05:30) for Node process and PostgreSQL driver
+process.env.TZ = process.env.TZ || 'Asia/Kolkata';
+process.env.PGTZ = process.env.PGTZ || 'Asia/Kolkata';
+
 async function fixEnumsBeforeSync() {
   const logger = new Logger('PreSyncEnumFix');
   const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
@@ -20,6 +24,9 @@ async function fixEnumsBeforeSync() {
     type: 'postgres',
     url,
     synchronize: false,
+    extra: {
+      options: '-c timezone=Asia/Kolkata',
+    },
     ssl:
       process.env.NODE_ENV === 'production' || isSupabase
         ? { rejectUnauthorized: false }

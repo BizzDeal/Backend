@@ -25,6 +25,8 @@ export class MeetingsService {
     private readonly meetingRepository: Repository<Meeting>,
     @InjectRepository(MeetingAttendee)
     private readonly attendeeRepository: Repository<MeetingAttendee>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -45,21 +47,7 @@ export class MeetingsService {
 
     const qb = this.meetingRepository.createQueryBuilder('meeting');
 
-    if (user.role !== UserRole.ADMIN) {
-      const myAttendees = await this.attendeeRepository.find({
-        where: { user_id: user.id },
-      });
-      const meetingIds = myAttendees.map((a) => a.meeting_id);
-
-      if (meetingIds.length > 0) {
-        qb.andWhere(
-          '(meeting.created_by_id = :userId OR meeting.id IN (:...meetingIds))',
-          { userId: user.id, meetingIds },
-        );
-      } else {
-        qb.andWhere('meeting.created_by_id = :userId', { userId: user.id });
-      }
-    }
+    // Visibility is now global for members. They can see all meetings.
 
     if (query.status) {
       qb.andWhere('meeting.status = :status', { status: query.status });
@@ -92,14 +80,7 @@ export class MeetingsService {
       throw new NotFoundException('Meeting not found');
     }
 
-    if (user.role !== UserRole.ADMIN && meeting.created_by_id !== user.id) {
-      const attendee = await this.attendeeRepository.findOne({
-        where: { meeting_id: id, user_id: user.id },
-      });
-      if (!attendee) {
-        throw new ForbiddenException('No permission to view this meeting');
-      }
-    }
+    // Any member can view the meeting details now.
 
     return meeting;
   }
@@ -280,6 +261,40 @@ export class MeetingsService {
     return this.attendeeRepository.save(attendee);
   }
 
+  async rsvpMeeting(
+    meetingId: string,
+    status: AttendeeStatus,
+    user: User,
+  ): Promise<MeetingAttendee> {
+    this.checkNotCustomer(user);
+    await this.findOne(meetingId, user);
+
+    if (
+      status !== AttendeeStatus.ACCEPTED &&
+      status !== AttendeeStatus.REJECTED
+    ) {
+      throw new ForbiddenException(
+        'Members can only RSVP as ACCEPTED or REJECTED',
+      );
+    }
+
+    let attendee = await this.attendeeRepository.findOne({
+      where: { meeting_id: meetingId, user_id: user.id },
+    });
+
+    if (attendee) {
+      attendee.status = status;
+    } else {
+      attendee = this.attendeeRepository.create({
+        meeting_id: meetingId,
+        user_id: user.id,
+        status,
+      });
+    }
+
+    return this.attendeeRepository.save(attendee);
+  }
+
   async removeAttendee(
     meetingId: string,
     attendeeId: string,
@@ -324,5 +339,37 @@ export class MeetingsService {
 
     await this.findOne(attendee.meeting_id, user);
     return attendee;
+  }
+
+  async getMeetingAttendeeReport(meetingId: string, user: User) {
+    this.checkAdminRole(user);
+    const meeting = await this.findOne(meetingId, user);
+
+    const whereCondition: any = { role: UserRole.MEMBER };
+    // Assuming members are global or business filtering is done differently. 
+    // The User entity does not have a business_id.
+
+    const members = await this.userRepository.find({
+      where: whereCondition,
+      select: {
+        id: true,
+        full_name: true,
+        phone: true,
+      },
+    });
+
+    const attendees = await this.attendeeRepository.find({
+      where: { meeting_id: meetingId },
+    });
+
+    return members.map((member) => {
+      const record = attendees.find((a) => a.user_id === member.id);
+      return {
+        id: member.id,
+        full_name: member.full_name,
+        phone: member.phone,
+        status: record ? record.status : 'PENDING',
+      };
+    });
   }
 }

@@ -86,6 +86,7 @@ export const businessQuerySchema = z.object({
   description: z.string().optional(),
   website: z.string().optional(),
   gst_number: z.string().optional(),
+  exclude_owner_id: z.string().optional(),
 });
 
 export class BusinessQueryDto {
@@ -182,6 +183,11 @@ export class BusinessQueryDto {
     example: '36AAAAA0000A1Z5',
   })
   gst_number?: string;
+
+  @ApiPropertyOptional({
+    description: 'Exclude business belonging to this owner_id',
+  })
+  exclude_owner_id?: string;
 }
 
 export const featureBusinessSchema = z.object({
