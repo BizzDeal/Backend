@@ -9,7 +9,7 @@ import { Repository } from 'typeorm';
 import { ChatConversation } from './entities/chat-conversation.entity';
 import { ChatMessage } from './entities/chat-message.entity';
 import { User } from '../users/entities/user.entity';
-import { UserRole, MessageType, NotificationType } from '../../common/enums';
+import { UserRole, MessageType, NotificationType, UserStatus } from '../../common/enums';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -21,6 +21,8 @@ export class ChatService {
     private readonly conversationRepository: Repository<ChatConversation>,
     @InjectRepository(ChatMessage)
     private readonly messageRepository: Repository<ChatMessage>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -34,6 +36,26 @@ export class ChatService {
 
   isUserOnline(userId: string): boolean {
     return this.onlineUsers.has(userId);
+  }
+
+  async getContacts(user: User): Promise<User[]> {
+    if (user.role === UserRole.ADMIN) {
+      return this.userRepository.find({
+        where: { role: UserRole.MEMBER, status: UserStatus.ACTIVE },
+        order: { full_name: 'ASC' },
+      });
+    } else if (user.role === UserRole.MEMBER) {
+      const admins = await this.userRepository.find({
+        where: { role: UserRole.ADMIN },
+      });
+      const members = await this.userRepository.find({
+        where: { role: UserRole.MEMBER, status: UserStatus.ACTIVE },
+        order: { full_name: 'ASC' },
+      });
+      const filteredMembers = members.filter((m) => m.id !== user.id);
+      return [...admins, ...filteredMembers];
+    }
+    return [];
   }
 
   async findConversations(
@@ -113,6 +135,7 @@ export class ChatService {
     return this.messageRepository.find({
       where: { conversation_id: conversationId },
       order: { created_at: 'ASC' },
+      relations: { media_file: true },
     });
   }
 
@@ -161,6 +184,11 @@ export class ChatService {
       media_file_id: mediaFileId || null,
     });
     const saved = await this.messageRepository.save(msg);
+    const completeMsg = await this.messageRepository.findOne({
+      where: { id: saved.id },
+      relations: { media_file: true },
+    });
+
     await this.conversationRepository.update(conversationId, {
       last_message_at: new Date(),
     });
@@ -178,7 +206,7 @@ export class ChatService {
       );
     }
 
-    return saved;
+    return completeMsg ?? saved;
   }
 
   async markMessagesAsRead(
@@ -209,6 +237,7 @@ export class ChatService {
   ): Promise<ChatMessage> {
     const msg = await this.messageRepository.findOne({
       where: { id: messageId },
+      relations: { media_file: true },
     });
     if (!msg) {
       throw new NotFoundException('Message not found');
@@ -221,6 +250,7 @@ export class ChatService {
     }
     msg.message = newText;
     msg.is_edited = true;
+    msg.edited_at = new Date();
     return this.messageRepository.save(msg);
   }
 

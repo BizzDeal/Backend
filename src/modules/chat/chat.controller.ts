@@ -50,6 +50,20 @@ export class ChatController {
     private readonly mediaService: MediaService,
   ) {}
 
+  @Get('contacts')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Available Contacts',
+    description: 'Retrieves a list of available contacts for the user to chat with based on their role.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contacts returned successfully.',
+  })
+  async getContacts(@CurrentUser() user: User) {
+    return this.chatService.getContacts(user);
+  }
+
   @Post('conversations')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
