@@ -81,6 +81,7 @@ export class NotificationsController {
   ) {
     return this.notificationsService.create({
       user_id: body.user_id,
+      phone: body.phone,
       title: body.title,
       message: body.message,
       type: body.type || NotificationType.GENERAL,
@@ -91,9 +92,9 @@ export class NotificationsController {
   @Post('send-bulk')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Send Push Notification to Multiple Users (by UUIDs)',
+    summary: 'Send Push Notification to Multiple Users (by UUIDs or Phone Numbers)',
     description:
-      'Creates notification alerts in the database and automatically dispatches universal Firebase Cloud Messaging (FCM) push notifications to a specific list of recipient user UUIDs. Returns only foreign key IDs without nested relational objects.',
+      'Creates notification alerts in the database and automatically dispatches universal Firebase Cloud Messaging (FCM) push notifications to a specific list of recipient user UUIDs or phone numbers. Returns only foreign key IDs without nested relational objects.',
   })
   @ApiResponse({
     status: 201,
@@ -106,6 +107,7 @@ export class NotificationsController {
   ) {
     return this.notificationsService.sendBulkToUsers({
       user_ids: body.user_ids,
+      phones: body.phones,
       title: body.title,
       message: body.message,
       type: body.type || NotificationType.GENERAL,

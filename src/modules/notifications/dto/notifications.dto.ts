@@ -2,13 +2,20 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DeviceType, NotificationType, UserRole } from '../../../common/enums';
 
 export class CreateNotificationDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     format: 'uuid',
-    description: 'UUID of the target recipient user',
+    description: 'UUID of the target recipient user (optional if phone is provided)',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  user_id: string;
+  user_id?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Phone number of the target recipient user (optional if user_id is provided)',
+    example: '9876543210',
+  })
+  phone?: string;
 
   @ApiProperty({
     type: String,
@@ -41,15 +48,25 @@ export class CreateNotificationDto {
 }
 
 export class SendBulkNotificationDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: [String],
-    description: 'Array of target recipient user UUIDs',
+    description: 'Array of target recipient user UUIDs (or phone numbers if UUIDs not used)',
     example: [
       '123e4567-e89b-12d3-a456-426614174000',
       '223e4567-e89b-12d3-a456-426614174001',
     ],
   })
-  user_ids: string[];
+  user_ids?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Array of target recipient user phone numbers',
+    example: [
+      '9876543210',
+      '9876543211',
+    ],
+  })
+  phones?: string[];
 
   @ApiProperty({
     type: String,

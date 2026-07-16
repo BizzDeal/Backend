@@ -19,6 +19,7 @@ describe('NotificationsService', () => {
   let notificationRepo: jest.Mocked<Repository<Notification>>;
   let deviceRepo: jest.Mocked<Repository<UserDevice>>;
   let firebaseService: jest.Mocked<FirebaseService>;
+  let userRepo: jest.Mocked<Repository<User>>;
 
   const mockUser: User = {
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -104,6 +105,7 @@ describe('NotificationsService', () => {
     notificationRepo = module.get(getRepositoryToken(Notification));
     deviceRepo = module.get(getRepositoryToken(UserDevice));
     firebaseService = module.get(FirebaseService);
+    userRepo = module.get(getRepositoryToken(User));
   });
 
   it('should be defined', () => {
@@ -172,6 +174,26 @@ describe('NotificationsService', () => {
         user_id: mockUser.id,
         fcm_token: mockDevice.fcm_token,
       });
+    });
+
+    it('should resolve phone number to user_id when phone is provided in create', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser);
+      notificationRepo.create.mockReturnValue(mockNotification);
+      notificationRepo.save.mockResolvedValue(mockNotification);
+      deviceRepo.find.mockResolvedValue([]);
+
+      const result = await service.create({
+        phone: '9876543210',
+        title: 'Test Alert',
+        message: 'Hello World',
+        type: NotificationType.GENERAL,
+      });
+
+      expect(userRepo.findOne).toHaveBeenCalledWith({ where: { phone: '9876543210' } });
+      expect(notificationRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: mockUser.id }),
+      );
+      expect(result).toEqual(mockNotification);
     });
   });
 
@@ -383,6 +405,29 @@ describe('NotificationsService', () => {
       expect(result.count).toBe(1);
       expect(result.user_ids).toContain(mockUser.id);
       expect(notificationRepo.save).toHaveBeenCalled();
+    });
+
+    it('should resolve phones array to user_ids and send bulk notifications', async () => {
+      userRepo.find.mockResolvedValue([mockUser]);
+      notificationRepo.create.mockReturnValue(mockNotification);
+      notificationRepo.save.mockResolvedValue([
+        mockNotification,
+      ] as unknown as Notification);
+      deviceRepo.find.mockResolvedValue([]);
+
+      const result = await service.sendBulkToUsers({
+        phones: ['9876543210'],
+        title: 'Test',
+        message: 'Message',
+        type: NotificationType.GENERAL,
+      });
+
+      expect(userRepo.find).toHaveBeenCalledWith({
+        where: { phone: expect.anything() },
+        select: { id: true, phone: true },
+      });
+      expect(result.count).toBe(1);
+      expect(result.user_ids).toContain(mockUser.id);
     });
   });
 });

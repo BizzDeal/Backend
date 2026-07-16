@@ -62,14 +62,36 @@ export class NotificationsService {
   }
 
   async create(data: {
-    user_id: string;
+    user_id?: string;
+    phone?: string;
     title: string;
     message: string;
     type: NotificationType;
     data?: Record<string, any>;
   }): Promise<Notification> {
+    let targetUserId = data.user_id;
+
+    const isUuid = (str?: string) =>
+      !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    const phoneToLookup = data.phone || (!isUuid(targetUserId) ? targetUserId : undefined);
+
+    if (phoneToLookup) {
+      const user = await this.userRepository.findOne({
+        where: { phone: phoneToLookup.trim() },
+      });
+      if (!user) {
+        throw new NotFoundException(`User with phone ${phoneToLookup} not found`);
+      }
+      targetUserId = user.id;
+    }
+
+    if (!targetUserId || !isUuid(targetUserId)) {
+      throw new NotFoundException('Target user ID or valid phone number could not be resolved');
+    }
+
     const notif = this.notificationRepository.create({
-      user_id: data.user_id,
+      user_id: targetUserId,
       title: data.title,
       message: data.message,
       type: data.type || NotificationType.GENERAL,
@@ -123,18 +145,43 @@ export class NotificationsService {
   }
 
   async sendBulkToUsers(data: {
-    user_ids: string[];
+    user_ids?: string[];
+    phones?: string[];
     title: string;
     message: string;
     type: NotificationType;
     data?: Record<string, any>;
   }): Promise<{ count: number; user_ids: string[]; message: string }> {
-    const targetUserIds = Array.from(new Set(data.user_ids));
+    const isUuid = (str?: string) =>
+      !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    const inputIds = data.user_ids || [];
+    const inputPhones = data.phones || [];
+
+    const uuidList: string[] = inputIds.filter((id) => isUuid(id));
+    const phoneList: string[] = [
+      ...inputPhones,
+      ...inputIds.filter((id) => !isUuid(id)),
+    ].map((p) => p.trim()).filter((p) => p.length > 0);
+
+    const targetUserIdsSet = new Set<string>(uuidList);
+
+    if (phoneList.length > 0) {
+      const users = await this.userRepository.find({
+        where: { phone: In(phoneList) },
+        select: { id: true, phone: true },
+      });
+      for (const u of users) {
+        targetUserIdsSet.add(u.id);
+      }
+    }
+
+    const targetUserIds = Array.from(targetUserIdsSet);
     if (targetUserIds.length === 0) {
       return {
         count: 0,
         user_ids: [],
-        message: 'No valid target user IDs provided.',
+        message: 'No valid target users found for the provided phone numbers or IDs.',
       };
     }
 

@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { DeviceType, NotificationType, UserRole } from '../../../common/enums';
 
 export const createNotificationSchema = z.object({
-  user_id: z.string().uuid('Invalid user UUID format'),
+  user_id: z.string().optional(),
+  phone: z.string().min(5, 'Phone number invalid').optional(),
   title: z.string().min(1, 'Title cannot be empty').max(255, 'Title too long'),
   message: z.string().min(1, 'Message cannot be empty'),
   type: z
@@ -10,12 +11,20 @@ export const createNotificationSchema = z.object({
     .optional()
     .default(NotificationType.GENERAL),
   data: z.record(z.string(), z.any()).optional().nullable(),
+}).refine((data) => !!(data.user_id || data.phone), {
+  message: 'Either user_id or phone must be provided',
+  path: ['phone'],
 });
 
 export const sendBulkNotificationSchema = z.object({
   user_ids: z
-    .array(z.string().uuid('Invalid user UUID format'))
-    .min(1, 'Must provide at least one user UUID'),
+    .array(z.string())
+    .optional()
+    .default([]),
+  phones: z
+    .array(z.string().min(5, 'Phone number invalid'))
+    .optional()
+    .default([]),
   title: z.string().min(1, 'Title cannot be empty').max(255, 'Title too long'),
   message: z.string().min(1, 'Message cannot be empty'),
   type: z
@@ -23,6 +32,9 @@ export const sendBulkNotificationSchema = z.object({
     .optional()
     .default(NotificationType.GENERAL),
   data: z.record(z.string(), z.any()).optional().nullable(),
+}).refine((data) => (data.user_ids && data.user_ids.length > 0) || (data.phones && data.phones.length > 0), {
+  message: 'Must provide at least one user_id or phone',
+  path: ['phones'],
 });
 
 export const broadcastRoleNotificationSchema = z.object({

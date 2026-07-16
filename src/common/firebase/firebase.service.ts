@@ -152,6 +152,15 @@ export class FirebaseService implements OnModuleInit {
           body,
         },
         data: Object.keys(formattedData).length > 0 ? formattedData : undefined,
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'bizzdeal_notifications',
+            priority: 'high',
+            defaultSound: true,
+            defaultVibrateTimings: true,
+          },
+        },
       });
 
       const staleTokens: string[] = [];
