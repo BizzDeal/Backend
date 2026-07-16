@@ -12,6 +12,7 @@ import { BusinessesModule } from '../businesses/businesses.module';
 import { FirebaseModule } from '../../common/firebase/firebase.module';
 import { MediaModule } from '../media/media.module';
 import { LocationModule } from '../location/location.module';
+import { ReferralsModule } from '../referrals/referrals.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { LocationModule } from '../location/location.module';
     FirebaseModule,
     MediaModule,
     LocationModule,
+    ReferralsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService],

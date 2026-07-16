@@ -67,12 +67,48 @@ export class ReferralsController {
     description:
       'Retrieves details of a specific referral by UUID. Returns only foreign key IDs without nested relational objects.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Referral details returned successfully.',
-  })
+  @ApiResponse({ status: 200, description: 'Referral details returned successfully.' })
   @ApiResponse({ status: 404, description: 'Referral not found.' })
   async findOne(@Param('id') id: string, @CurrentUser() user: User) {
     return this.referralsService.findOne(id, user);
+  }
+
+  @Post('check-contacts')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Check Contacts Eligibility',
+    description:
+      'Checks a list of contact phone numbers against users and existing active referrals, returning those which do not have a BizzDeal account and are not already referred.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns array of eligible phone numbers.',
+  })
+  async checkContacts(
+    @Body() body: { phones: string[] },
+  ) {
+    return this.referralsService.checkContacts(body.phones);
+  }
+
+  @Post('bulk')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Bulk Create Referrals',
+    description:
+      'Creates multiple referral records in a single batch transaction.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Bulk referrals created successfully.',
+  })
+  async bulkCreate(
+    @Body()
+    body: {
+      referred_phones: string[];
+      referral_code: string;
+    },
+    @CurrentUser() user: User,
+  ) {
+    return this.referralsService.bulkCreate(body, user);
   }
 }

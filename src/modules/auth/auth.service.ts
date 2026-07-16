@@ -17,6 +17,7 @@ import { BusinessesService } from '../businesses/businesses.service';
 import { FirebaseService } from '../../common/firebase/firebase.service';
 import { MediaService } from '../media/media.service';
 import { LocationService } from '../location/services/location.service';
+import { ReferralsService } from '../referrals/referrals.service';
 import {
   UserRole,
   UserStatus,
@@ -43,6 +44,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mediaService: MediaService,
     private readonly locationService: LocationService,
+    private readonly referralsService: ReferralsService,
   ) {}
 
   private hashToken(token: string): string {
@@ -206,6 +208,13 @@ export class AuthService {
     // Verify phone token via Firebase Auth
     await this.verifyPhoneMatch(dto.phone, dto.firebaseToken);
 
+    if (dto.reference_code) {
+      await this.referralsService.validateReferralCode(
+        dto.reference_code,
+        dto.phone,
+      );
+    }
+
     const pinHash = await bcrypt.hash(dto.pin, 10);
 
     const newUser = await this.usersService.create({
@@ -220,6 +229,14 @@ export class AuthService {
       role: UserRole.MEMBER,
       status: UserStatus.PENDING, // Members are pending by default until Admin approves
     });
+
+    if (dto.reference_code) {
+      await this.referralsService.updateReferralOnRegistration(
+        dto.reference_code,
+        dto.phone,
+        newUser.id,
+      );
+    }
 
     let logoId: string | null = null;
     if (files?.business_logo?.[0]) {

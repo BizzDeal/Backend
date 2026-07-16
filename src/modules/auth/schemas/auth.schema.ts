@@ -35,6 +35,7 @@ export const registerMemberSchema = z.object({
   website: z.string().min(3, 'Website is required'),
   gst_number: z.string().min(5, 'GST number is required'),
   firebaseToken: z.string().min(1, 'Firebase authentication token is required'),
+  reference_code: z.string().optional(),
 });
 
 export class RegisterMemberDto {
@@ -136,6 +137,13 @@ export class RegisterMemberDto {
     example: 'eyJhbGciOiJSUzI1NiIs...',
   })
   firebaseToken: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Optional referral/reference code matching a pending referral',
+    example: 'BD-JOHN-1234',
+  })
+  reference_code?: string;
 
   @ApiPropertyOptional({
     type: 'string',

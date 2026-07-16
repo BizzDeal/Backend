@@ -6,12 +6,16 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import { FirebaseService } from './../src/common/firebase/firebase.service';
-import { UserRole, UserStatus, MediaPurpose } from './../src/common/enums';
+import { UserRole, UserStatus, MediaPurpose, ReferralStatus } from './../src/common/enums';
 import { User } from './../src/modules/users/entities/user.entity';
 import { RefreshToken } from './../src/modules/auth/entities/refresh-token.entity';
 import { Business } from './../src/modules/businesses/entities/business.entity';
 import { BusinessCategory } from './../src/modules/businesses/entities/business-category.entity';
 import { MediaFile } from './../src/modules/media/entities/media-file.entity';
+import { State } from './../src/modules/location/entities/state.entity';
+import { District } from './../src/modules/location/entities/district.entity';
+import { StateType } from './../src/modules/location/enums/location.enum';
+import { Referral } from './../src/modules/referrals/entities/referral.entity';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
@@ -20,7 +24,12 @@ describe('AuthController (e2e)', () => {
   let businessRepository: Repository<Business>;
   let categoryRepository: Repository<BusinessCategory>;
   let mediaRepository: Repository<MediaFile>;
+  let stateRepository: Repository<State>;
+  let districtRepository: Repository<District>;
+  let referralRepository: Repository<Referral>;
   let testCategoryId: string;
+  let testStateId: string;
+  let testDistrictId: string;
 
   const mockFirebaseService = {
     verifyPhoneToken: jest.fn().mockImplementation((idToken: string) => {
@@ -32,6 +41,10 @@ describe('AuthController (e2e)', () => {
         return Promise.resolve('9999000006');
       if (idToken === 'valid-firebase-token-7')
         return Promise.resolve('9999000007');
+      if (idToken === 'valid-firebase-token-11')
+        return Promise.resolve('9999000011');
+      if (idToken === 'valid-firebase-token-12')
+        return Promise.resolve('9999000012');
       return Promise.reject(new Error('Invalid Firebase token'));
     }),
     getAuth: jest.fn(),
@@ -52,13 +65,18 @@ describe('AuthController (e2e)', () => {
     '9999000005',
     '9999000006',
     '9999000007',
+    '9999000010',
+    '9999000011',
+    '9999000012',
   ];
 
   async function cleanup() {
     if (!userRepository) return;
     for (const phone of testPhones) {
+      await referralRepository?.delete({ referred_phone: phone });
       const user = await userRepository.findOne({ where: { phone } });
       if (user) {
+        await referralRepository?.delete({ referrer_id: user.id });
         await mediaRepository?.delete({ uploaded_by_id: user.id });
         await businessRepository.delete({ owner_id: user.id });
         await refreshTokenRepository.delete({ user_id: user.id });
@@ -93,6 +111,15 @@ describe('AuthController (e2e)', () => {
     mediaRepository = moduleFixture.get<Repository<MediaFile>>(
       getRepositoryToken(MediaFile),
     );
+    stateRepository = moduleFixture.get<Repository<State>>(
+      getRepositoryToken(State),
+    );
+    districtRepository = moduleFixture.get<Repository<District>>(
+      getRepositoryToken(District),
+    );
+    referralRepository = moduleFixture.get<Repository<Referral>>(
+      getRepositoryToken(Referral),
+    );
 
     let category = await categoryRepository.findOne({
       where: { slug: 'it-services' },
@@ -107,6 +134,32 @@ describe('AuthController (e2e)', () => {
       await categoryRepository.save(category);
     }
     testCategoryId = category.id;
+
+    let state = await stateRepository.findOne({
+      where: { name: 'Test State' },
+    });
+    if (!state) {
+      state = stateRepository.create({
+        name: 'Test State',
+        lgdCode: 'S99',
+        type: StateType.STATE,
+      });
+      await stateRepository.save(state);
+    }
+    testStateId = state.id;
+
+    let district = await districtRepository.findOne({
+      where: { name: 'Test District' },
+    });
+    if (!district) {
+      district = districtRepository.create({
+        name: 'Test District',
+        lgdCode: 'D999',
+        stateId: testStateId,
+      });
+      await districtRepository.save(district);
+    }
+    testDistrictId = district.id;
 
     await cleanup();
   });
@@ -232,6 +285,8 @@ describe('AuthController (e2e)', () => {
         .field('whatsapp', '9999000004')
         .field('email', 'test.entrepreneur@example.com')
         .field('address', '123 Entrepreneur Way, Hyderabad')
+        .field('state_id', testStateId)
+        .field('district_id', testDistrictId)
         .field('business_name', 'Test Business Enterprise')
         .field('category_id', testCategoryId)
         .field(
@@ -241,8 +296,9 @@ describe('AuthController (e2e)', () => {
         .field('website', 'https://testenterprise.com')
         .field('gst_number', '36AAAAA0000A1Z5')
         .field('firebaseToken', 'valid-firebase-token-4')
-        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf')
-        .expect(201);
+        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf');
+
+      expect(res.status).toBe(201);
 
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.refreshToken).toBeDefined();
@@ -260,6 +316,8 @@ describe('AuthController (e2e)', () => {
         .field('whatsapp', '9999000004')
         .field('email', 'dup@example.com')
         .field('address', '456 Entrepreneur Way, Hyderabad')
+        .field('state_id', testStateId)
+        .field('district_id', testDistrictId)
         .field('business_name', 'Dup Business Enterprise')
         .field('category_id', testCategoryId)
         .field('business_description', 'Providing duplicate IT services')
@@ -279,6 +337,8 @@ describe('AuthController (e2e)', () => {
         .field('whatsapp', '9999000006')
         .field('email', 'upload.entrepreneur@example.com')
         .field('address', '789 Upload Way, Hyderabad')
+        .field('state_id', testStateId)
+        .field('district_id', testDistrictId)
         .field('business_name', 'Upload Business Enterprise')
         .field('category_id', testCategoryId)
         .field('business_description', 'Providing IT upload services')
@@ -299,6 +359,79 @@ describe('AuthController (e2e)', () => {
       const purposes = mediaList.map((m) => m.purpose);
       expect(purposes).toContain(MediaPurpose.PROFILE_PIC);
       expect(purposes).toContain(MediaPurpose.PAYMENT_RECEIPT);
+    });
+
+    it('should register a member successfully and update the referral record when a valid reference_code is given', async () => {
+      // 1. Create a referrer user
+      const referrer = userRepository.create({
+        full_name: 'Test Referrer',
+        phone: '9999000010',
+        pin_hash: 'dummy_hash',
+        role: UserRole.MEMBER,
+        status: UserStatus.ACTIVE,
+      });
+      await userRepository.save(referrer);
+
+      // 2. Create a pending referral record
+      const referral = referralRepository.create({
+        referrer_id: referrer.id,
+        referred_phone: '9999000011',
+        referral_code: 'BD-TESTREF-1111',
+        reward_amount: 0,
+        status: ReferralStatus.PENDING,
+      });
+      await referralRepository.save(referral);
+
+      // 3. Register the referred user
+      const res = await request(app.getHttpServer())
+        .post('/auth/register-member')
+        .field('full_name', 'Referred Entrepreneur')
+        .field('phone', '9999000011')
+        .field('pin', '5678')
+        .field('whatsapp', '9999000011')
+        .field('email', 'referred@example.com')
+        .field('address', '123 Referred Way, Hyderabad')
+        .field('state_id', testStateId)
+        .field('district_id', testDistrictId)
+        .field('business_name', 'Referred Enterprise')
+        .field('category_id', testCategoryId)
+        .field('business_description', 'IT consulting referred')
+        .field('website', 'https://referred.com')
+        .field('gst_number', '36AAAAA0000A1Z8')
+        .field('firebaseToken', 'valid-firebase-token-11')
+        .field('reference_code', 'BD-TESTREF-1111')
+        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf')
+        .expect(201);
+
+      // 4. Verify referral was updated
+      const updatedReferral = await referralRepository.findOne({
+        where: { id: referral.id },
+      });
+      expect(updatedReferral).toBeDefined();
+      expect(updatedReferral?.status).toBe(ReferralStatus.JOINED);
+      expect(updatedReferral?.referred_user_id).toBe(res.body.user.id);
+    });
+
+    it('should return 400 when an invalid reference_code is given during member registration', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register-member')
+        .field('full_name', 'Invalid Ref Entrepreneur')
+        .field('phone', '9999000012')
+        .field('pin', '5678')
+        .field('whatsapp', '9999000012')
+        .field('email', 'invalidref@example.com')
+        .field('address', '123 Invalid Way, Hyderabad')
+        .field('state_id', testStateId)
+        .field('district_id', testDistrictId)
+        .field('business_name', 'Invalid Ref Enterprise')
+        .field('category_id', testCategoryId)
+        .field('business_description', 'IT consulting invalid ref')
+        .field('website', 'https://invalidref.com')
+        .field('gst_number', '36AAAAA0000A1Z9')
+        .field('firebaseToken', 'valid-firebase-token-12')
+        .field('reference_code', 'BD-INVALIDCODE-9999')
+        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf')
+        .expect(400);
     });
   });
 
