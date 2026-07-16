@@ -99,6 +99,22 @@ export class BusinessesController {
     return this.businessesService.findFeatured({}, user);
   }
 
+  @Get('top')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Top Businesses',
+    description: 'Retrieves a list of top businesses ranked by number of claiming customers.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of top businesses returned successfully.',
+  })
+  async getTop(@CurrentUser() user?: User) {
+    return this.businessesService.findTop({}, user);
+  }
+
   @Get('search')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()

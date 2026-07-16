@@ -388,6 +388,7 @@ export class BusinessesService {
     }
 
     qb.orderBy('business.created_at', 'DESC');
+    qb.take(20);
 
     const items = await qb.getMany();
     const enriched = await this.enrichBusinessesWithMediaAndCategory(items);
@@ -395,6 +396,70 @@ export class BusinessesService {
     return {
       success: true,
       message: 'Featured businesses fetched successfully',
+      data: enriched,
+    };
+  }
+
+  async findTop(
+    query: BusinessQueryDto = {},
+    currentUser?: { id: string; role: UserRole },
+  ) {
+    const qb = this.businessRepository.createQueryBuilder('business');
+    qb.leftJoinAndSelect('business.category', 'category');
+    qb.leftJoinAndSelect('business.owner', 'owner');
+    qb.leftJoin('vouchers', 'voucher', 'voucher.business_id = business.id');
+
+    // Filter by visibility rights
+    if (!currentUser || currentUser.role === UserRole.CUSTOMER) {
+      qb.andWhere('business.status = :activeStatus', {
+        activeStatus: BusinessStatus.ACTIVE,
+      });
+    } else if (currentUser.role === UserRole.MEMBER) {
+      qb.andWhere(
+        '(business.status = :activeStatus OR business.owner_id = :currentUserId)',
+        {
+          activeStatus: BusinessStatus.ACTIVE,
+          currentUserId: currentUser.id,
+        },
+      );
+    }
+
+    this.applySearchFilters(qb, query);
+
+    if (query.category_id) {
+      if (this.isUUID(query.category_id)) {
+        qb.andWhere('business.category_id = :catId', {
+          catId: query.category_id,
+        });
+      } else {
+        const cat = await this.categoryRepository.findOne({
+          where: { slug: query.category_id },
+        });
+        if (cat) {
+          qb.andWhere('business.category_id = :catId', { catId: cat.id });
+        } else {
+          qb.andWhere('1 = 0');
+        }
+      }
+    }
+
+    // Group by business to aggregate voucher count
+    qb.groupBy('business.id');
+    qb.addGroupBy('category.id');
+    qb.addGroupBy('owner.id');
+
+    // Order by number of distinct customers who claimed vouchers, then by created_at
+    qb.addSelect('COUNT(DISTINCT voucher.customer_id)', 'voucherCount');
+    qb.orderBy('voucherCount', 'DESC');
+    qb.addOrderBy('business.created_at', 'DESC');
+    qb.take(20);
+
+    const items = await qb.getMany();
+    const enriched = await this.enrichBusinessesWithMediaAndCategory(items);
+
+    return {
+      success: true,
+      message: 'Top businesses fetched successfully',
       data: enriched,
     };
   }

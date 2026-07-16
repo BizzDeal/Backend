@@ -205,6 +205,7 @@ export class UpdateOfferDto {
 
 export const offerQuerySchema = z.object({
   business_id: z.string().uuid().optional(),
+  category_id: z.string().optional(),
   offer_type: z.nativeEnum(OfferType).optional(),
   status: z.nativeEnum(OfferStatus).optional(),
   search: z.string().optional(),
@@ -218,6 +219,12 @@ export class OfferQueryDto {
     description: 'Filter by specific business UUID',
   })
   business_id?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Filter by category UUID or slug',
+  })
+  category_id?: string;
 
   @ApiPropertyOptional({
     enum: OfferType,

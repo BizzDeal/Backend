@@ -137,6 +137,54 @@ export class OffersController {
     return this.offersService.findAll(query, user);
   }
 
+  @Get('mega')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Mega Deals',
+    description: 'Retrieves high-value mega deals optionally filtered by category.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of mega deals returned successfully.',
+  })
+  async getMegaDeals(@Query() query: any, @CurrentUser() user?: User) {
+    try {
+      const parsedQuery = offerQuerySchema.parse(query || {});
+      return await this.offersService.findMegaDeals(parsedQuery, user);
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+  }
+
+  @Get('trending')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Trending Offers',
+    description: 'Retrieves trending offers optionally filtered by category.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of trending offers returned successfully.',
+  })
+  async getTrendingOffers(@Query() query: any, @CurrentUser() user?: User) {
+    try {
+      const parsedQuery = offerQuerySchema.parse(query || {});
+      return await this.offersService.findTrendingOffers(parsedQuery, user);
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+  }
+
   @Put('approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)

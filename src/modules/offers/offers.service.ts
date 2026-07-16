@@ -104,6 +104,12 @@ export class OffersService {
       });
     }
 
+    if (query.category_id) {
+      qb.andWhere('business.category_id = :categoryId', {
+        categoryId: query.category_id,
+      });
+    }
+
     if (query.offer_type) {
       qb.andWhere('offer.offer_type = :offerType', {
         offerType: query.offer_type,
@@ -163,6 +169,45 @@ export class OffersService {
     qb.orderBy('offer.created_at', 'DESC');
     const offers = await qb.getMany();
     return Promise.all(offers.map((o) => this.transformOfferAsync(o)));
+  }
+
+  async findMegaDeals(query: OfferQueryDto, user?: User): Promise<Offer[]> {
+    const qb = this.offerRepository.createQueryBuilder('offer');
+    qb.leftJoinAndSelect('offer.business', 'business');
+    qb.leftJoinAndSelect('offer.image', 'image');
+
+    if (query.category_id) {
+      qb.andWhere('business.category_id = :categoryId', {
+        categoryId: query.category_id,
+      });
+    }
+
+    const now = new Date();
+    qb.andWhere('offer.status = :approvedStatus', {
+      approvedStatus: OfferStatus.APPROVED,
+    });
+    qb.andWhere('offer.start_date <= :now', { now });
+    qb.andWhere('offer.end_date >= :now', { now });
+
+    qb.andWhere(
+      new Brackets((qbInner) => {
+        qbInner
+          .where("(offer.discount_type = 'PERCENTAGE' AND offer.discount_value >= 30)")
+          .orWhere("(offer.discount_type = 'FIXED_AMOUNT' AND offer.discount_value >= 500)")
+          .orWhere('business.is_featured = :isFeatured', { isFeatured: true });
+      }),
+    );
+
+    qb.orderBy('offer.created_at', 'DESC');
+    qb.take(20);
+    const offers = await qb.getMany();
+    return Promise.all(offers.map((o) => this.transformOfferAsync(o)));
+  }
+
+  async findTrendingOffers(query: OfferQueryDto, user?: User): Promise<Offer[]> {
+    // For now, trending offers are all active offers (can be refined later)
+    const allOffers = await this.findAll({ ...query, status: OfferStatus.APPROVED }, user);
+    return allOffers.slice(0, 20);
   }
 
   async findOne(id: string, user?: User): Promise<Offer> {
