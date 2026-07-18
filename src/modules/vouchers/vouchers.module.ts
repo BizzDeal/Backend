@@ -10,6 +10,7 @@ import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity'
 import { MediaFile } from '../media/entities/media-file.entity';
 import { VouchersService } from './vouchers.service';
 import { VouchersController } from './vouchers.controller';
+import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { VouchersController } from './vouchers.controller';
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
     }),
+    EventsModule,
   ],
   controllers: [VouchersController],
   providers: [VouchersService],

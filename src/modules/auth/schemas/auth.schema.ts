@@ -24,7 +24,7 @@ export const registerMemberSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
   phone: z.string().min(10, 'Valid phone number is required'),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
-  whatsapp: z.string().min(10, 'Valid WhatsApp number is required'),
+  whatsapp: z.string().optional().or(z.literal('')).refine(val => !val || /^[0-9]{10}$/.test(val), { message: 'WhatsApp number must be exactly 10 digits' }),
   email: z.string().email('Invalid email address'),
   address: z.string().min(5, 'Address is required'),
   state_id: z.string().uuid('Valid state UUID is required'),
@@ -32,8 +32,8 @@ export const registerMemberSchema = z.object({
   business_name: z.string().min(2, 'Business name is required'),
   category_id: z.string().uuid('Valid business category UUID is required'),
   business_description: z.string().min(5, 'Business description is required'),
-  website: z.string().min(3, 'Website is required'),
-  gst_number: z.string().min(5, 'GST number is required'),
+  website: z.string().optional().or(z.literal('')),
+  gst_number: z.string().optional().or(z.literal('')),
   firebaseToken: z.string().min(1, 'Firebase authentication token is required'),
   reference_code: z.string().optional(),
 });
@@ -60,12 +60,12 @@ export class RegisterMemberDto {
   })
   pin: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     description: 'WhatsApp number of the member',
     example: '9876543210',
   })
-  whatsapp: string;
+  whatsapp?: string;
 
   @ApiProperty({
     type: String,
@@ -116,19 +116,19 @@ export class RegisterMemberDto {
   })
   business_description: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     description: 'Official website or social media URL of the business',
     example: 'https://techsolutions.in',
   })
-  website: string;
+  website?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     description: 'GST Number of the business',
     example: '36AAAAA0000A1Z5',
   })
-  gst_number: string;
+  gst_number?: string;
 
   @ApiProperty({
     type: String,

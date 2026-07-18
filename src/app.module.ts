@@ -19,6 +19,8 @@ import { ChatModule } from './modules/chat/chat.module';
 import { MeetingsModule } from './modules/meetings/meetings.module';
 import { LocationModule } from './modules/location/location.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { EventsModule } from './modules/events/events.module';
+import { PaymentSettingsModule } from './modules/payment-settings/payment-settings.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     ChatModule,
     MeetingsModule,
     LocationModule,
+    EventsModule,
+    PaymentSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -32,6 +32,7 @@ import {
   MediaPurpose,
 } from '../../common/enums';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { AppEventsGateway } from '../events/events.gateway';
 
 @Injectable()
 export class VouchersService {
@@ -46,9 +47,12 @@ export class VouchersService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Wallet)
+    private readonly walletRepository: Repository<Wallet>,
     @InjectRepository(MediaFile)
     private readonly mediaRepository: Repository<MediaFile>,
     private readonly analyticsService: AnalyticsService,
+    private readonly appEventsGateway: AppEventsGateway,
   ) {}
 
   private generateVoucherCode(): string {
@@ -193,15 +197,19 @@ export class VouchersService {
             calculatedAmount = (dto.bill_amount * totalValue) / 100;
           }
         } else {
-          if (
-            dto.bill_amount &&
-            dto.bill_amount > 0 &&
-            dto.bill_amount < totalValue
-          ) {
-            calculatedAmount = dto.bill_amount;
-            remainingAmount = totalValue - dto.bill_amount;
-          } else {
+          if (offer.offer_type === OfferType.CASHBACK) {
             calculatedAmount = totalValue;
+          } else {
+            if (
+              dto.bill_amount &&
+              dto.bill_amount > 0 &&
+              dto.bill_amount < totalValue
+            ) {
+              calculatedAmount = dto.bill_amount;
+              remainingAmount = totalValue - dto.bill_amount;
+            } else {
+              calculatedAmount = totalValue;
+            }
           }
         }
       }
@@ -226,8 +234,7 @@ export class VouchersService {
 
         if (calculatedAmount > 0) {
           const txType =
-            offer.offer_type === OfferType.CASHBACK &&
-            (!dto.bill_amount || dto.bill_amount <= 0)
+            offer.offer_type === OfferType.CASHBACK
               ? WalletTransactionType.CREDIT
               : WalletTransactionType.SAVING;
 
@@ -307,6 +314,13 @@ export class VouchersService {
         calculatedAmount || Number(offer.discount_value || 0),
       );
 
+      // Emit event to customer in real-time
+      this.appEventsGateway.emitToUser(voucher.customer_id, 'VOUCHER_REDEEMED', {
+        voucher_id: savedVoucher.id,
+        voucher_code: savedVoucher.voucher_code,
+        status: VoucherStatus.REDEEMED,
+      });
+
       delete (savedVoucher as any).offer;
       delete (savedVoucher as any).business;
       delete (savedVoucher as any).customer;
@@ -317,7 +331,8 @@ export class VouchersService {
 
   async findAll(query: VoucherQueryDto, user?: User): Promise<any[]> {
     const qb = this.voucherRepository.createQueryBuilder('voucher');
-    qb.leftJoin('voucher.business', 'business');
+    qb.leftJoinAndSelect('voucher.business', 'business');
+    qb.leftJoinAndSelect('voucher.offer', 'offer');
     qb.leftJoinAndSelect('voucher.customer', 'customer');
 
     if (query.status) {
@@ -373,20 +388,35 @@ export class VouchersService {
       const customer_phone = v.customer ? (v.customer as any).phone : null;
       const customer_avatar = profilePicMap.get(v.customer_id) || null;
       
+      const businessName = v.business ? v.business.name : 'Unknown';
+      const offerTitle = v.offer ? v.offer.title : 'Unknown';
+      const discountText = v.offer ? 
+        (v.offer.discount_type === 'PERCENTAGE' 
+          ? `${v.offer.discount_value}% OFF` 
+          : v.offer.discount_type === 'FIXED_AMOUNT' 
+            ? `₹${v.offer.discount_value} OFF` 
+            : 'Special Deal') 
+        : 'Special Deal';
+        
       delete (voucherData as any).customer;
+      
       return {
         ...voucherData,
         customer_name,
         customer_phone,
-        customer_avatar
+        customer_avatar,
+        businessName,
+        offerTitle,
+        discountText
       };
     });
   }
 
   async findOne(id: string, user?: User): Promise<Voucher> {
     const qb = this.voucherRepository.createQueryBuilder('voucher');
-    qb.leftJoin('voucher.business', 'business');
-    qb.addSelect('business.owner_id');
+    qb.leftJoinAndSelect('voucher.business', 'business');
+    qb.leftJoinAndSelect('voucher.offer', 'offer');
+    qb.leftJoinAndSelect('voucher.customer', 'customer');
 
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -413,11 +443,36 @@ export class VouchersService {
       );
     }
 
-    delete (voucher as any).business;
-    delete (voucher as any).offer;
-    delete (voucher as any).customer;
-    delete (voucher as any).redeemed_by;
+    let wallet_balance = 0;
+    if (voucher.customer_id) {
+      const wallet = await this.walletRepository.findOne({ where: { user_id: voucher.customer_id } });
+      if (wallet) {
+        wallet_balance = Number(wallet.balance) || 0;
+      }
+    }
 
-    return voucher;
+    const { ...voucherData } = voucher;
+    
+    const customer_name = voucher.customer ? voucher.customer.full_name : 'Unknown';
+    const customer_phone = voucher.customer ? voucher.customer.phone : 'Unknown';
+    
+    delete (voucherData as any).customer;
+    delete (voucherData as any).redeemed_by;
+
+    return {
+      ...voucherData,
+      customer_name,
+      customer_phone,
+      wallet_balance,
+      businessName: voucher.business?.name || 'Unknown',
+      offerTitle: voucher.offer?.title || 'Unknown',
+      discountText: voucher.offer ? 
+        (voucher.offer.discount_type === 'PERCENTAGE' 
+          ? `${voucher.offer.discount_value}% OFF` 
+          : voucher.offer.discount_type === 'FIXED_AMOUNT' 
+            ? `₹${voucher.offer.discount_value} OFF` 
+            : 'Special Deal') 
+        : 'Special Deal'
+    } as any;
   }
 }

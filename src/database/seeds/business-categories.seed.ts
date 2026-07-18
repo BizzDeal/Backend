@@ -60,7 +60,19 @@ export async function seedBusinessCategories(
       await categoryRepository.save(category);
       logger.log(`Inserted business category: "${item.name}" (${item.slug})`);
     } else {
-      logger.log(`Business category "${item.name}" already exists. Skipping.`);
+      if (
+        existing.name !== item.name ||
+        existing.description !== item.description ||
+        !existing.is_active
+      ) {
+        existing.name = item.name;
+        existing.description = item.description;
+        existing.is_active = true;
+        await categoryRepository.save(existing);
+        logger.log(`Updated business category: "${item.name}" (${item.slug})`);
+      } else {
+        logger.log(`Business category "${item.name}" already exists and matches. Skipping.`);
+      }
     }
   }
 

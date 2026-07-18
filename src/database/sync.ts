@@ -5,8 +5,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 import { BusinessCategory } from '../modules/businesses/entities/business-category.entity';
+import { PaymentSetting } from '../modules/payment-settings/entities/payment-setting.entity';
 import { seedBusinessCategories } from './seeds/business-categories.seed';
 import { seedLocations } from './seeds/locations.seed';
+import { seedPaymentSettings } from './seeds/payment-settings.seed';
 
 dotenv.config();
 
@@ -76,6 +78,10 @@ async function bootstrap() {
     const categoryRepo = app.get(getRepositoryToken(BusinessCategory));
     await seedBusinessCategories(categoryRepo);
     await seedLocations(app.get(DataSource));
+
+    const paymentSettingsRepo = app.get(getRepositoryToken(PaymentSetting));
+    await seedPaymentSettings(paymentSettingsRepo);
+
     logger.log(
       'Database synchronization & all individual seed scripts completed successfully.',
     );

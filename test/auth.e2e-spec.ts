@@ -41,6 +41,8 @@ describe('AuthController (e2e)', () => {
         return Promise.resolve('9999000006');
       if (idToken === 'valid-firebase-token-7')
         return Promise.resolve('9999000007');
+      if (idToken === 'valid-firebase-token-8')
+        return Promise.resolve('9999000008');
       if (idToken === 'valid-firebase-token-11')
         return Promise.resolve('9999000011');
       if (idToken === 'valid-firebase-token-12')
@@ -65,6 +67,7 @@ describe('AuthController (e2e)', () => {
     '9999000005',
     '9999000006',
     '9999000007',
+    '9999000008',
     '9999000010',
     '9999000011',
     '9999000012',
@@ -359,6 +362,27 @@ describe('AuthController (e2e)', () => {
       const purposes = mediaList.map((m) => m.purpose);
       expect(purposes).toContain(MediaPurpose.PROFILE_PIC);
       expect(purposes).toContain(MediaPurpose.PAYMENT_RECEIPT);
+    });
+
+    it('should register a member successfully without optional fields (whatsapp, website, gst_number)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register-member')
+        .field('full_name', 'Optional Fields Entrepreneur')
+        .field('phone', '9999000008')
+        .field('pin', '5678')
+        .field('email', 'optional.entrepreneur@example.com')
+        .field('address', '789 Optional Way, Hyderabad')
+        .field('state_id', testStateId)
+        .field('district_id', testDistrictId)
+        .field('business_name', 'Optional Business Enterprise')
+        .field('category_id', testCategoryId)
+        .field('business_description', 'Providing IT optional services')
+        .field('firebaseToken', 'valid-firebase-token-8')
+        .attach('payment_receipt', Buffer.from('fake pdf data'), 'receipt.pdf')
+        .expect(201);
+
+      expect(res.body.accessToken).toBeDefined();
+      expect(res.body.user.phone).toBe('9999000008');
     });
 
     it('should register a member successfully and update the referral record when a valid reference_code is given', async () => {
