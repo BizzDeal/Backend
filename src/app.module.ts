@@ -21,7 +21,7 @@ import { LocationModule } from './modules/location/location.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { EventsModule } from './modules/events/events.module';
 import { PaymentSettingsModule } from './modules/payment-settings/payment-settings.module';
-
+import { SettingsModule } from './modules/settings/settings.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -46,6 +46,7 @@ import { PaymentSettingsModule } from './modules/payment-settings/payment-settin
     LocationModule,
     EventsModule,
     PaymentSettingsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

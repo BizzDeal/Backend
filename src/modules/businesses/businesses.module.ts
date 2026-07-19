@@ -10,6 +10,8 @@ import { BusinessesController } from './businesses.controller';
 import { MediaModule } from '../media/media.module';
 import { AuditModule } from '../audit/audit.module';
 
+import { SettingsModule } from '../settings/settings.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([Business, BusinessCategory, User, MediaFile]),
@@ -18,6 +20,7 @@ import { AuditModule } from '../audit/audit.module';
     }),
     MediaModule,
     AuditModule,
+    SettingsModule,
   ],
   controllers: [BusinessesController],
   providers: [BusinessesService],

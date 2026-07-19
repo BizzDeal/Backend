@@ -26,6 +26,8 @@ import {
 } from './schemas/businesses.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
 
+import { SettingsService } from '../settings/settings.service';
+
 @Injectable()
 export class BusinessesService {
   private readonly logger = new Logger(BusinessesService.name);
@@ -41,6 +43,7 @@ export class BusinessesService {
     private readonly mediaService: MediaService,
     private readonly auditService: AuditService,
     private readonly analyticsService: AnalyticsService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   private isUUID(str: string): boolean {
@@ -388,7 +391,8 @@ export class BusinessesService {
     }
 
     qb.orderBy('business.created_at', 'DESC');
-    qb.take(20);
+    const settings = await this.settingsService.getSettings();
+    qb.take(settings.home_feed_limit);
 
     const items = await qb.getMany();
     const enriched = await this.enrichBusinessesWithMediaAndCategory(items);
@@ -452,7 +456,8 @@ export class BusinessesService {
     qb.addSelect('COUNT(DISTINCT voucher.customer_id)', 'voucherCount');
     qb.orderBy('voucherCount', 'DESC');
     qb.addOrderBy('business.created_at', 'DESC');
-    qb.take(20);
+    const settings = await this.settingsService.getSettings();
+    qb.take(settings.home_feed_limit);
 
     const items = await qb.getMany();
     const enriched = await this.enrichBusinessesWithMediaAndCategory(items);

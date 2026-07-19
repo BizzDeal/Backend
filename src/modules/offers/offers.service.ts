@@ -23,6 +23,8 @@ import {
   MediaPurpose,
 } from '../../common/enums';
 
+import { SettingsService } from '../settings/settings.service';
+
 @Injectable()
 export class OffersService {
   private readonly logger = new Logger(OffersService.name);
@@ -33,6 +35,7 @@ export class OffersService {
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
     private readonly mediaService: MediaService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async create(
@@ -172,6 +175,8 @@ export class OffersService {
   }
 
   async findMegaDeals(query: OfferQueryDto, user?: User): Promise<Offer[]> {
+    const settings = await this.settingsService.getSettings();
+
     const qb = this.offerRepository.createQueryBuilder('offer');
     qb.leftJoinAndSelect('offer.business', 'business');
     qb.leftJoinAndSelect('offer.image', 'image');
@@ -192,22 +197,23 @@ export class OffersService {
     qb.andWhere(
       new Brackets((qbInner) => {
         qbInner
-          .where("(offer.discount_type = 'PERCENTAGE' AND offer.discount_value >= 30)")
-          .orWhere("(offer.discount_type = 'FIXED_AMOUNT' AND offer.discount_value >= 500)")
+          .where("(offer.discount_type = 'PERCENTAGE' AND offer.discount_value >= :percentThreshold)", { percentThreshold: settings.mega_deals_percent_threshold })
+          .orWhere("(offer.discount_type = 'FIXED_AMOUNT' AND offer.discount_value >= :fixedThreshold)", { fixedThreshold: settings.mega_deals_fixed_threshold })
           .orWhere('business.is_featured = :isFeatured', { isFeatured: true });
       }),
     );
 
     qb.orderBy('offer.created_at', 'DESC');
-    qb.take(20);
+    qb.take(settings.home_feed_limit);
     const offers = await qb.getMany();
     return Promise.all(offers.map((o) => this.transformOfferAsync(o)));
   }
 
   async findTrendingOffers(query: OfferQueryDto, user?: User): Promise<Offer[]> {
+    const settings = await this.settingsService.getSettings();
     // For now, trending offers are all active offers (can be refined later)
     const allOffers = await this.findAll({ ...query, status: OfferStatus.APPROVED }, user);
-    return allOffers.slice(0, 20);
+    return allOffers.slice(0, settings.home_feed_limit);
   }
 
   async findOne(id: string, user?: User): Promise<Offer> {
