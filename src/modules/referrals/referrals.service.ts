@@ -21,14 +21,29 @@ export class ReferralsService {
     private readonly analyticsService: AnalyticsService,
   ) {}
 
-  async findAll(user: User): Promise<Referral[]> {
-    if (user.role === UserRole.ADMIN) {
-      return this.referralRepository.find({ order: { created_at: 'DESC' } });
+  async findAll(user: User, filter?: any): Promise<Referral[]> {
+    const qb = this.referralRepository.createQueryBuilder('referral');
+    
+    if (user.role !== UserRole.ADMIN) {
+      qb.andWhere('referral.referrer_id = :userId', { userId: user.id });
     }
-    return this.referralRepository.find({
-      where: { referrer_id: user.id },
-      order: { created_at: 'DESC' },
-    });
+
+    if (filter?.states || filter?.districts) {
+      qb.leftJoin('referral.referrer', 'referrer');
+      if (filter.states) {
+        qb.andWhere('referrer.state_id IN (:...states)', {
+          states: filter.states.split(','),
+        });
+      }
+      if (filter.districts) {
+        qb.andWhere('referrer.district_id IN (:...districts)', {
+          districts: filter.districts.split(','),
+        });
+      }
+    }
+
+    qb.orderBy('referral.created_at', 'DESC');
+    return qb.getMany();
   }
 
   async findOne(id: string, user: User): Promise<Referral> {

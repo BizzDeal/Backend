@@ -108,6 +108,20 @@ export class WalletService {
       });
     }
 
+    if (query.states || query.districts) {
+      qb.leftJoin('tx.user', 'user');
+      if (query.states) {
+        qb.andWhere('user.state_id IN (:...states)', {
+          states: query.states.split(','),
+        });
+      }
+      if (query.districts) {
+        qb.andWhere('user.district_id IN (:...districts)', {
+          districts: query.districts.split(','),
+        });
+      }
+    }
+
     qb.orderBy('tx.created_at', 'DESC');
     return qb.getMany();
   }
@@ -140,6 +154,20 @@ export class WalletService {
       qb.andWhere('tx.reference_type = :refType', {
         refType: query.reference_type,
       });
+    }
+
+    if (query.states || query.districts) {
+      qb.leftJoin('tx.user', 'user');
+      if (query.states) {
+        qb.andWhere('user.state_id IN (:...states)', {
+          states: query.states.split(','),
+        });
+      }
+      if (query.districts) {
+        qb.andWhere('user.district_id IN (:...districts)', {
+          districts: query.districts.split(','),
+        });
+      }
     }
 
     qb.orderBy('tx.created_at', 'DESC');

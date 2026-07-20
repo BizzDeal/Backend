@@ -211,6 +211,8 @@ export const offerQuerySchema = z.object({
   search: z.string().optional(),
   q: z.string().optional(),
   my_offers: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
+  states: z.string().optional(),
+  districts: z.string().optional(),
 });
 
 export class OfferQueryDto {
@@ -255,6 +257,16 @@ export class OfferQueryDto {
     description: 'If true, returns only offers created by the logged-in member business owner',
   })
   my_offers?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated state UUIDs for filtering',
+  })
+  states?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated district UUIDs for filtering',
+  })
+  districts?: string;
 }
 
 export const offerActionSchema = z.object({

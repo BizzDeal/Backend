@@ -111,6 +111,8 @@ export const walletQuerySchema = z.object({
   user_id: z.string().uuid().optional(),
   type: z.nativeEnum(WalletTransactionType).optional(),
   reference_type: z.nativeEnum(WalletReferenceType).optional(),
+  states: z.string().optional(),
+  districts: z.string().optional(),
 });
 
 export class WalletQueryDto {
@@ -133,4 +135,14 @@ export class WalletQueryDto {
     example: WalletReferenceType.VOUCHER,
   })
   reference_type?: WalletReferenceType;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated state UUIDs for filtering',
+  })
+  states?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated district UUIDs for filtering',
+  })
+  districts?: string;
 }

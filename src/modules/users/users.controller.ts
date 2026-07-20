@@ -40,6 +40,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole, UserStatus } from '../../common/enums';
+import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -59,10 +60,10 @@ export class UsersController {
     description:
       'List of users returned successfully along with profile_pic_url.',
   })
-  async findAll(): Promise<
+  async findAll(@Query() filter?: RegionFilterDto): Promise<
     (Omit<User, 'pin_hash'> & { profile_pic_url: string | null })[]
   > {
-    return this.usersService.findAll();
+    return this.usersService.findAll(filter);
   }
 
   @Post('user-exist')
@@ -98,8 +99,8 @@ export class UsersController {
     status: 200,
     description: 'List of members returned successfully.',
   })
-  async findMembers(@Query('status') status?: UserStatus) {
-    return this.usersService.findMembers(status);
+  async findMembers(@Query('status') status?: UserStatus, @Query() filter?: RegionFilterDto) {
+    return this.usersService.findMembers(status, filter);
   }
 
   @Get('customers')
@@ -114,8 +115,8 @@ export class UsersController {
     status: 200,
     description: 'List of customers returned successfully.',
   })
-  async findCustomers() {
-    return this.usersService.findCustomers();
+  async findCustomers(@Query() filter?: RegionFilterDto) {
+    return this.usersService.findCustomers(filter);
   }
 
   @Post('profile')

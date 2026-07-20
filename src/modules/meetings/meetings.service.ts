@@ -68,6 +68,22 @@ export class MeetingsService {
       });
     }
 
+    if (query.states || query.districts) {
+      qb.leftJoin('meeting.business', 'business');
+      qb.leftJoin('business.owner', 'owner');
+      
+      if (query.states) {
+        qb.andWhere('owner.state_id IN (:...states)', {
+          states: query.states.split(','),
+        });
+      }
+      if (query.districts) {
+        qb.andWhere('owner.district_id IN (:...districts)', {
+          districts: query.districts.split(','),
+        });
+      }
+    }
+
     qb.orderBy('meeting.meeting_date', 'DESC');
     return qb.getMany();
   }

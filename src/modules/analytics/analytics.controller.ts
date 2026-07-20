@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -14,6 +14,7 @@ import {
   AdminAnalyticsOverviewDto,
   DetailedAnalyticsDto,
 } from './schemas/analytics.schema';
+import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 
 @ApiTags('Analytics & KPIs (Admin Only)')
 @Controller('analytics')
@@ -25,32 +26,32 @@ export class AnalyticsController {
 
   @Get('overview')
   @ApiOperation({
-    summary: 'Get Platform Overview Analytics ($O(1)$ Table Read)',
+    summary: 'Get Platform Overview Analytics',
     description:
-      'Retrieves instant platform health stats, customer/member totals, vouchers claimed, and revenue history directly from materialized counter tables.',
+      'Retrieves instant platform health stats, customer/member totals, vouchers claimed, and revenue history. If region filters are applied, computes dynamically.',
   })
   @ApiResponse({
     status: 200,
     description: 'Platform overview metrics returned successfully.',
     type: AdminAnalyticsOverviewDto,
   })
-  async getOverview() {
-    return this.analyticsService.getOverviewAnalytics();
+  async getOverview(@Query() filter?: RegionFilterDto) {
+    return this.analyticsService.getOverviewAnalytics(filter);
   }
 
   @Get('detailed')
   @ApiOperation({
-    summary: 'Get Detailed Platform Analytics ($O(1)$ Table Read)',
+    summary: 'Get Detailed Platform Analytics',
     description:
-      'Retrieves granular time-series user growth, voucher performance, business distribution, wallet volume, and referral conversions directly from materialized counter tables.',
+      'Retrieves granular time-series user growth, voucher performance, business distribution, wallet volume, and referral conversions. Computes dynamically if filtered.',
   })
   @ApiResponse({
     status: 200,
     description: 'Detailed analytics returned successfully.',
     type: DetailedAnalyticsDto,
   })
-  async getDetailed() {
-    return this.analyticsService.getDetailedAnalytics();
+  async getDetailed(@Query() filter?: RegionFilterDto) {
+    return this.analyticsService.getDetailedAnalytics(filter);
   }
 
   @Post('sync')

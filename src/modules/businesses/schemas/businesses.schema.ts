@@ -87,6 +87,8 @@ export const businessQuerySchema = z.object({
   website: z.string().optional(),
   gst_number: z.string().optional(),
   exclude_owner_id: z.string().optional(),
+  states: z.string().optional(),
+  districts: z.string().optional(),
 });
 
 export class BusinessQueryDto {
@@ -188,6 +190,16 @@ export class BusinessQueryDto {
     description: 'Exclude business belonging to this owner_id',
   })
   exclude_owner_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated state UUIDs for filtering',
+  })
+  states?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated district UUIDs for filtering',
+  })
+  districts?: string;
 }
 
 export const featureBusinessSchema = z.object({

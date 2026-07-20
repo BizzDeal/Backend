@@ -75,6 +75,8 @@ export const voucherQuerySchema = z.object({
   business_id: z.string().uuid().optional(),
   offer_id: z.string().uuid().optional(),
   voucher_code: z.string().optional(),
+  states: z.string().optional(),
+  districts: z.string().optional(),
 });
 
 export class VoucherQueryDto {
@@ -108,4 +110,14 @@ export class VoucherQueryDto {
     description: 'Filter by exact or partial voucher code',
   })
   voucher_code?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated state UUIDs for filtering',
+  })
+  states?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated district UUIDs for filtering',
+  })
+  districts?: string;
 }

@@ -7,6 +7,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,6 +19,7 @@ import { ReferralsService } from './referrals.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 
 @ApiTags('Referrals')
 @Controller('referrals')
@@ -56,8 +58,11 @@ export class ReferralsController {
     status: 200,
     description: 'Referrals list returned successfully.',
   })
-  async findAll(@CurrentUser() user: User) {
-    return this.referralsService.findAll(user);
+  async findAll(
+    @CurrentUser() user: User,
+    @Query() filter?: RegionFilterDto,
+  ) {
+    return this.referralsService.findAll(user, filter);
   }
 
   @Get(':id')

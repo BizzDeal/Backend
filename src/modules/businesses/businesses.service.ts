@@ -174,7 +174,9 @@ export class BusinessesService {
       !!query.phone ||
       !!query.whatsapp ||
       !!query.email ||
-      !!query.address;
+      !!query.address ||
+      !!query.states ||
+      !!query.districts;
 
     const needsCategoryJoin =
       !!searchKeyword ||
@@ -194,6 +196,17 @@ export class BusinessesService {
     }
     if (needsCategoryJoin && !hasCategoryJoin) {
       qb.leftJoin('business.category', 'category');
+    }
+
+    if (query.states) {
+      qb.andWhere('owner.state_id IN (:...states)', {
+        states: query.states.split(','),
+      });
+    }
+    if (query.districts) {
+      qb.andWhere('owner.district_id IN (:...districts)', {
+        districts: query.districts.split(','),
+      });
     }
 
     if (searchKeyword) {

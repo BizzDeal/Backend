@@ -150,4 +150,14 @@ export class MeetingQueryDto {
     example: '2026-08-31T23:59:59Z',
   })
   to_date?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated state UUIDs for filtering',
+  })
+  states?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated district UUIDs for filtering',
+  })
+  districts?: string;
 }

@@ -20,6 +20,7 @@ import {
   AdminAnalyticsOverviewDto,
   DetailedAnalyticsDto,
 } from './schemas/analytics.schema';
+import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 
 @Injectable()
 export class AnalyticsService implements OnModuleInit {
@@ -104,28 +105,104 @@ export class AnalyticsService implements OnModuleInit {
 
   // --- O(1) Instant Read Methods ---
 
-  async getOverviewAnalytics(): Promise<{ success: boolean; data: AdminAnalyticsOverviewDto }> {
-    const kpi = await this.getOrCreatePlatformKpi();
-    const recentMonths = await this.monthlyRepo.find({
-      order: { period_month: 'ASC' },
-      take: 7,
-    });
+  async getOverviewAnalytics(filter?: RegionFilterDto): Promise<{ success: boolean; data: AdminAnalyticsOverviewDto }> {
+    if (!filter?.states && !filter?.districts) {
+      const kpi = await this.getOrCreatePlatformKpi();
+      const recentMonths = await this.monthlyRepo.find({
+        order: { period_month: 'ASC' },
+        take: 7,
+      });
 
-    const dates = recentMonths.map((m) => m.period_month);
-    const amounts = recentMonths.map((m) => Number(m.revenue || 0));
+      const dates = recentMonths.map((m) => m.period_month);
+      const amounts = recentMonths.map((m) => Number(m.revenue || 0));
 
-    // Ensure we have at least current month if history is empty
+      if (dates.length === 0) {
+        dates.push(this.getCurrentMonthKey());
+        amounts.push(0);
+      }
+
+      const data: AdminAnalyticsOverviewDto = {
+        totalMembers: kpi.total_members,
+        activeMembers: kpi.active_members,
+        totalCustomers: kpi.total_customers,
+        totalVouchers: kpi.total_vouchers_redeemed,
+        revenue: Number(kpi.total_revenue || 0),
+        revenueHistory: {
+          dates,
+          amounts,
+        },
+      };
+
+      return { success: true, data };
+    }
+
+    const states = filter.states ? filter.states.split(',') : [];
+    const districts = filter.districts ? filter.districts.split(',') : [];
+
+    const applyLocationFilter = (qb: any, alias: string) => {
+      if (states.length > 0) {
+        qb.andWhere(`${alias}.state_id IN (:...states)`, { states });
+      }
+      if (districts.length > 0) {
+        qb.andWhere(`${alias}.district_id IN (:...districts)`, { districts });
+      }
+    };
+
+    const membersQb = this.userRepo.createQueryBuilder('user').where('user.role = :role', { role: UserRole.MEMBER });
+    applyLocationFilter(membersQb, 'user');
+    const totalMembers = await membersQb.getCount();
+
+    const activeMembersQb = this.userRepo.createQueryBuilder('user')
+      .where('user.role = :role', { role: UserRole.MEMBER })
+      .andWhere('user.status = :status', { status: UserStatus.ACTIVE });
+    applyLocationFilter(activeMembersQb, 'user');
+    const activeMembers = await activeMembersQb.getCount();
+
+    const customersQb = this.userRepo.createQueryBuilder('user').where('user.role = :role', { role: UserRole.CUSTOMER });
+    applyLocationFilter(customersQb, 'user');
+    const totalCustomers = await customersQb.getCount();
+
+    const vouchersQb = this.voucherRepo.createQueryBuilder('voucher')
+      .leftJoin('voucher.business', 'business')
+      .leftJoin('business.owner', 'owner')
+      .where('voucher.status = :status', { status: VoucherStatus.REDEEMED });
+    applyLocationFilter(vouchersQb, 'owner');
+    const totalVouchers = await vouchersQb.getCount();
+
+    const txQb = this.txRepo.createQueryBuilder('tx')
+      .leftJoin('tx.user', 'user')
+      .where('tx.type = :type', { type: WalletTransactionType.CREDIT });
+    applyLocationFilter(txQb, 'user');
+    
+    const revenueResult = await txQb.clone()
+      .select('SUM(tx.amount)', 'total')
+      .getRawOne();
+    const revenue = Number(revenueResult?.total || 0);
+
+    const historyResult = await txQb.clone()
+      .select("TO_CHAR(tx.created_at, 'YYYY-MM')", 'month')
+      .addSelect("SUM(tx.amount)", 'amount')
+      .groupBy("TO_CHAR(tx.created_at, 'YYYY-MM')")
+      .orderBy('month', 'DESC')
+      .limit(7)
+      .getRawMany();
+      
+    historyResult.reverse();
+
+    const dates = historyResult.map((r) => r.month);
+    const amounts = historyResult.map((r) => Number(r.amount || 0));
+
     if (dates.length === 0) {
       dates.push(this.getCurrentMonthKey());
       amounts.push(0);
     }
 
     const data: AdminAnalyticsOverviewDto = {
-      totalMembers: kpi.total_members,
-      activeMembers: kpi.active_members,
-      totalCustomers: kpi.total_customers,
-      totalVouchers: kpi.total_vouchers_redeemed,
-      revenue: Number(kpi.total_revenue || 0),
+      totalMembers,
+      activeMembers,
+      totalCustomers,
+      totalVouchers,
+      revenue,
       revenueHistory: {
         dates,
         amounts,
@@ -135,49 +212,251 @@ export class AnalyticsService implements OnModuleInit {
     return { success: true, data };
   }
 
-  async getDetailedAnalytics(): Promise<{ success: boolean; data: DetailedAnalyticsDto }> {
-    const kpi = await this.getOrCreatePlatformKpi();
-    const recentMonths = await this.monthlyRepo.find({
-      order: { period_month: 'ASC' },
-      take: 7,
-    });
-    const categories = await this.categoryRepo.find({
-      order: { business_count: 'DESC' },
-    });
+  async getDetailedAnalytics(filter?: RegionFilterDto): Promise<{ success: boolean; data: DetailedAnalyticsDto }> {
+    if (!filter?.states && !filter?.districts) {
+      const kpi = await this.getOrCreatePlatformKpi();
+      const recentMonths = await this.monthlyRepo.find({
+        order: { period_month: 'ASC' },
+        take: 7,
+      });
+      const categories = await this.categoryRepo.find({
+        order: { business_count: 'DESC' },
+      });
 
-    const months = recentMonths.map((m) => m.period_month);
-    const customers = recentMonths.map((m) => m.new_customers || 0);
-    const members = recentMonths.map((m) => m.new_members || 0);
-    const issued = recentMonths.map((m) => m.vouchers_issued || 0);
-    const redeemed = recentMonths.map((m) => m.vouchers_redeemed || 0);
-    const credits = recentMonths.map((m) => Number(m.wallet_credits || 0));
-    const debits = recentMonths.map((m) => Number(m.wallet_debits || 0));
+      const months = recentMonths.map((m) => m.period_month);
+      const customers = recentMonths.map((m) => m.new_customers || 0);
+      const members = recentMonths.map((m) => m.new_members || 0);
+      const issued = recentMonths.map((m) => m.vouchers_issued || 0);
+      const redeemed = recentMonths.map((m) => m.vouchers_redeemed || 0);
+      const credits = recentMonths.map((m) => Number(m.wallet_credits || 0));
+      const debits = recentMonths.map((m) => Number(m.wallet_debits || 0));
 
-    // Ensure at least 1 period if empty
-    if (months.length === 0) {
-      const curr = this.getCurrentMonthKey();
-      months.push(curr);
-      customers.push(0);
-      members.push(0);
-      issued.push(0);
-      redeemed.push(0);
-      credits.push(0);
-      debits.push(0);
+      if (months.length === 0) {
+        const curr = this.getCurrentMonthKey();
+        months.push(curr);
+        customers.push(0);
+        members.push(0);
+        issued.push(0);
+        redeemed.push(0);
+        credits.push(0);
+        debits.push(0);
+      }
+
+      const catNames = categories.map((c) => c.category_name);
+      const catCounts = categories.map((c) => c.business_count || 0);
+
+      const totalRef = kpi.total_referrals || 0;
+      const convRef = kpi.converted_referrals || 0;
+      const conversionRate = totalRef > 0 ? Number(((convRef / totalRef) * 100).toFixed(1)) : 0;
+
+      const data: DetailedAnalyticsDto = {
+        kpis: {
+          totalUsers: kpi.total_members + kpi.total_customers,
+          totalBusinesses: kpi.total_businesses,
+          totalVouchersRedeemed: kpi.total_vouchers_redeemed,
+          totalWalletVolume: Number(kpi.total_wallet_volume || 0),
+        },
+        userGrowth: {
+          months,
+          customers,
+          members,
+        },
+        voucherPerformance: {
+          months,
+          issued,
+          redeemed,
+        },
+        businessDistribution: {
+          categories: catNames.length > 0 ? catNames : ['General'],
+          counts: catCounts.length > 0 ? catCounts : [0],
+        },
+        walletVolume: {
+          months,
+          credits,
+          debits,
+        },
+        referralStats: {
+          total: totalRef,
+          converted: convRef,
+          conversionRate,
+        },
+      };
+
+      return { success: true, data };
     }
 
-    const catNames = categories.map((c) => c.category_name);
-    const catCounts = categories.map((c) => c.business_count || 0);
+    const states = filter.states ? filter.states.split(',') : [];
+    const districts = filter.districts ? filter.districts.split(',') : [];
 
-    const totalRef = kpi.total_referrals || 0;
-    const convRef = kpi.converted_referrals || 0;
+    const applyLocationFilter = (qb: any, alias: string) => {
+      if (states.length > 0) {
+        qb.andWhere(`${alias}.state_id IN (:...states)`, { states });
+      }
+      if (districts.length > 0) {
+        qb.andWhere(`${alias}.district_id IN (:...districts)`, { districts });
+      }
+    };
+
+    // --- KPIs ---
+    const usersQb = this.userRepo.createQueryBuilder('user').where('user.role IN (:...roles)', { roles: [UserRole.MEMBER, UserRole.CUSTOMER] });
+    applyLocationFilter(usersQb, 'user');
+    const totalUsers = await usersQb.getCount();
+
+    const businessesQb = this.businessRepo.createQueryBuilder('business').leftJoin('business.owner', 'owner');
+    applyLocationFilter(businessesQb, 'owner');
+    const totalBusinesses = await businessesQb.getCount();
+
+    const vouchersQb = this.voucherRepo.createQueryBuilder('voucher')
+      .leftJoin('voucher.business', 'business')
+      .leftJoin('business.owner', 'owner')
+      .where('voucher.status = :status', { status: VoucherStatus.REDEEMED });
+    applyLocationFilter(vouchersQb, 'owner');
+    const totalVouchersRedeemed = await vouchersQb.getCount();
+
+    const txQb = this.txRepo.createQueryBuilder('tx')
+      .leftJoin('tx.user', 'user')
+      .where('tx.type IN (:...types)', { types: [WalletTransactionType.CREDIT, WalletTransactionType.DEBIT] });
+    applyLocationFilter(txQb, 'user');
+    const walletVolRes = await txQb.clone().select('SUM(tx.amount)', 'total').getRawOne();
+    const totalWalletVolume = Number(walletVolRes?.total || 0);
+
+    // --- User Growth (Last 7 Months) ---
+    const userGrowthQuery = await this.userRepo.createQueryBuilder('user')
+      .select("TO_CHAR(user.created_at, 'YYYY-MM')", 'month')
+      .addSelect("SUM(CASE WHEN user.role = :customer THEN 1 ELSE 0 END)", 'customers')
+      .addSelect("SUM(CASE WHEN user.role = :member THEN 1 ELSE 0 END)", 'members')
+      .setParameters({ customer: UserRole.CUSTOMER, member: UserRole.MEMBER })
+      .where('user.role IN (:customer, :member)')
+      .andWhere((qb) => {
+        const sub = qb.subQuery().select('1').from(User, 'u2').where('u2.id = user.id');
+        applyLocationFilter(sub, 'u2');
+        return 'EXISTS ' + sub.getQuery();
+      })
+      .groupBy("TO_CHAR(user.created_at, 'YYYY-MM')")
+      .orderBy('month', 'DESC')
+      .limit(7)
+      .getRawMany();
+
+    userGrowthQuery.reverse();
+
+    // --- Voucher Performance (Last 7 Months) ---
+    const voucherIssuedQuery = await this.voucherRepo.createQueryBuilder('voucher')
+      .select("TO_CHAR(voucher.created_at, 'YYYY-MM')", 'month')
+      .addSelect('COUNT(*)', 'issued')
+      .leftJoin('voucher.business', 'business')
+      .leftJoin('business.owner', 'owner')
+      .andWhere((qb) => {
+        const sub = qb.subQuery().select('1').from(User, 'o2').where('o2.id = business.owner_id');
+        applyLocationFilter(sub, 'o2');
+        return 'EXISTS ' + sub.getQuery();
+      })
+      .groupBy("TO_CHAR(voucher.created_at, 'YYYY-MM')")
+      .orderBy('month', 'DESC')
+      .limit(7)
+      .getRawMany();
+    
+    const voucherRedeemedQuery = await this.voucherRepo.createQueryBuilder('voucher')
+      .select("TO_CHAR(voucher.redeemed_at, 'YYYY-MM')", 'month')
+      .addSelect('COUNT(*)', 'redeemed')
+      .leftJoin('voucher.business', 'business')
+      .leftJoin('business.owner', 'owner')
+      .where('voucher.status = :status', { status: VoucherStatus.REDEEMED })
+      .andWhere('voucher.redeemed_at IS NOT NULL')
+      .andWhere((qb) => {
+        const sub = qb.subQuery().select('1').from(User, 'o2').where('o2.id = business.owner_id');
+        applyLocationFilter(sub, 'o2');
+        return 'EXISTS ' + sub.getQuery();
+      })
+      .groupBy("TO_CHAR(voucher.redeemed_at, 'YYYY-MM')")
+      .orderBy('month', 'DESC')
+      .limit(7)
+      .getRawMany();
+
+    // --- Business Distribution ---
+    const bizDistQuery = await this.businessRepo.createQueryBuilder('business')
+      .select('category.name', 'category_name')
+      .addSelect('COUNT(business.id)', 'count')
+      .leftJoin('business.category', 'category')
+      .leftJoin('business.owner', 'owner')
+      .andWhere((qb) => {
+        const sub = qb.subQuery().select('1').from(User, 'o2').where('o2.id = business.owner_id');
+        applyLocationFilter(sub, 'o2');
+        return 'EXISTS ' + sub.getQuery();
+      })
+      .groupBy('category.name')
+      .orderBy('count', 'DESC')
+      .limit(10)
+      .getRawMany();
+
+    // --- Wallet Volume ---
+    const walletVolQuery = await this.txRepo.createQueryBuilder('tx')
+      .select("TO_CHAR(tx.created_at, 'YYYY-MM')", 'month')
+      .addSelect("SUM(CASE WHEN tx.type = :credit THEN tx.amount ELSE 0 END)", 'credits')
+      .addSelect("SUM(CASE WHEN tx.type = :debit THEN tx.amount ELSE 0 END)", 'debits')
+      .setParameters({ credit: WalletTransactionType.CREDIT, debit: WalletTransactionType.DEBIT })
+      .leftJoin('tx.user', 'user')
+      .andWhere((qb) => {
+        const sub = qb.subQuery().select('1').from(User, 'u2').where('u2.id = tx.user_id');
+        applyLocationFilter(sub, 'u2');
+        return 'EXISTS ' + sub.getQuery();
+      })
+      .groupBy("TO_CHAR(tx.created_at, 'YYYY-MM')")
+      .orderBy('month', 'DESC')
+      .limit(7)
+      .getRawMany();
+
+    walletVolQuery.reverse();
+
+    // --- Referral Stats ---
+    const totalRef = await this.referralRepo.createQueryBuilder('ref')
+      .leftJoin('ref.referrer', 'referrer')
+      .andWhere((qb) => {
+        const sub = qb.subQuery().select('1').from(User, 'u2').where('u2.id = ref.referrer_id');
+        applyLocationFilter(sub, 'u2');
+        return 'EXISTS ' + sub.getQuery();
+      }).getCount();
+      
+    const convRef = await this.referralRepo.createQueryBuilder('ref')
+      .leftJoin('ref.referrer', 'referrer')
+      .where('ref.status = :status', { status: ReferralStatus.REWARDED })
+      .andWhere((qb) => {
+        const sub = qb.subQuery().select('1').from(User, 'u2').where('u2.id = ref.referrer_id');
+        applyLocationFilter(sub, 'u2');
+        return 'EXISTS ' + sub.getQuery();
+      }).getCount();
+      
     const conversionRate = totalRef > 0 ? Number(((convRef / totalRef) * 100).toFixed(1)) : 0;
+
+    // Combine time series data
+    const allMonths = new Set<string>();
+    userGrowthQuery.forEach(r => allMonths.add(r.month));
+    voucherIssuedQuery.forEach(r => allMonths.add(r.month));
+    voucherRedeemedQuery.forEach(r => allMonths.add(r.month));
+    walletVolQuery.forEach(r => allMonths.add(r.month));
+    
+    let months = Array.from(allMonths).sort();
+    if (months.length === 0) {
+      months.push(this.getCurrentMonthKey());
+    }
+
+    const customers = months.map(m => Number(userGrowthQuery.find(r => r.month === m)?.customers || 0));
+    const members = months.map(m => Number(userGrowthQuery.find(r => r.month === m)?.members || 0));
+    
+    const issued = months.map(m => Number(voucherIssuedQuery.find(r => r.month === m)?.issued || 0));
+    const redeemed = months.map(m => Number(voucherRedeemedQuery.find(r => r.month === m)?.redeemed || 0));
+    
+    const credits = months.map(m => Number(walletVolQuery.find(r => r.month === m)?.credits || 0));
+    const debits = months.map(m => Number(walletVolQuery.find(r => r.month === m)?.debits || 0));
+    
+    const categoriesList = bizDistQuery.map(r => r.category_name || 'General');
+    const countsList = bizDistQuery.map(r => Number(r.count || 0));
 
     const data: DetailedAnalyticsDto = {
       kpis: {
-        totalUsers: kpi.total_members + kpi.total_customers,
-        totalBusinesses: kpi.total_businesses,
-        totalVouchersRedeemed: kpi.total_vouchers_redeemed,
-        totalWalletVolume: Number(kpi.total_wallet_volume || 0),
+        totalUsers,
+        totalBusinesses,
+        totalVouchersRedeemed,
+        totalWalletVolume,
       },
       userGrowth: {
         months,
@@ -190,8 +469,8 @@ export class AnalyticsService implements OnModuleInit {
         redeemed,
       },
       businessDistribution: {
-        categories: catNames.length > 0 ? catNames : ['General'],
-        counts: catCounts.length > 0 ? catCounts : [0],
+        categories: categoriesList.length > 0 ? categoriesList : ['General'],
+        counts: countsList.length > 0 ? countsList : [0],
       },
       walletVolume: {
         months,

@@ -22,6 +22,7 @@ import {
 import { UpdateProfileDto } from './schemas/users.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { LocationService } from '../location/services/location.service';
+import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 
 @Injectable()
 export class UsersService {
@@ -39,10 +40,18 @@ export class UsersService {
     private readonly locationService: LocationService,
   ) {}
 
-  async findAll(): Promise<
+  async findAll(filter?: RegionFilterDto): Promise<
     (Omit<User, 'pin_hash'> & { profile_pic_url: string | null })[]
   > {
-    const users = await this.usersRepository.find();
+    const whereCondition: any = {};
+    if (filter?.states) {
+      whereCondition.state_id = In(filter.states.split(','));
+    }
+    if (filter?.districts) {
+      whereCondition.district_id = In(filter.districts.split(','));
+    }
+    
+    const users = await this.usersRepository.find({ where: whereCondition });
     if (users.length === 0) return [];
 
     const userIds = users.map((u) => u.id);
@@ -110,11 +119,18 @@ export class UsersService {
     return { exists: !!user };
   }
 
-  async findMembers(status?: UserStatus) {
+  async findMembers(status?: UserStatus, filter?: RegionFilterDto) {
     const whereCondition: any = { role: UserRole.MEMBER };
     if (status) {
       whereCondition.status = status;
     }
+    if (filter?.states) {
+      whereCondition.state_id = In(filter.states.split(','));
+    }
+    if (filter?.districts) {
+      whereCondition.district_id = In(filter.districts.split(','));
+    }
+
     const members = await this.usersRepository.find({
       where: whereCondition,
       order: { created_at: 'DESC' },
@@ -174,9 +190,17 @@ export class UsersService {
     };
   }
 
-  async findCustomers() {
+  async findCustomers(filter?: RegionFilterDto) {
+    const whereCondition: any = { role: UserRole.CUSTOMER };
+    if (filter?.states) {
+      whereCondition.state_id = In(filter.states.split(','));
+    }
+    if (filter?.districts) {
+      whereCondition.district_id = In(filter.districts.split(','));
+    }
+
     const customers = await this.usersRepository.find({
-      where: { role: UserRole.CUSTOMER },
+      where: whereCondition,
       order: { created_at: 'DESC' },
     });
 
