@@ -71,7 +71,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Check User Existence',
     description:
-      'Checks whether a user exists with the specified phone number.',
+      'Checks whether a user exists with the specified email address.',
   })
   @ApiResponse({
     status: 200,
@@ -79,12 +79,12 @@ export class UsersController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid phone number provided.',
+    description: 'Invalid email address provided.',
   })
   async checkUserExist(
     @Body(new ZodValidationPipe(userExistSchema)) dto: UserExistDto,
   ) {
-    return this.usersService.checkUserExist(dto.phone);
+    return this.usersService.checkUserExist(dto.email);
   }
 
   @Get('members')

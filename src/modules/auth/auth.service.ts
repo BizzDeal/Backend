@@ -14,7 +14,8 @@ import * as crypto from 'crypto';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/businesses.service';
-import { FirebaseService } from '../../common/firebase/firebase.service';
+import { OtpService } from './otp.service';
+import { MailService } from '../mail/mail.service';
 import { MediaService } from '../media/media.service';
 import { LocationService } from '../location/services/location.service';
 import { ReferralsService } from '../referrals/referrals.service';
@@ -31,6 +32,7 @@ import {
   RegisterCustomerDto,
   RegisterAdminDto,
   ResetPinDto,
+  SendOtpDto,
 } from './schemas/auth.schema';
 
 @Injectable()
@@ -40,7 +42,8 @@ export class AuthService {
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly usersService: UsersService,
     private readonly businessesService: BusinessesService,
-    private readonly firebaseService: FirebaseService,
+    private readonly otpService: OtpService,
+    private readonly mailService: MailService,
     private readonly jwtService: JwtService,
     private readonly mediaService: MediaService,
     private readonly locationService: LocationService,
@@ -51,23 +54,18 @@ export class AuthService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  private async verifyPhoneMatch(
-    inputPhone: string,
-    firebaseToken: string,
-  ): Promise<void> {
-    const verifiedPhone =
-      await this.firebaseService.verifyPhoneToken(firebaseToken);
-    const cleanInput = inputPhone.replace(/\D/g, '');
-    const cleanVerified = verifiedPhone.replace(/\D/g, '');
-
-    if (
-      !cleanVerified.endsWith(cleanInput) &&
-      !cleanInput.endsWith(cleanVerified)
-    ) {
-      throw new BadRequestException(
-        'Verified phone number does not match input phone number',
-      );
+  async sendOtp(dto: SendOtpDto): Promise<{ success: boolean; message: string }> {
+    let userEmail = dto.email;
+    if (dto.purpose === 'forgot-pin') {
+      const user = await this.usersService.findOneByEmail(dto.email);
+      if (!user) {
+        throw new NotFoundException('User with this email was not found');
+      }
     }
+    const otp = this.otpService.generateOtp();
+    this.otpService.saveOtp(userEmail, otp);
+    await this.mailService.sendOtpEmail(userEmail, otp);
+    return { success: true, message: 'OTP sent successfully to email.' };
   }
 
   async generateTokens(
@@ -115,9 +113,9 @@ export class AuthService {
     refreshToken: string;
     user: Omit<User, 'pin_hash'>;
   }> {
-    const user = await this.usersService.findOneByPhoneWithPin(dto.phone);
+    const user = await this.usersService.findOneByEmailWithPin(dto.email);
     if (!user || !user.pin_hash) {
-      throw new UnauthorizedException('Invalid phone number or PIN');
+      throw new UnauthorizedException('Invalid email or PIN');
     }
 
     if (user.status === UserStatus.SUSPENDED) {
@@ -134,7 +132,7 @@ export class AuthService {
 
     const isPinValid = await bcrypt.compare(dto.pin, user.pin_hash);
     if (!isPinValid) {
-      throw new UnauthorizedException('Invalid phone number or PIN');
+      throw new UnauthorizedException('Invalid email or PIN');
     }
 
     const tokens = await this.generateTokens(user);
@@ -170,10 +168,10 @@ export class AuthService {
       );
     }
 
-    // Check if phone number is already registered
-    const existingUser = await this.usersService.findOneByPhone(dto.phone);
+    // Check if email is already registered
+    const existingUser = await this.usersService.findOneByEmail(dto.email);
     if (existingUser) {
-      throw new ConflictException('Phone number is already registered');
+      throw new ConflictException('Email is already registered');
     }
 
     // Validate that the mandatory business category ID exists and is active
@@ -192,28 +190,30 @@ export class AuthService {
       throw new BadRequestException('Selected state ID does not exist');
     }
 
-    const district = await this.locationService.getDistrictById(
-      dto.district_id,
-    );
-    if (!district) {
-      throw new BadRequestException('Selected district ID does not exist');
-    }
-
-    if (district.stateId !== dto.state_id) {
-      throw new BadRequestException(
-        'Selected district does not belong to the selected state',
+    if (dto.district_id) {
+      const district = await this.locationService.getDistrictById(
+        dto.district_id,
       );
+      if (!district) {
+        throw new BadRequestException('Selected district ID does not exist');
+      }
+
+      if (district.stateId !== dto.state_id) {
+        throw new BadRequestException(
+          'Selected district does not belong to the selected state',
+        );
+      }
     }
 
-    // Verify phone token via Firebase Auth
-    await this.verifyPhoneMatch(dto.phone, dto.firebaseToken);
+    // Verify OTP
+    this.otpService.verifyOtp(dto.email, dto.otp);
 
-    if (dto.reference_code) {
-      await this.referralsService.validateReferralCode(
-        dto.reference_code,
-        dto.phone,
-      );
-    }
+      if (dto.phone && dto.reference_code) {
+        await this.referralsService.validateReferralCode(
+          dto.reference_code,
+          dto.phone,
+        );
+      }
 
     const pinHash = await bcrypt.hash(dto.pin, 10);
 
@@ -227,16 +227,16 @@ export class AuthService {
       district_id: dto.district_id,
       pin_hash: pinHash,
       role: UserRole.MEMBER,
-      status: UserStatus.PENDING, // Members are pending by default until Admin approves
+      status: UserStatus.UNVERIFIED, // Members are unverified by default until email is confirmed
     });
 
-    if (dto.reference_code) {
-      await this.referralsService.updateReferralOnRegistration(
-        dto.reference_code,
-        dto.phone,
-        newUser.id,
-      );
-    }
+      if (dto.phone && dto.reference_code) {
+        await this.referralsService.updateReferralOnRegistration(
+          dto.reference_code,
+          dto.phone,
+          newUser.id,
+        );
+      }
 
     let logoId: string | null = null;
     if (files?.business_logo?.[0]) {
@@ -274,6 +274,12 @@ export class AuthService {
       MediaPurpose.PAYMENT_RECEIPT,
     );
 
+    const verificationToken = await this.jwtService.signAsync(
+      { sub: newUser.id, purpose: 'email_verification' },
+      { expiresIn: '1h' },
+    );
+    await this.mailService.sendConfirmationEmail(newUser.email, verificationToken);
+
     const tokens = await this.generateTokens(newUser);
 
     const profileRes = await this.usersService.getProfile(newUser.id);
@@ -281,6 +287,34 @@ export class AuthService {
       ...tokens,
       user: profileRes.data,
     };
+  }
+
+  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const payload = await this.jwtService.verifyAsync(token);
+      
+      if (payload.purpose !== 'email_verification' || !payload.sub) {
+        throw new BadRequestException('Invalid verification token');
+      }
+
+      const user = await this.usersService.findOneById(payload.sub);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (user.status !== UserStatus.UNVERIFIED) {
+        throw new BadRequestException('Email is already verified or account is not in unverified state');
+      }
+
+      await this.usersService.update(user.id, { status: UserStatus.PENDING });
+      
+      return { success: true, message: 'Email verified successfully. Your account is now pending admin approval.' };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Invalid or expired verification token');
+    }
   }
 
   async registerCustomer(
@@ -291,14 +325,16 @@ export class AuthService {
     refreshToken: string;
     user: Omit<User, 'pin_hash'>;
   }> {
-    // Check if phone number is already registered
-    const existingUser = await this.usersService.findOneByPhone(dto.phone);
-    if (existingUser) {
-      throw new ConflictException('Phone number is already registered');
+    // Check if phone number is already registered (if provided)
+    if (dto.phone) {
+      const existingPhoneUser = await this.usersService.findOneByPhone(dto.phone);
+      if (existingPhoneUser) {
+        throw new ConflictException('Phone number is already registered');
+      }
     }
 
-    // Verify phone token via Firebase Auth
-    await this.verifyPhoneMatch(dto.phone, dto.firebaseToken);
+    // Verify OTP
+    this.otpService.verifyOtp(dto.email, dto.otp);
 
     const pinHash = await bcrypt.hash(dto.pin, 10);
 
@@ -306,7 +342,7 @@ export class AuthService {
       full_name: dto.full_name || null,
       phone: dto.phone,
       whatsapp: dto.whatsapp || null,
-      email: dto.email || null,
+      email: dto.email,
       address: dto.address || null,
       pin_hash: pinHash,
       role: UserRole.CUSTOMER,
@@ -338,14 +374,14 @@ export class AuthService {
     refreshToken: string;
     user: Omit<User, 'pin_hash'>;
   }> {
-    // Check if phone number is already registered
-    const existingUser = await this.usersService.findOneByPhone(dto.phone);
+    // Check if email is already registered
+    const existingUser = await this.usersService.findOneByEmail(dto.email);
     if (existingUser) {
-      throw new ConflictException('Phone number is already registered');
+      throw new ConflictException('Email is already registered');
     }
 
-    // Verify phone token via Firebase Auth
-    await this.verifyPhoneMatch(dto.phone, dto.firebaseToken);
+    // Verify OTP
+    this.otpService.verifyOtp(dto.email, dto.otp);
 
     const pinHash = await bcrypt.hash(dto.pin, 10);
 
@@ -378,29 +414,29 @@ export class AuthService {
   }
 
   async forgotPin(
-    phone: string,
+    email: string,
   ): Promise<{ success: boolean; message: string }> {
-    const user = await this.usersService.findOneByPhone(phone);
+    const user = await this.usersService.findOneByEmail(email);
     if (!user) {
-      throw new NotFoundException('User with this phone number was not found');
+      throw new NotFoundException('User with this email was not found');
     }
 
     return {
       success: true,
-      message: 'User found. Please proceed with client-side OTP verification.',
+      message: 'User found. Please trigger OTP via send-otp endpoint.',
     };
   }
 
   async resetPin(
     dto: ResetPinDto,
   ): Promise<{ success: boolean; message: string }> {
-    const user = await this.usersService.findOneByPhone(dto.phone);
+    const user = await this.usersService.findOneByEmail(dto.email);
     if (!user) {
-      throw new NotFoundException('User with this phone number was not found');
+      throw new NotFoundException('User with this email was not found');
     }
 
-    // Verify phone token via Firebase Auth
-    await this.verifyPhoneMatch(dto.phone, dto.firebaseToken);
+    // Verify OTP
+    this.otpService.verifyOtp(dto.email, dto.otp);
 
     const newPinHash = await bcrypt.hash(dto.newPin, 10);
     await this.usersService.update(user.id, { pin_hash: newPinHash });

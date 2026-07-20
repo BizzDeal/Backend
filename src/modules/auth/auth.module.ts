@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { User } from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
+import { OtpService } from './otp.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { BusinessesModule } from '../businesses/businesses.module';
@@ -13,6 +14,7 @@ import { FirebaseModule } from '../../common/firebase/firebase.module';
 import { MediaModule } from '../media/media.module';
 import { LocationModule } from '../location/location.module';
 import { ReferralsModule } from '../referrals/referrals.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -34,9 +36,10 @@ import { ReferralsModule } from '../referrals/referrals.module';
     MediaModule,
     LocationModule,
     ReferralsModule,
+    MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService, JwtModule],
+  providers: [AuthService, OtpService],
+  exports: [AuthService, JwtModule, OtpService],
 })
 export class AuthModule {}

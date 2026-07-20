@@ -5,6 +5,7 @@ export enum UserRole {
 }
 
 export enum UserStatus {
+  UNVERIFIED = 'UNVERIFIED',
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
   REJECTED = 'REJECTED',

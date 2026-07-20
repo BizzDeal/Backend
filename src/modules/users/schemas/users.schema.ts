@@ -2,15 +2,15 @@ import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export const userExistSchema = z.object({
-  phone: z.string().min(10, 'Valid phone number is required'),
+  email: z.string().email('Valid email address is required'),
 });
 
 export class UserExistDto {
   @ApiProperty({
-    description: 'The phone number to check for existence in the system',
-    example: '9876543210',
+    description: 'The email address to check for existence in the system',
+    example: 'user@example.com',
   })
-  phone: string;
+  email: string;
 }
 
 export const updateProfileSchema = z.object({

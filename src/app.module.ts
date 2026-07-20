@@ -22,6 +22,8 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { EventsModule } from './modules/events/events.module';
 import { PaymentSettingsModule } from './modules/payment-settings/payment-settings.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { MailModule } from './modules/mail/mail.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -33,6 +35,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     AnalyticsModule,
     UsersModule,
     AuthModule,
+    MailModule,
     MediaModule,
     BusinessesModule,
     OffersModule,

@@ -19,14 +19,14 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   full_name: string | null;
 
-  @Column({ type: 'varchar', length: 50, unique: true })
-  phone: string;
+  @Column({ type: 'varchar', length: 50, unique: true, nullable: true })
+  phone: string | null;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   whatsapp: string | null;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  email: string | null;
+  @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
+  email: string;
 
   @Column({ type: 'text', nullable: true })
   address: string | null;
@@ -58,7 +58,7 @@ export class User {
   @Column({
     type: 'enum',
     enum: UserStatus,
-    default: UserStatus.PENDING,
+    default: UserStatus.UNVERIFIED,
   })
   status: UserStatus;
 

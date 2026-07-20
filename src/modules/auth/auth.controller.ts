@@ -40,6 +40,10 @@ import {
   ForgotPinDto,
   ResetPinDto,
   RefreshTokenDto,
+  sendOtpSchema,
+  SendOtpDto,
+  verifyEmailSchema,
+  VerifyEmailDto,
 } from './schemas/auth.schema';
 
 @ApiTags('Authentication')
@@ -67,12 +71,48 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Post('send-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Send Mail OTP',
+    description: 'Generates and sends a 6-digit OTP to the provided email address.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed or unable to send email.',
+  })
+  async sendOtp(@Body(new ZodValidationPipe(sendOtpSchema)) dto: SendOtpDto) {
+    return this.authService.sendOtp(dto);
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify Email',
+    description: 'Verifies the email address using the token sent to the user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid or expired token, or account is already verified.',
+  })
+  async verifyEmail(@Body(new ZodValidationPipe(verifyEmailSchema)) dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto.token);
+  }
+
   @Post('register-member')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Register Member / Entrepreneur',
     description:
-      'Registers a new member account with optional profile_pic and mandatory payment_receipt file uploads. Requires client-side verification of the phone number via Firebase Phone Auth (firebaseToken). Status is set to PENDING until approved by an admin.',
+      'Registers a new member account with optional profile_pic and mandatory payment_receipt file uploads. Requires a valid 6-digit OTP sent to the email. Status is set to PENDING until approved by an admin.',
   })
   @ApiResponse({
     status: 201,
@@ -111,7 +151,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register Customer',
     description:
-      'Registers a new customer account with optional profile_image upload and profile details. Requires client-side verification of the phone number via Firebase Phone Auth (firebaseToken). Customer is immediately active.',
+      'Registers a new customer account with optional profile_image upload and profile details. Requires a valid 6-digit OTP sent to the email. Customer is immediately active.',
   })
   @ApiResponse({
     status: 201,
@@ -140,7 +180,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register Admin',
     description:
-      'Registers a new admin account with optional profile_image upload and profile details. Requires client-side verification of the phone number via Firebase Phone Auth (firebaseToken). Admin is immediately active.',
+      'Registers a new admin account with optional profile_image upload and profile details. Requires a valid 6-digit OTP sent to the email. Admin is immediately active.',
   })
   @ApiResponse({
     status: 201,
@@ -169,21 +209,21 @@ export class AuthController {
   @ApiOperation({
     summary: 'Forgot PIN',
     description:
-      'Validates that a user exists with the given phone number before the client initiates Firebase Phone Auth SMS verification.',
+      'Validates that a user exists with the given email number before triggering a Mail OTP.',
   })
   @ApiResponse({
     status: 200,
     description:
-      'User verified successfully. Client should proceed with Firebase SMS verification.',
+      'User verified successfully.',
   })
   @ApiResponse({
     status: 404,
-    description: 'Phone number not found in registered users.',
+    description: 'Email not found in registered users.',
   })
   async forgotPin(
     @Body(new ZodValidationPipe(forgotPinSchema)) dto: ForgotPinDto,
   ) {
-    return this.authService.forgotPin(dto.phone);
+    return this.authService.forgotPin(dto.email);
   }
 
   @Post('reset-pin')
@@ -191,7 +231,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Reset PIN',
     description:
-      'Resets the security PIN of a user after verifying ownership of the phone via Firebase ID token.',
+      'Resets the security PIN of a user after verifying ownership of the email via a 6-digit OTP.',
   })
   @ApiResponse({
     status: 200,
@@ -199,7 +239,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid Firebase ID token or invalid input.',
+    description: 'Invalid OTP or invalid input.',
   })
   @ApiResponse({
     status: 404,

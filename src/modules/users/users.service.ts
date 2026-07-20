@@ -82,11 +82,23 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { phone } });
   }
 
+  async findOneByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { email } });
+  }
+
   async findOneByPhoneWithPin(phone: string): Promise<User | null> {
     return this.usersRepository
       .createQueryBuilder('user')
       .addSelect('user.pin_hash')
       .where('user.phone = :phone', { phone })
+      .getOne();
+  }
+
+  async findOneByEmailWithPin(email: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.pin_hash')
+      .where('user.email = :email', { email })
       .getOne();
   }
 
@@ -112,10 +124,10 @@ export class UsersService {
     return updatedUser;
   }
 
-  async checkUserExist(phone: string): Promise<{
+  async checkUserExist(email: string): Promise<{
     exists: boolean;
   }> {
-    const user = await this.findOneByPhone(phone);
+    const user = await this.findOneByEmail(email);
     return { exists: !!user };
   }
 
