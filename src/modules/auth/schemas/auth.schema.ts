@@ -22,20 +22,22 @@ export class LoginDto {
 
 export const registerMemberSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
-  phone: z.string().optional().nullable(),
+  phone: z.string().optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
-  whatsapp: z.string().optional().or(z.literal('')).refine(val => !val || /^[0-9]{10}$/.test(val), { message: 'WhatsApp number must be exactly 10 digits' }),
+  whatsapp: z.string().optional().or(z.literal('')).refine(val => !val || /^[0-9]{10}$/.test(val), { message: 'WhatsApp number must be exactly 10 digits' }).transform(val => val === '' ? null : val),
   email: z.string().email('Invalid email address'),
-  address: z.string().min(5, 'Address must be at least 5 characters if provided').optional().nullable(),
+  address: z.string().min(5, 'Address must be at least 5 characters if provided').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   state_id: z.string().uuid('Valid state UUID is required'),
-  district_id: z.string().uuid('Valid district UUID is required').optional().nullable(),
+  district_id: z.string().uuid('Valid district UUID is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   business_name: z.string().min(2, 'Business name is required'),
   category_id: z.string().uuid('Valid business category UUID is required'),
   business_description: z.string().min(5, 'Business description is required'),
-  website: z.string().optional().or(z.literal('')),
-  gst_number: z.string().optional().or(z.literal('')),
-  otp: z.string().length(6, 'OTP must be exactly 6 digits'),
-  reference_code: z.string().optional(),
+  website: z.string().optional().or(z.literal('')).transform(val => val === '' ? null : val),
+  gst_number: z.string().optional().or(z.literal('')).transform(val => val === '' ? null : val),
+  business_address: z.string().min(5, 'Business address must be at least 5 characters').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  business_state_id: z.string().uuid('Valid state UUID is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  business_district_id: z.string().uuid('Valid district UUID is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  reference_code: z.string().optional().or(z.literal('')).transform(val => val === '' ? null : val),
 });
 
 export class RegisterMemberDto {
@@ -130,12 +132,28 @@ export class RegisterMemberDto {
   })
   gst_number?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
-    description: 'The 6-digit OTP sent to the email address',
-    example: '123456',
+    description: 'Complete address of the business',
+    example: '456 Business Lane, Tech Park, Hyderabad',
   })
-  otp: string;
+  business_address?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'UUID of the selected business state',
+    example: 'a1111111-2222-3333-4444-555555555555',
+  })
+  business_state_id?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'UUID of the selected business district',
+    example: 'b2222222-3333-4444-5555-666666666666',
+  })
+  business_district_id?: string | null;
+
+
 
   @ApiPropertyOptional({
     type: String,
@@ -167,12 +185,12 @@ export class RegisterMemberDto {
 }
 
 export const registerCustomerSchema = z.object({
-  full_name: z.string().min(2, 'Full name must be at least 2 characters').optional().nullable(),
-  phone: z.string().optional().nullable(),
+  full_name: z.string().min(2, 'Full name must be at least 2 characters').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  phone: z.string().optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
-  whatsapp: z.string().min(10, 'Valid WhatsApp number is required').optional().nullable(),
+  whatsapp: z.string().min(10, 'Valid WhatsApp number is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   email: z.string().email('Invalid email address'),
-  address: z.string().min(5, 'Address is required').optional().nullable(),
+  address: z.string().min(5, 'Address is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   otp: z.string().length(6, 'OTP must be exactly 6 digits'),
 });
 
@@ -236,7 +254,7 @@ export class RegisterCustomerDto {
 
 export const registerAdminSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
-  phone: z.string().optional().nullable(),
+  phone: z.string().optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
   whatsapp: z.string().min(10, 'Valid WhatsApp number is required'),
   email: z.string().email('Invalid email address'),

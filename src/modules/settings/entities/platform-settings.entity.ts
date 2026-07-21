@@ -19,6 +19,6 @@ export class PlatformSettings {
   @Column({ type: 'int', default: 20 })
   home_feed_limit: number;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

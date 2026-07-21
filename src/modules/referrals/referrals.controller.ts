@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { ReferralsService } from './referrals.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { ActiveMemberGuard } from '../../common/guards/active-member.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { RegionFilterDto } from '../../common/dto/region-filter.dto';
@@ -29,6 +30,7 @@ export class ReferralsController {
   constructor(private readonly referralsService: ReferralsService) {}
 
   @Post()
+  @UseGuards(ActiveMemberGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create Referral',
@@ -96,6 +98,7 @@ export class ReferralsController {
   }
 
   @Post('bulk')
+  @UseGuards(ActiveMemberGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Bulk Create Referrals',

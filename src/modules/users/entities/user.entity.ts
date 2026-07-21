@@ -6,44 +6,22 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { UserRole, UserStatus } from '../../../common/enums';
-import { State } from '../../location/entities/state.entity';
-import { District } from '../../location/entities/district.entity';
+import { Profile } from './profile.entity';
+import { BusinessProfile } from '../../businesses/entities/business-profile.entity';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  full_name: string | null;
-
   @Column({ type: 'varchar', length: 50, unique: true, nullable: true })
   phone: string | null;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  whatsapp: string | null;
-
   @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
   email: string;
-
-  @Column({ type: 'text', nullable: true })
-  address: string | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  state_id: string | null;
-
-  @ManyToOne(() => State, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'state_id' })
-  state: State | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  district_id: string | null;
-
-  @ManyToOne(() => District, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'district_id' })
-  district: District | null;
 
   @Column({ type: 'varchar', length: 255, select: false })
   pin_hash?: string;
@@ -69,15 +47,21 @@ export class User {
   @JoinColumn({ name: 'approved_by_id' })
   approved_by: User | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @OneToOne(() => Profile, (profile) => profile.user)
+  profile: Profile;
+
+  @OneToOne(() => BusinessProfile, (businessProfile) => businessProfile.owner)
+  business_profile: BusinessProfile;
+
+  @Column({ type: 'timestamptz', nullable: true })
   approved_at: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   last_login_at: Date | null;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

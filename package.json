@@ -33,6 +33,7 @@
     "@nestjs/typeorm": "^11.0.3",
     "@nestjs/websockets": "^11.1.27",
     "bcryptjs": "^3.0.3",
+    "ejs": "^6.0.1",
     "firebase-admin": "^14.1.0",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0",

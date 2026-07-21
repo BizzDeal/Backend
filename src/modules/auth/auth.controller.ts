@@ -1,6 +1,9 @@
 import {
   Controller,
   Post,
+  Get,
+  Query,
+  Res,
   Body,
   UseGuards,
   HttpCode,
@@ -9,6 +12,7 @@ import {
   UploadedFiles,
   UploadedFile,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   FileFieldsInterceptor,
   FileInterceptor,
@@ -89,6 +93,20 @@ export class AuthController {
     return this.authService.sendOtp(dto);
   }
 
+  @Get('verify-email')
+  @ApiOperation({
+    summary: 'Verify Email (Page)',
+    description: 'Verifies the email address using the token and renders a confirmation page.',
+  })
+  async verifyEmailPage(@Query('token') token: string, @Res() res: Response) {
+    try {
+      const result = await this.authService.verifyEmail(token);
+      return res.render('verify-email', { success: result.success, message: result.message });
+    } catch (error) {
+      return res.render('verify-email', { success: false, message: 'Invalid or expired token.' });
+    }
+  }
+
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -112,7 +130,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register Member / Entrepreneur',
     description:
-      'Registers a new member account with optional profile_pic and mandatory payment_receipt file uploads. Requires a valid 6-digit OTP sent to the email. Status is set to PENDING until approved by an admin.',
+      'Registers a new member account with optional profile_pic and mandatory payment_receipt file uploads. An email verification link is sent to the user. Status is set to UNVERIFIED until the link is clicked, after which it becomes PENDING for admin approval.',
   })
   @ApiResponse({
     status: 201,

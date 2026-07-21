@@ -40,6 +40,6 @@ export class PlatformKpi {
   @Column({ type: 'int', default: 0 })
   converted_referrals: number;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

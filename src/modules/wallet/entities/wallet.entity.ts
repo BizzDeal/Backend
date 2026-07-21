@@ -27,9 +27,9 @@ export class Wallet {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   total_savings: number;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { MeetingStatus } from '../../../common/enums';
 import { User } from '../../users/entities/user.entity';
-import { Business } from '../../businesses/entities/business.entity';
+import { BusinessProfile } from '../../businesses/entities/business-profile.entity';
 
 @Entity('meetings')
 export class Meeting {
@@ -26,9 +26,9 @@ export class Meeting {
   @Column({ type: 'uuid', nullable: true })
   business_id: string | null;
 
-  @ManyToOne(() => Business, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => BusinessProfile, (business) => business.id, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'business_id' })
-  business: Business | null;
+  business: BusinessProfile | null;
 
   @Column({ type: 'varchar', length: 255 })
   title: string;
@@ -36,7 +36,7 @@ export class Meeting {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   meeting_date: Date;
 
   @Column({ type: 'text', nullable: true })
@@ -52,9 +52,9 @@ export class Meeting {
   })
   status: MeetingStatus;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

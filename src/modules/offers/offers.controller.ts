@@ -26,6 +26,7 @@ import { OffersService } from './offers.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { ActiveMemberGuard } from '../../common/guards/active-member.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -48,7 +49,7 @@ export class OffersController {
   constructor(private readonly offersService: OffersService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, ActiveMemberGuard)
   @Roles(UserRole.MEMBER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')

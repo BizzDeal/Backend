@@ -38,6 +38,6 @@ export class AuditLog {
   @Column({ type: 'varchar', length: 100, nullable: true })
   ip_address: string | null;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, SelectQueryBuilder } from 'typeorm';
-import { Business } from './entities/business.entity';
+import { BusinessProfile } from './entities/business-profile.entity';
 import { BusinessCategory } from './entities/business-category.entity';
 import { User } from '../users/entities/user.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
@@ -25,15 +25,14 @@ import {
   BusinessQueryDto,
 } from './schemas/businesses.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
-
 import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class BusinessesService {
   private readonly logger = new Logger(BusinessesService.name);
   constructor(
-    @InjectRepository(Business)
-    private readonly businessRepository: Repository<Business>,
+    @InjectRepository(BusinessProfile)
+    private readonly businessRepository: Repository<BusinessProfile>,
     @InjectRepository(BusinessCategory)
     private readonly categoryRepository: Repository<BusinessCategory>,
     @InjectRepository(User)
@@ -78,7 +77,12 @@ export class BusinessesService {
     return category;
   }
 
-  async createBusiness(data: Partial<Business>): Promise<Business> {
+  async createBusiness(data: Partial<BusinessProfile>): Promise<BusinessProfile> {
+    const user = await this.userRepository.findOne({ where: { id: data.owner_id } });
+    if (!user || user.role !== UserRole.MEMBER) {
+      throw new BadRequestException('Only users with MEMBER role can create a Business Profile.');
+    }
+
     const business = this.businessRepository.create(data);
     const saved = await this.businessRepository.save(business);
     if (saved) {
@@ -92,7 +96,7 @@ export class BusinessesService {
     return saved;
   }
 
-  private async enrichBusinessesWithMediaAndCategory(businesses: Business[]) {
+  private async enrichBusinessesWithMediaAndCategory(businesses: BusinessProfile[]) {
     if (businesses.length === 0) return [];
 
     const logoIds = businesses
@@ -111,9 +115,9 @@ export class BusinessesService {
       const { ...biz } = b;
       const categoryName = b.category ? b.category.name : 'General';
       const phone = b.owner ? (b.owner.phone || '') : '';
-      const whatsapp = b.owner ? ((b.owner as any).whatsapp || b.owner.phone || '') : '';
-      const owner_name = b.owner ? ((b.owner as any).full_name || '') : '';
-      const owner_email = b.owner ? ((b.owner as any).email || '') : '';
+      const whatsapp = b.owner?.profile?.whatsapp || phone || '';
+      const owner_name = b.owner?.profile?.full_name || '';
+      const owner_email = b.owner ? (b.owner.email || '') : '';
       const initials = (b.name || 'BI')
         .split(' ')
         .map((w) => w[0])
@@ -164,7 +168,7 @@ export class BusinessesService {
   }
 
   private applySearchFilters(
-    qb: SelectQueryBuilder<Business>,
+    qb: SelectQueryBuilder<BusinessProfile>,
     query: BusinessQueryDto,
   ) {
     const searchKeyword = query.q || query.search;
@@ -174,9 +178,7 @@ export class BusinessesService {
       !!query.phone ||
       !!query.whatsapp ||
       !!query.email ||
-      !!query.address ||
-      !!query.states ||
-      !!query.districts;
+      !!query.address;
 
     const needsCategoryJoin =
       !!searchKeyword ||
@@ -193,18 +195,19 @@ export class BusinessesService {
 
     if (needsOwnerJoin && !hasOwnerJoin) {
       qb.leftJoin('business.owner', 'owner');
+      qb.leftJoin('owner.profile', 'profile');
     }
     if (needsCategoryJoin && !hasCategoryJoin) {
       qb.leftJoin('business.category', 'category');
     }
 
     if (query.states) {
-      qb.andWhere('owner.state_id IN (:...states)', {
+      qb.andWhere('business.state_id IN (:...states)', {
         states: query.states.split(','),
       });
     }
     if (query.districts) {
-      qb.andWhere('owner.district_id IN (:...districts)', {
+      qb.andWhere('business.district_id IN (:...districts)', {
         districts: query.districts.split(','),
       });
     }
@@ -215,11 +218,11 @@ export class BusinessesService {
           'business.description ILIKE :kw OR ' +
           'business.website ILIKE :kw OR ' +
           'business.gst_number ILIKE :kw OR ' +
-          'owner.full_name ILIKE :kw OR ' +
+          'profile.full_name ILIKE :kw OR ' +
           'owner.phone ILIKE :kw OR ' +
-          'owner.whatsapp ILIKE :kw OR ' +
+          'profile.whatsapp ILIKE :kw OR ' +
           'owner.email ILIKE :kw OR ' +
-          'owner.address ILIKE :kw OR ' +
+          'business.address ILIKE :kw OR ' +
           'category.name ILIKE :kw OR ' +
           'category.slug ILIKE :kw OR ' +
           'category.description ILIKE :kw)',
@@ -228,7 +231,7 @@ export class BusinessesService {
     }
 
     if (query.full_name) {
-      qb.andWhere('owner.full_name ILIKE :fullName', {
+      qb.andWhere('profile.full_name ILIKE :fullName', {
         fullName: `%${query.full_name}%`,
       });
     }
@@ -238,7 +241,7 @@ export class BusinessesService {
       });
     }
     if (query.whatsapp) {
-      qb.andWhere('owner.whatsapp ILIKE :whatsapp', {
+      qb.andWhere('profile.whatsapp ILIKE :whatsapp', {
         whatsapp: `%${query.whatsapp}%`,
       });
     }
@@ -248,7 +251,7 @@ export class BusinessesService {
       });
     }
     if (query.address) {
-      qb.andWhere('owner.address ILIKE :address', {
+      qb.andWhere('business.address ILIKE :address', {
         address: `%${query.address}%`,
       });
     }
@@ -296,6 +299,7 @@ export class BusinessesService {
     const qb = this.businessRepository.createQueryBuilder('business');
     qb.leftJoinAndSelect('business.category', 'category');
     qb.leftJoinAndSelect('business.owner', 'owner');
+    qb.leftJoinAndSelect('owner.profile', 'profile');
 
     // Filter by visibility rights
     if (!currentUser || currentUser.role === UserRole.CUSTOMER) {
@@ -364,6 +368,7 @@ export class BusinessesService {
     const qb = this.businessRepository.createQueryBuilder('business');
     qb.leftJoinAndSelect('business.category', 'category');
     qb.leftJoinAndSelect('business.owner', 'owner');
+    qb.leftJoinAndSelect('owner.profile', 'profile');
 
     // Filter by visibility rights
     if (!currentUser || currentUser.role === UserRole.CUSTOMER) {
@@ -424,6 +429,7 @@ export class BusinessesService {
     const qb = this.businessRepository.createQueryBuilder('business');
     qb.leftJoinAndSelect('business.category', 'category');
     qb.leftJoinAndSelect('business.owner', 'owner');
+    qb.leftJoinAndSelect('owner.profile', 'profile');
     qb.leftJoin('vouchers', 'voucher', 'voucher.business_id = business.id');
 
     // Filter by visibility rights
@@ -464,6 +470,7 @@ export class BusinessesService {
     qb.groupBy('business.id');
     qb.addGroupBy('category.id');
     qb.addGroupBy('owner.id');
+    qb.addGroupBy('profile.id');
 
     // Order by number of distinct customers who claimed vouchers, then by created_at
     qb.addSelect('COUNT(DISTINCT voucher.customer_id)', 'voucherCount');
@@ -512,7 +519,7 @@ export class BusinessesService {
 
     const business = await this.businessRepository.findOne({ 
       where: { id },
-      relations: { category: true, owner: true }
+      relations: { category: true, owner: { profile: true } }
     });
     if (!business) {
       throw new NotFoundException('Business not found');
@@ -542,7 +549,7 @@ export class BusinessesService {
     };
   }
 
-  async findOneByOwnerId(ownerId: string): Promise<Business | null> {
+  async findOneByOwnerId(ownerId: string): Promise<BusinessProfile | null> {
     return this.businessRepository.findOne({ where: { owner_id: ownerId } });
   }
 
@@ -589,12 +596,15 @@ export class BusinessesService {
       }
     }
 
-    const updateData: Partial<Business> = {};
+    const updateData: Partial<BusinessProfile> = {};
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.category_id !== undefined) updateData.category_id = dto.category_id;
     if (dto.description !== undefined) updateData.description = dto.description;
     if (dto.website !== undefined) updateData.website = dto.website;
     if (dto.gst_number !== undefined) updateData.gst_number = dto.gst_number;
+    if (dto.address !== undefined) updateData.address = dto.address;
+    if (dto.state_id !== undefined) updateData.state_id = dto.state_id;
+    if (dto.district_id !== undefined) updateData.district_id = dto.district_id;
 
     if (logoFile) {
       const media = await this.mediaService.replaceUserFile(
@@ -710,6 +720,7 @@ export class BusinessesService {
 
     const updated = await this.businessRepository.findOne({
       where: { id: businessId },
+      relations: { category: true, owner: { profile: true } }
     });
     const enriched = await this.enrichBusinessesWithMediaAndCategory(
       updated ? [updated] : [business],
@@ -756,6 +767,7 @@ export class BusinessesService {
 
     const updated = await this.businessRepository.findOne({
       where: { id: businessId },
+      relations: { category: true, owner: { profile: true } }
     });
     const enriched = await this.enrichBusinessesWithMediaAndCategory(
       updated ? [updated] : [business],

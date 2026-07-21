@@ -367,10 +367,13 @@ export class MeetingsService {
 
     const members = await this.userRepository.find({
       where: whereCondition,
+      relations: { profile: true },
       select: {
         id: true,
-        full_name: true,
         phone: true,
+        profile: {
+          full_name: true,
+        },
       },
     });
 
@@ -382,7 +385,7 @@ export class MeetingsService {
       const record = attendees.find((a) => a.user_id === member.id);
       return {
         id: member.id,
-        full_name: member.full_name,
+        full_name: member.profile?.full_name || null,
         phone: member.phone,
         status: record ? record.status : 'PENDING',
       };

@@ -31,6 +31,6 @@ export class MonthlyMetric {
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   revenue: number;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

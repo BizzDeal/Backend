@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { Offer } from './entities/offer.entity';
-import { Business } from '../businesses/entities/business.entity';
+import { BusinessProfile } from '../businesses/entities/business-profile.entity';
 import { MediaService } from '../media/media.service';
 import { User } from '../users/entities/user.entity';
 import {
@@ -32,8 +32,8 @@ export class OffersService {
   constructor(
     @InjectRepository(Offer)
     private readonly offerRepository: Repository<Offer>,
-    @InjectRepository(Business)
-    private readonly businessRepository: Repository<Business>,
+    @InjectRepository(BusinessProfile)
+    private readonly businessRepository: Repository<BusinessProfile>,
     private readonly mediaService: MediaService,
     private readonly settingsService: SettingsService,
   ) {}

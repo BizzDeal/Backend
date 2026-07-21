@@ -5,7 +5,7 @@ import { PlatformKpi } from './entities/analytics-platform-kpi.entity';
 import { MonthlyMetric } from './entities/analytics-monthly-metric.entity';
 import { CategoryMetric } from './entities/analytics-category-metric.entity';
 import { User } from '../users/entities/user.entity';
-import { Business } from '../businesses/entities/business.entity';
+import { BusinessProfile } from '../businesses/entities/business-profile.entity';
 import { Voucher } from '../vouchers/entities/voucher.entity';
 import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
 import { Referral } from '../referrals/entities/referral.entity';
@@ -35,8 +35,8 @@ export class AnalyticsService implements OnModuleInit {
     private readonly categoryRepo: Repository<CategoryMetric>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-    @InjectRepository(Business)
-    private readonly businessRepo: Repository<Business>,
+    @InjectRepository(BusinessProfile)
+    private businessRepo: Repository<BusinessProfile>,
     @InjectRepository(Voucher)
     private readonly voucherRepo: Repository<Voucher>,
     @InjectRepository(WalletTransaction)

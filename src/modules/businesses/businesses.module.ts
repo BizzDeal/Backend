@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { Business } from './entities/business.entity';
+import { BusinessProfile } from './entities/business-profile.entity';
 import { BusinessCategory } from './entities/business-category.entity';
 import { User } from '../users/entities/user.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
@@ -14,7 +14,7 @@ import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Business, BusinessCategory, User, MediaFile]),
+    TypeOrmModule.forFeature([BusinessProfile, BusinessCategory, User, MediaFile]),
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
     }),

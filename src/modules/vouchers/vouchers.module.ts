@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { Voucher } from './entities/voucher.entity';
 import { Offer } from '../offers/entities/offer.entity';
-import { Business } from '../businesses/entities/business.entity';
+import { BusinessProfile } from '../businesses/entities/business-profile.entity';
 import { User } from '../users/entities/user.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
@@ -17,7 +17,7 @@ import { EventsModule } from '../events/events.module';
     TypeOrmModule.forFeature([
       Voucher,
       Offer,
-      Business,
+      BusinessProfile,
       User,
       Wallet,
       WalletTransaction,

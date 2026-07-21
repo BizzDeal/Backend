@@ -10,7 +10,7 @@ import { Repository, In } from 'typeorm';
 import { randomBytes } from 'crypto';
 import { Voucher } from './entities/voucher.entity';
 import { Offer } from '../offers/entities/offer.entity';
-import { Business } from '../businesses/entities/business.entity';
+import { BusinessProfile } from '../businesses/entities/business-profile.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
 import { User } from '../users/entities/user.entity';
@@ -43,8 +43,8 @@ export class VouchersService {
     private readonly voucherRepository: Repository<Voucher>,
     @InjectRepository(Offer)
     private readonly offerRepository: Repository<Offer>,
-    @InjectRepository(Business)
-    private readonly businessRepository: Repository<Business>,
+    @InjectRepository(BusinessProfile)
+    private readonly businessRepository: Repository<BusinessProfile>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(Wallet)
@@ -334,6 +334,7 @@ export class VouchersService {
     qb.leftJoinAndSelect('voucher.business', 'business');
     qb.leftJoinAndSelect('voucher.offer', 'offer');
     qb.leftJoinAndSelect('voucher.customer', 'customer');
+    qb.leftJoinAndSelect('customer.profile', 'profile');
 
     if (query.status) {
       qb.andWhere('voucher.status = :status', { status: query.status });
@@ -398,7 +399,7 @@ export class VouchersService {
 
     return vouchers.map((v) => {
       const { ...voucherData } = v;
-      const customer_name = v.customer ? (v.customer as any).full_name : 'Unknown';
+      const customer_name = v.customer?.profile?.full_name || 'Unknown';
       const customer_phone = v.customer ? (v.customer as any).phone : null;
       const customer_avatar = profilePicMap.get(v.customer_id) || null;
       
@@ -431,6 +432,7 @@ export class VouchersService {
     qb.leftJoinAndSelect('voucher.business', 'business');
     qb.leftJoinAndSelect('voucher.offer', 'offer');
     qb.leftJoinAndSelect('voucher.customer', 'customer');
+    qb.leftJoinAndSelect('customer.profile', 'profile');
 
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -467,7 +469,7 @@ export class VouchersService {
 
     const { ...voucherData } = voucher;
     
-    const customer_name = voucher.customer ? voucher.customer.full_name : 'Unknown';
+    const customer_name = voucher.customer?.profile?.full_name || 'Unknown';
     const customer_phone = voucher.customer ? voucher.customer.phone : 'Unknown';
     
     delete (voucherData as any).customer;

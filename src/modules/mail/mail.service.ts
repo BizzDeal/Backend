@@ -11,12 +11,12 @@ export class MailService {
     const host = this.configService.get<string>('MAIL_HOST');
     const port = this.configService.get<number>('MAIL_PORT') || 587;
     const user = this.configService.get<string>('MAIL_USER');
-    const pass = this.configService.get<string>('MAIL_PASS');
+    const pass = this.configService.get<string>('MAIL_PASSWORD');
 
     this.transporter = nodemailer.createTransport({
       host,
       port,
-      secure: port === 465, // true for 465, false for other ports
+      secure: this.configService.get<string>('MAIL_SECURE') === 'true' || port === 465,
       auth: {
         user,
         pass,
@@ -25,8 +25,11 @@ export class MailService {
   }
 
   async sendOtpEmail(to: string, otp: string): Promise<boolean> {
+    const fromName = this.configService.get<string>('MAIL_FROM_NAME') || 'BizzDeal';
+    const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER');
+
     const mailOptions = {
-      from: `"BizzDeal" <${this.configService.get<string>('MAIL_USER')}>`,
+      from: `"${fromName}" <${fromEmail}>`,
       to,
       subject: 'Your BizzDeal OTP Verification Code',
       html: `
@@ -52,11 +55,19 @@ export class MailService {
   }
 
   async sendConfirmationEmail(to: string, token: string): Promise<boolean> {
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200';
-    const confirmationLink = `${frontendUrl}/auth/verify-email?token=${token}`;
+    const domain = this.configService.get<string>('DOMAIN') || 'http://localhost';
+    const port = this.configService.get<number>('PORT') || 3000;
+    const contextPath = this.configService.get<string>('CONTEXT_PATH') || '/bizzdeal/api';
+    
+    const isProd = domain.startsWith('https');
+    const backendUrl = isProd ? `${domain}${contextPath}` : `${domain}:${port}${contextPath}`;
+    const confirmationLink = `${backendUrl}/auth/verify-email?token=${token}`;
+
+    const fromName = this.configService.get<string>('MAIL_FROM_NAME') || 'BizzDeal';
+    const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER');
 
     const mailOptions = {
-      from: `"BizzDeal" <${this.configService.get<string>('MAIL_USER')}>`,
+      from: `"${fromName}" <${fromEmail}>`,
       to,
       subject: 'Verify Your BizzDeal Account',
       html: `

@@ -25,6 +25,7 @@ import {
 import { ChatService } from './chat.service';
 import { MediaService } from '../media/media.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { ActiveMemberGuard } from '../../common/guards/active-member.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { User } from '../users/entities/user.entity';
@@ -65,6 +66,7 @@ export class ChatController {
   }
 
   @Post('conversations')
+  @UseGuards(ActiveMemberGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create or Get Conversation',
@@ -152,6 +154,7 @@ export class ChatController {
   }
 
   @Post('messages')
+  @UseGuards(ActiveMemberGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Send Message',

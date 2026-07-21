@@ -8,7 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { OfferType, DiscountType, OfferStatus } from '../../../common/enums';
-import { Business } from '../../businesses/entities/business.entity';
+import { BusinessProfile } from '../../businesses/entities/business-profile.entity';
 import { MediaFile } from '../../media/entities/media-file.entity';
 import { User } from '../../users/entities/user.entity';
 
@@ -20,9 +20,9 @@ export class Offer {
   @Column({ type: 'uuid' })
   business_id: string;
 
-  @ManyToOne(() => Business, { onDelete: 'CASCADE' })
+  @ManyToOne(() => BusinessProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'business_id' })
-  business: Business;
+  business: BusinessProfile;
 
   @Column({ type: 'varchar', length: 255 })
   title: string;
@@ -46,10 +46,10 @@ export class Offer {
   })
   discount_type: DiscountType | null;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   start_date: Date;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   end_date: Date;
 
   @Column({ type: 'uuid', nullable: true })
@@ -73,12 +73,12 @@ export class Offer {
   @JoinColumn({ name: 'approved_by_id' })
   approved_by: User | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   approved_at: Date | null;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

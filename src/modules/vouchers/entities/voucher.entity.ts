@@ -10,7 +10,7 @@ import {
 import { VoucherStatus } from '../../../common/enums';
 import { Offer } from '../../offers/entities/offer.entity';
 import { User } from '../../users/entities/user.entity';
-import { Business } from '../../businesses/entities/business.entity';
+import { BusinessProfile } from '../../businesses/entities/business-profile.entity';
 
 @Entity('vouchers')
 export class Voucher {
@@ -37,9 +37,9 @@ export class Voucher {
   @Column({ type: 'uuid' })
   business_id: string;
 
-  @ManyToOne(() => Business, { onDelete: 'CASCADE' })
+  @ManyToOne(() => BusinessProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'business_id' })
-  business: Business;
+  business: BusinessProfile;
 
   @Column({
     type: 'enum',
@@ -48,13 +48,13 @@ export class Voucher {
   })
   status: VoucherStatus;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   issued_at: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   redeemed_at: Date | null;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   expires_at: Date;
 
   @Column({ type: 'uuid', nullable: true })
@@ -64,9 +64,9 @@ export class Voucher {
   @JoinColumn({ name: 'redeemed_by_id' })
   redeemed_by: User | null;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

@@ -16,6 +16,6 @@ export class CategoryMetric {
   @Column({ type: 'int', default: 0 })
   business_count: number;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

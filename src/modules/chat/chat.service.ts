@@ -42,7 +42,8 @@ export class ChatService {
     if (user.role === UserRole.ADMIN) {
       return this.userRepository.find({
         where: { role: UserRole.MEMBER, status: UserStatus.ACTIVE },
-        order: { full_name: 'ASC' },
+        relations: { profile: true },
+        order: { profile: { full_name: 'ASC' } },
       });
     } else if (user.role === UserRole.MEMBER) {
       const admins = await this.userRepository.find({
@@ -50,7 +51,8 @@ export class ChatService {
       });
       const members = await this.userRepository.find({
         where: { role: UserRole.MEMBER, status: UserStatus.ACTIVE },
-        order: { full_name: 'ASC' },
+        relations: { profile: true },
+        order: { profile: { full_name: 'ASC' } },
       });
       const filteredMembers = members.filter((m) => m.id !== user.id);
       return [...admins, ...filteredMembers];
@@ -287,7 +289,7 @@ export class ChatService {
 
       await this.notificationsService.create({
         user_id: recipientId,
-        title: `New message from ${sender.full_name || sender.phone}`,
+        title: `New message from ${sender.profile?.full_name || sender.phone}`,
         message: preview,
         type: NotificationType.CHAT,
         data: {

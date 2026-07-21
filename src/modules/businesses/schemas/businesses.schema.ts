@@ -8,6 +8,9 @@ export const updateBusinessSchema = z.object({
   description: z.string().optional().nullable(),
   website: z.string().optional().nullable(),
   gst_number: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  state_id: z.string().uuid().optional().nullable(),
+  district_id: z.string().uuid().optional().nullable(),
 });
 
 export class UpdateBusinessDto {
@@ -41,6 +44,24 @@ export class UpdateBusinessDto {
     description: 'GST identification number',
   })
   gst_number?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Business address',
+  })
+  address?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'UUID of the state',
+  })
+  state_id?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'UUID of the district',
+  })
+  district_id?: string | null;
 
   @ApiPropertyOptional({
     type: 'string',

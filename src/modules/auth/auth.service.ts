@@ -61,6 +61,11 @@ export class AuthService {
       if (!user) {
         throw new NotFoundException('User with this email was not found');
       }
+    } else if (dto.purpose === 'register') {
+      const user = await this.usersService.findOneByEmail(dto.email);
+      if (user) {
+        throw new ConflictException('Email is already registered');
+      }
     }
     const otp = this.otpService.generateOtp();
     this.otpService.saveOtp(userEmail, otp);
@@ -75,7 +80,7 @@ export class AuthService {
       sub: user.id,
       phone: user.phone,
       role: user.role,
-      name: user.full_name,
+      name: user.profile?.full_name || '',
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {
@@ -174,6 +179,14 @@ export class AuthService {
       throw new ConflictException('Email is already registered');
     }
 
+    // Check if phone number is already registered (if provided)
+    if (dto.phone) {
+      const existingPhoneUser = await this.usersService.findOneByPhone(dto.phone);
+      if (existingPhoneUser) {
+        throw new ConflictException('Phone number is already registered');
+      }
+    }
+
     // Validate that the mandatory business category ID exists and is active
     const category = await this.businessesService.validateCategoryExists(
       dto.category_id,
@@ -205,8 +218,6 @@ export class AuthService {
       }
     }
 
-    // Verify OTP
-    this.otpService.verifyOtp(dto.email, dto.otp);
 
       if (dto.phone && dto.reference_code) {
         await this.referralsService.validateReferralCode(
@@ -256,6 +267,9 @@ export class AuthService {
       description: dto.business_description,
       website: dto.website,
       gst_number: dto.gst_number,
+      address: dto.business_address,
+      state_id: dto.business_state_id,
+      district_id: dto.business_district_id,
       logo_id: logoId,
       status: BusinessStatus.PENDING,
     });
@@ -325,6 +339,12 @@ export class AuthService {
     refreshToken: string;
     user: Omit<User, 'pin_hash'>;
   }> {
+    // Check if email is already registered
+    const existingUser = await this.usersService.findOneByEmail(dto.email);
+    if (existingUser) {
+      throw new ConflictException('Email is already registered');
+    }
+
     // Check if phone number is already registered (if provided)
     if (dto.phone) {
       const existingPhoneUser = await this.usersService.findOneByPhone(dto.phone);
@@ -378,6 +398,14 @@ export class AuthService {
     const existingUser = await this.usersService.findOneByEmail(dto.email);
     if (existingUser) {
       throw new ConflictException('Email is already registered');
+    }
+
+    // Check if phone number is already registered (if provided)
+    if (dto.phone) {
+      const existingPhoneUser = await this.usersService.findOneByPhone(dto.phone);
+      if (existingPhoneUser) {
+        throw new ConflictException('Phone number is already registered');
+      }
     }
 
     // Verify OTP

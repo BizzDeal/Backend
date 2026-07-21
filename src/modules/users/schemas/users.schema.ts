@@ -30,6 +30,9 @@ export const updateProfileSchema = z.object({
   business_description: z.string().min(5).optional().or(z.literal('')),
   website: z.string().optional().nullable().or(z.literal('')),
   gst_number: z.string().optional().nullable().or(z.literal('')),
+  business_address: z.string().optional().nullable().or(z.literal('')),
+  business_state_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  business_district_id: z.string().uuid().optional().nullable().or(z.literal('')),
 });
 
 export class UpdateProfileDto {
@@ -116,6 +119,27 @@ export class UpdateProfileDto {
     example: '36AAAAA0000A1Z5',
   })
   gst_number?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Physical address of the business (for members)',
+    example: '456 Business Park, Mumbai',
+  })
+  business_address?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'UUID of the business state',
+    example: 'a1111111-2222-3333-4444-555555555555',
+  })
+  business_state_id?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'UUID of the business district',
+    example: 'b2222222-3333-4444-5555-666666666666',
+  })
+  business_district_id?: string;
 
   @ApiPropertyOptional({
     type: 'string',

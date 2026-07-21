@@ -8,8 +8,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { User } from './entities/user.entity';
+import { Profile } from './entities/profile.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
-import { Business } from '../businesses/entities/business.entity';
+import { BusinessProfile } from '../businesses/entities/business-profile.entity';
 import { AuditService } from '../audit/audit.service';
 import { MediaService } from '../media/media.service';
 import { BusinessesService } from '../businesses/businesses.service';
@@ -24,15 +25,30 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import { LocationService } from '../location/services/location.service';
 import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 
+interface CreateUserData {
+  email: string;
+  phone?: string | null;
+  pin_hash: string;
+  role: UserRole;
+  status: UserStatus;
+  full_name?: string | null;
+  whatsapp?: string | null;
+  address?: string | null;
+  state_id?: string | null;
+  district_id?: string | null;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(Profile)
+    private readonly profileRepository: Repository<Profile>,
     @InjectRepository(MediaFile)
     private readonly mediaRepository: Repository<MediaFile>,
-    @InjectRepository(Business)
-    private readonly businessRepository: Repository<Business>,
+    @InjectRepository(BusinessProfile)
+    private readonly businessRepository: Repository<BusinessProfile>,
     private readonly auditService: AuditService,
     private readonly mediaService: MediaService,
     private readonly businessesService: BusinessesService,
@@ -41,17 +57,28 @@ export class UsersService {
   ) {}
 
   async findAll(filter?: RegionFilterDto): Promise<
-    (Omit<User, 'pin_hash'> & { profile_pic_url: string | null })[]
+    (Omit<User, 'pin_hash'> & { profile_pic_url: string | null; profile: Profile })[]
   > {
     const whereCondition: any = {};
     if (filter?.states) {
-      whereCondition.state_id = In(filter.states.split(','));
+      whereCondition['profile.state_id'] = In(filter.states.split(','));
     }
     if (filter?.districts) {
-      whereCondition.district_id = In(filter.districts.split(','));
+      whereCondition['profile.district_id'] = In(filter.districts.split(','));
     }
     
-    const users = await this.usersRepository.find({ where: whereCondition });
+    // Using query builder to handle nested where properly if needed, but find() with relations works too.
+    const qb = this.usersRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile');
+      
+    if (filter?.states) {
+      qb.andWhere('profile.state_id IN (:...states)', { states: filter.states.split(',') });
+    }
+    if (filter?.districts) {
+      qb.andWhere('profile.district_id IN (:...districts)', { districts: filter.districts.split(',') });
+    }
+
+    const users = await qb.getMany();
     if (users.length === 0) return [];
 
     const userIds = users.map((u) => u.id);
@@ -73,22 +100,28 @@ export class UsersService {
       const { pin_hash: _pin_hash, ...userWithoutPin } = user;
       return {
         ...userWithoutPin,
+        full_name: user.profile?.full_name || null,
+        whatsapp: user.profile?.whatsapp || null,
+        address: user.profile?.address || null,
+        state_id: user.profile?.state_id || null,
+        district_id: user.profile?.district_id || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
       };
     });
   }
 
   async findOneByPhone(phone: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { phone } });
+    return this.usersRepository.findOne({ where: { phone }, relations: { profile: true } });
   }
 
   async findOneByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+    return this.usersRepository.findOne({ where: { email }, relations: { profile: true } });
   }
 
   async findOneByPhoneWithPin(phone: string): Promise<User | null> {
     return this.usersRepository
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile')
       .addSelect('user.pin_hash')
       .where('user.phone = :phone', { phone })
       .getOne();
@@ -97,18 +130,39 @@ export class UsersService {
   async findOneByEmailWithPin(email: string): Promise<User | null> {
     return this.usersRepository
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile')
       .addSelect('user.pin_hash')
       .where('user.email = :email', { email })
       .getOne();
   }
 
   async findOneById(id: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { id } });
+    return this.usersRepository.findOne({ where: { id }, relations: { profile: true } });
   }
 
-  async create(userData: Partial<User>): Promise<User> {
-    const user = this.usersRepository.create(userData);
+  async create(userData: CreateUserData): Promise<User> {
+    const user = this.usersRepository.create({
+      email: userData.email,
+      phone: userData.phone,
+      pin_hash: userData.pin_hash,
+      role: userData.role,
+      status: userData.status,
+    });
     const savedUser = await this.usersRepository.save(user);
+    
+    // Create profile
+    const profile = this.profileRepository.create({
+      user_id: savedUser.id,
+      full_name: userData.full_name,
+      whatsapp: userData.whatsapp,
+      address: userData.address,
+      state_id: userData.state_id,
+      district_id: userData.district_id,
+    });
+    const savedProfile = await this.profileRepository.save(profile);
+    
+    savedUser.profile = savedProfile;
+
     if (savedUser && savedUser.role) {
       await this.analyticsService.trackUserCreated(savedUser.role);
     }
@@ -132,21 +186,22 @@ export class UsersService {
   }
 
   async findMembers(status?: UserStatus, filter?: RegionFilterDto) {
-    const whereCondition: any = { role: UserRole.MEMBER };
+    const qb = this.usersRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .where('user.role = :role', { role: UserRole.MEMBER });
+      
     if (status) {
-      whereCondition.status = status;
+      qb.andWhere('user.status = :status', { status });
     }
     if (filter?.states) {
-      whereCondition.state_id = In(filter.states.split(','));
+      qb.andWhere('profile.state_id IN (:...states)', { states: filter.states.split(',') });
     }
     if (filter?.districts) {
-      whereCondition.district_id = In(filter.districts.split(','));
+      qb.andWhere('profile.district_id IN (:...districts)', { districts: filter.districts.split(',') });
     }
 
-    const members = await this.usersRepository.find({
-      where: whereCondition,
-      order: { created_at: 'DESC' },
-    });
+    qb.orderBy('user.created_at', 'DESC');
+    const members = await qb.getMany();
 
     if (members.length === 0) {
       return {
@@ -180,7 +235,7 @@ export class UsersService {
       }
     });
 
-    const businessMap = new Map<string, Business>();
+    const businessMap = new Map<string, BusinessProfile>();
     businesses.forEach((b) => {
       businessMap.set(b.owner_id, b);
     });
@@ -189,6 +244,11 @@ export class UsersService {
       const { pin_hash: _pin_hash, ...userWithoutPin } = user;
       return {
         ...userWithoutPin,
+        full_name: user.profile?.full_name || null,
+        whatsapp: user.profile?.whatsapp || null,
+        address: user.profile?.address || null,
+        state_id: user.profile?.state_id || null,
+        district_id: user.profile?.district_id || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
         payment_receipt_url: receiptMap.get(user.id) || null,
         business_id: businessMap.get(user.id)?.id || null,
@@ -203,18 +263,19 @@ export class UsersService {
   }
 
   async findCustomers(filter?: RegionFilterDto) {
-    const whereCondition: any = { role: UserRole.CUSTOMER };
+    const qb = this.usersRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .where('user.role = :role', { role: UserRole.CUSTOMER });
+
     if (filter?.states) {
-      whereCondition.state_id = In(filter.states.split(','));
+      qb.andWhere('profile.state_id IN (:...states)', { states: filter.states.split(',') });
     }
     if (filter?.districts) {
-      whereCondition.district_id = In(filter.districts.split(','));
+      qb.andWhere('profile.district_id IN (:...districts)', { districts: filter.districts.split(',') });
     }
-
-    const customers = await this.usersRepository.find({
-      where: whereCondition,
-      order: { created_at: 'DESC' },
-    });
+    
+    qb.orderBy('user.created_at', 'DESC');
+    const customers = await qb.getMany();
 
     if (customers.length === 0) {
       return {
@@ -243,6 +304,11 @@ export class UsersService {
       const { pin_hash: _pin_hash, ...userWithoutPin } = user;
       return {
         ...userWithoutPin,
+        full_name: user.profile?.full_name || null,
+        whatsapp: user.profile?.whatsapp || null,
+        address: user.profile?.address || null,
+        state_id: user.profile?.state_id || null,
+        district_id: user.profile?.district_id || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
       };
     });
@@ -280,7 +346,7 @@ export class UsersService {
       }
     });
 
-    let business: Business | null = null;
+    let business: BusinessProfile | null = null;
     if (user.role === UserRole.MEMBER) {
       business = await this.businessRepository.findOne({
         where: { owner_id: user.id },
@@ -296,8 +362,11 @@ export class UsersService {
     const { pin_hash: _pin_hash, ...userWithoutPin } = user;
     return {
       ...userWithoutPin,
-      state_id: user.state_id || null,
-      district_id: user.district_id || null,
+      full_name: user.profile?.full_name || null,
+      whatsapp: user.profile?.whatsapp || null,
+      address: user.profile?.address || null,
+      state_id: user.profile?.state_id || null,
+      district_id: user.profile?.district_id || null,
       profile_pic_url,
       payment_receipt_url:
         user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
@@ -315,6 +384,12 @@ export class UsersService {
         user.role === UserRole.MEMBER ? business?.gst_number || null : undefined,
       business_logo_url:
         user.role === UserRole.MEMBER ? business_logo_url : undefined,
+      business_address:
+        user.role === UserRole.MEMBER ? business?.address || null : undefined,
+      business_state_id:
+        user.role === UserRole.MEMBER ? business?.state_id || null : undefined,
+      business_district_id:
+        user.role === UserRole.MEMBER ? business?.district_id || null : undefined,
     };
   }
 
@@ -368,12 +443,15 @@ export class UsersService {
       }
     }
 
-    const updateData: Partial<User> = {};
-    if (dto.full_name !== undefined) updateData.full_name = dto.full_name;
-    if (dto.phone !== undefined) updateData.phone = dto.phone;
-    if (dto.whatsapp !== undefined) updateData.whatsapp = dto.whatsapp;
-    if (dto.email !== undefined) updateData.email = dto.email;
-    if (dto.address !== undefined) updateData.address = dto.address;
+    const updateUserData: Partial<User> = {};
+    const updateProfileData: Partial<Profile> = {};
+    
+    if (dto.phone !== undefined) updateUserData.phone = dto.phone;
+    if (dto.email !== undefined) updateUserData.email = dto.email;
+
+    if (dto.full_name !== undefined) updateProfileData.full_name = dto.full_name;
+    if (dto.whatsapp !== undefined) updateProfileData.whatsapp = dto.whatsapp;
+    if (dto.address !== undefined) updateProfileData.address = dto.address;
 
     if (dto.state_id !== undefined) {
       if (dto.state_id && dto.state_id !== '') {
@@ -381,9 +459,9 @@ export class UsersService {
         if (!state) {
           throw new BadRequestException('Selected state ID does not exist');
         }
-        updateData.state_id = dto.state_id;
+        updateProfileData.state_id = dto.state_id;
       } else {
-        updateData.state_id = null;
+        updateProfileData.state_id = null;
       }
     }
 
@@ -393,18 +471,27 @@ export class UsersService {
         if (!district) {
           throw new BadRequestException('Selected district ID does not exist');
         }
-        const checkStateId = updateData.state_id !== undefined ? updateData.state_id : user.state_id;
+        const checkStateId = updateProfileData.state_id !== undefined ? updateProfileData.state_id : user.profile?.state_id;
         if (checkStateId && district.stateId !== checkStateId) {
           throw new BadRequestException('Selected district does not belong to the selected state');
         }
-        updateData.district_id = dto.district_id;
+        updateProfileData.district_id = dto.district_id;
       } else {
-        updateData.district_id = null;
+        updateProfileData.district_id = null;
       }
     }
 
-    if (Object.keys(updateData).length > 0) {
-      await this.usersRepository.update(userId, updateData);
+    if (Object.keys(updateUserData).length > 0) {
+      await this.usersRepository.update(userId, updateUserData);
+    }
+    
+    if (Object.keys(updateProfileData).length > 0) {
+      if (user.profile) {
+        await this.profileRepository.update(user.profile.id, updateProfileData);
+      } else {
+        const profile = this.profileRepository.create({ ...updateProfileData, user_id: userId });
+        await this.profileRepository.save(profile);
+      }
     }
 
     if (files?.profile_pic?.[0]) {
@@ -432,7 +519,7 @@ export class UsersService {
           }
         }
 
-        const businessUpdate: Partial<Business> = {};
+        const businessUpdate: Partial<BusinessProfile> = {};
         if (dto.category_id !== undefined)
           businessUpdate.category_id = dto.category_id;
         if (dto.business_name !== undefined)
@@ -442,6 +529,33 @@ export class UsersService {
         if (dto.website !== undefined) businessUpdate.website = dto.website;
         if (dto.gst_number !== undefined)
           businessUpdate.gst_number = dto.gst_number;
+        
+        if (dto.business_address !== undefined)
+          businessUpdate.address = dto.business_address;
+        
+        if (dto.business_state_id !== undefined) {
+          if (dto.business_state_id && dto.business_state_id !== '') {
+            const state = await this.locationService.getStateById(dto.business_state_id);
+            if (!state) throw new BadRequestException('Selected business state ID does not exist');
+            businessUpdate.state_id = dto.business_state_id;
+          } else {
+            businessUpdate.state_id = null;
+          }
+        }
+
+        if (dto.business_district_id !== undefined) {
+          if (dto.business_district_id && dto.business_district_id !== '') {
+            const district = await this.locationService.getDistrictById(dto.business_district_id);
+            if (!district) throw new BadRequestException('Selected business district ID does not exist');
+            const checkStateId = businessUpdate.state_id !== undefined ? businessUpdate.state_id : business.state_id;
+            if (checkStateId && district.stateId !== checkStateId) {
+              throw new BadRequestException('Selected business district does not belong to the selected business state');
+            }
+            businessUpdate.district_id = dto.business_district_id;
+          } else {
+            businessUpdate.district_id = null;
+          }
+        }
 
         if (files?.business_logo?.[0]) {
           const logoMedia = await this.mediaService.replaceUserFile(
@@ -620,6 +734,7 @@ export class UsersService {
 
     const { pin_hash: _pin_hash, ...userWithoutPin } = user;
     await this.usersRepository.delete(memberId);
+    // Note: Due to CASCADE onDelete on Profile and BusinessProfile in entities, they should be deleted automatically.
 
     await this.auditService.createLog({
       user_id: adminId ?? null,
