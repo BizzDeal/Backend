@@ -24,6 +24,7 @@ import { UpdateProfileDto } from './schemas/users.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { LocationService } from '../location/services/location.service';
 import { RegionFilterDto } from '../../common/dto/region-filter.dto';
+import { ChatService } from '../chat/chat.service';
 
 interface CreateUserData {
   email: string;
@@ -54,6 +55,7 @@ export class UsersService {
     private readonly businessesService: BusinessesService,
     private readonly analyticsService: AnalyticsService,
     private readonly locationService: LocationService,
+    private readonly chatService: ChatService,
   ) {}
 
   async findAll(filter?: RegionFilterDto): Promise<
@@ -166,6 +168,12 @@ export class UsersService {
     if (savedUser && savedUser.role) {
       await this.analyticsService.trackUserCreated(savedUser.role);
     }
+    
+    // Add user to the default Global Community chat group if they are active
+    if (savedUser.status === UserStatus.ACTIVE) {
+      await this.chatService.addUserToDefaultGroup(savedUser.id);
+    }
+
     return savedUser;
   }
 
@@ -629,6 +637,9 @@ export class UsersService {
     if (oldStatus !== UserStatus.ACTIVE) {
       await this.analyticsService.trackMemberApproved();
     }
+    
+    // Add the newly approved member to the default group
+    await this.chatService.addUserToDefaultGroup(memberId);
 
     return {
       success: true,

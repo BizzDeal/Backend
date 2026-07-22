@@ -55,6 +55,9 @@ async function fixEnumsBeforeSync() {
     await ds.query(`
       DROP TYPE IF EXISTS "public"."location_sync_jobs_status_enum" CASCADE;
     `);
+    logger.log('Dropping old chat tables to wipe data and apply new schema...');
+    await ds.query(`DROP TABLE IF EXISTS "chat_messages" CASCADE;`);
+    await ds.query(`DROP TABLE IF EXISTS "chat_conversations" CASCADE;`);
     await ds.query(`NOTIFY pgrst, 'reload schema';`);
     logger.log('Pre-sync adjustments and schema cleanup successful.');
   } catch (err: any) {

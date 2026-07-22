@@ -24,6 +24,7 @@ import {
   DeleteMessageWsSchema,
 } from './dto/chat-ws.dto';
 import { User } from '../users/entities/user.entity';
+import { ConversationType } from '../../common/enums';
 
 @WebSocketGateway({
   cors: {
@@ -123,13 +124,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.conversation_id,
         user,
       );
-      const recipientId =
-        conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
 
-      // Emit to recipient's room
-      this.server.to(`user_${recipientId}`).emit('receive_message', message);
+      // Emit to all participants except sender
+      for (const p of conv.participants) {
+        if (p.user_id !== user.id) {
+          this.server.to(`user_${p.user_id}`).emit('receive_message', message);
+        }
+      }
 
-      // Return Sent tick acknowledgment (Single Tick)
       return {
         status: 'SENT',
         message_id: message.id,
@@ -155,15 +157,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new WsException('Unauthorized');
       }
       const data = MessageDeliveredWsSchema.parse(payload);
-      const conv = await this.chatService.getConversationById(
-        data.conversation_id,
-        user,
-      );
-      const senderId =
-        conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
+      
+      const msg = await this.chatService.getMessageById(data.message_id, user);
 
-      // Emit Delivered tick (Double Tick) to original sender
-      this.server.to(`user_${senderId}`).emit('message_status_update', {
+      // Emit Delivered tick to original sender
+      this.server.to(`user_${msg.sender_id}`).emit('message_status_update', {
         message_id: data.message_id,
         conversation_id: data.conversation_id,
         status: 'DELIVERED',
@@ -198,15 +196,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.conversation_id,
         user,
       );
-      const partnerId =
-        conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
 
-      // Emit Blue Ticks to conversation partner
-      this.server.to(`user_${partnerId}`).emit('messages_read', {
-        conversation_id: data.conversation_id,
-        read_by: user.id,
-        read_at: result.read_at,
-      });
+      // Emit Blue Ticks to other participants
+      for (const p of conv.participants) {
+        if (p.user_id !== user.id) {
+          this.server.to(`user_${p.user_id}`).emit('messages_read', {
+            conversation_id: data.conversation_id,
+            read_by: user.id,
+            read_at: result.read_at,
+          });
+        }
+      }
 
       return { status: 'READ', ...result };
     } catch (error) {
@@ -219,7 +219,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('typing_start')
-  handleTypingStart(
+  async handleTypingStart(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: unknown,
   ) {
@@ -230,10 +230,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new WsException('Unauthorized');
       }
       const data = TypingWsSchema.parse(payload);
-      this.server.to(`user_${data.receiver_id}`).emit('user_typing', {
-        conversation_id: data.conversation_id,
-        sender_id: user.id,
-      });
+      const conv = await this.chatService.getConversationById(data.conversation_id, user);
+
+      for (const p of conv.participants) {
+        if (p.user_id !== user.id) {
+          this.server.to(`user_${p.user_id}`).emit('user_typing', {
+            conversation_id: data.conversation_id,
+            sender_id: user.id,
+          });
+        }
+      }
       return { success: true };
     } catch (error) {
       throw new WsException(
@@ -243,7 +249,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('typing_stop')
-  handleTypingStop(
+  async handleTypingStop(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: unknown,
   ) {
@@ -254,10 +260,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new WsException('Unauthorized');
       }
       const data = TypingWsSchema.parse(payload);
-      this.server.to(`user_${data.receiver_id}`).emit('user_stopped_typing', {
-        conversation_id: data.conversation_id,
-        sender_id: user.id,
-      });
+      const conv = await this.chatService.getConversationById(data.conversation_id, user);
+
+      for (const p of conv.participants) {
+        if (p.user_id !== user.id) {
+          this.server.to(`user_${p.user_id}`).emit('user_stopped_typing', {
+            conversation_id: data.conversation_id,
+            sender_id: user.id,
+          });
+        }
+      }
       return { success: true };
     } catch (error) {
       throw new WsException(
@@ -287,11 +299,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message.conversation_id,
         user,
       );
-      const recipientId =
-        conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
 
-      this.server.to(`user_${recipientId}`).emit('message_edited', message);
-      this.server.to(`user_${user.id}`).emit('message_edited', message);
+      for (const p of conv.participants) {
+        this.server.to(`user_${p.user_id}`).emit('message_edited', message);
+      }
 
       return { status: 'EDITED', message };
     } catch (error) {
@@ -321,18 +332,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message.conversation_id,
         user,
       );
-      const recipientId =
-        conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
 
       const deletePayload = {
         message_id: message.id,
         conversation_id: message.conversation_id,
         is_deleted: true,
       };
-      this.server
-        .to(`user_${recipientId}`)
-        .emit('message_deleted', deletePayload);
-      this.server.to(`user_${user.id}`).emit('message_deleted', deletePayload);
+
+      for (const p of conv.participants) {
+        this.server.to(`user_${p.user_id}`).emit('message_deleted', deletePayload);
+      }
 
       return { status: 'DELETED', message_id: message.id };
     } catch (error) {

@@ -100,6 +100,11 @@ export enum MessageType {
   VOICE = 'VOICE',
 }
 
+export enum ConversationType {
+  DIRECT = 'DIRECT',
+  GROUP = 'GROUP',
+}
+
 export enum MeetingStatus {
   SCHEDULED = 'SCHEDULED',
   COMPLETED = 'COMPLETED',

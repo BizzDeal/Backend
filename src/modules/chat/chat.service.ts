@@ -3,28 +3,68 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  OnModuleInit,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, Like, ILike } from 'typeorm';
 import { ChatConversation } from './entities/chat-conversation.entity';
 import { ChatMessage } from './entities/chat-message.entity';
+import { ChatParticipant } from './entities/chat-participant.entity';
 import { User } from '../users/entities/user.entity';
-import { UserRole, MessageType, NotificationType, UserStatus } from '../../common/enums';
+import { UserRole, MessageType, NotificationType, ConversationType, UserStatus } from '../../common/enums';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
-export class ChatService {
+export class ChatService implements OnModuleInit {
   private readonly onlineUsers = new Set<string>();
+  private readonly logger = new Logger(ChatService.name);
 
   constructor(
     @InjectRepository(ChatConversation)
     private readonly conversationRepository: Repository<ChatConversation>,
     @InjectRepository(ChatMessage)
     private readonly messageRepository: Repository<ChatMessage>,
+    @InjectRepository(ChatParticipant)
+    private readonly participantRepository: Repository<ChatParticipant>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  async onModuleInit() {
+    await this.ensureDefaultGroupExists();
+  }
+
+  private async ensureDefaultGroupExists() {
+    let group = await this.conversationRepository.findOne({ where: { is_default_group: true } });
+    if (!group) {
+      this.logger.log('Creating default BizzDeal Community group...');
+      group = this.conversationRepository.create({
+        type: ConversationType.GROUP,
+        name: 'BizzDeal Community',
+        is_default_group: true,
+      });
+      await this.conversationRepository.save(group);
+    }
+  }
+
+  async addUserToDefaultGroup(userId: string) {
+    const group = await this.conversationRepository.findOne({ where: { is_default_group: true } });
+    if (group) {
+      const exists = await this.participantRepository.findOne({
+        where: { conversation_id: group.id, user_id: userId },
+      });
+      if (!exists) {
+        await this.participantRepository.save(
+          this.participantRepository.create({
+            conversation_id: group.id,
+            user_id: userId,
+          }),
+        );
+      }
+    }
+  }
 
   setUserOnlineStatus(userId: string, isOnline: boolean): void {
     if (isOnline) {
@@ -38,92 +78,87 @@ export class ChatService {
     return this.onlineUsers.has(userId);
   }
 
-  async getContacts(user: User): Promise<User[]> {
-    if (user.role === UserRole.ADMIN) {
+  async getContacts(user: User, search?: string): Promise<User[]> {
+    if (search) {
       return this.userRepository.find({
-        where: { role: UserRole.MEMBER, status: UserStatus.ACTIVE },
+        where: [
+          { profile: { full_name: ILike(`%${search}%`) }, status: UserStatus.ACTIVE },
+          { phone: ILike(`%${search}%`), status: UserStatus.ACTIVE },
+        ],
         relations: { profile: true },
-        order: { profile: { full_name: 'ASC' } },
-      });
-    } else if (user.role === UserRole.MEMBER) {
-      const admins = await this.userRepository.find({
-        where: { role: UserRole.ADMIN },
-      });
-      const members = await this.userRepository.find({
-        where: { role: UserRole.MEMBER, status: UserStatus.ACTIVE },
-        relations: { profile: true },
-        order: { profile: { full_name: 'ASC' } },
-      });
-      const filteredMembers = members.filter((m) => m.id !== user.id);
-      return [...admins, ...filteredMembers];
-    }
-    return [];
-  }
-
-  async findConversations(
-    user: User,
-  ): Promise<(ChatConversation & { unread_count: number })[]> {
-    let convs: ChatConversation[];
-    if (user.role === UserRole.ADMIN) {
-      convs = await this.conversationRepository.find({
-        order: { updated_at: 'DESC' },
+        take: 20,
       });
     } else {
-      convs = await this.conversationRepository.find({
-        where: [{ user_one_id: user.id }, { user_two_id: user.id }],
-        order: { updated_at: 'DESC' },
+      // Default contact is Admin
+      return this.userRepository.find({
+        where: { role: UserRole.ADMIN, status: UserStatus.ACTIVE },
+        relations: { profile: true },
       });
     }
+  }
 
-    if (convs.length === 0) {
-      return [];
-    }
+  async findConversations(user: User): Promise<any[]> {
+    // Also ensuring user is in the default group just in case
+    await this.addUserToDefaultGroup(user.id);
 
-    const convIds = convs.map((c) => c.id);
-    const unreadCounts: unknown[] = await this.messageRepository
-      .createQueryBuilder('msg')
-      .select('msg.conversation_id', 'conversation_id')
-      .addSelect('COUNT(msg.id)', 'count')
-      .where('msg.conversation_id IN (:...convIds)', { convIds })
-      .andWhere('msg.sender_id != :userId', { userId: user.id })
-      .andWhere('msg.is_read = :isRead', { isRead: false })
-      .groupBy('msg.conversation_id')
-      .getRawMany();
+    const participants = await this.participantRepository.find({
+      where: { user_id: user.id },
+      relations: {
+        conversation: {
+          participants: {
+            user: { profile: true },
+          },
+        },
+      },
+      order: {
+        conversation: {
+          updated_at: 'DESC',
+        },
+      },
+    });
 
-    const countMap = new Map<string, number>();
-    for (const raw of unreadCounts) {
-      if (raw && typeof raw === 'object') {
-        const item = raw as Record<string, unknown>;
-        const convIdRaw = item.conversation_id;
-        const countRaw = item.count;
-        if (
-          (typeof convIdRaw === 'string' || typeof convIdRaw === 'number') &&
-          (typeof countRaw === 'string' || typeof countRaw === 'number')
-        ) {
-          const convId = String(convIdRaw);
-          const countVal = parseInt(String(countRaw), 10) || 0;
-          countMap.set(convId, countVal);
+    return participants.map((p) => {
+      let partner: any = null;
+      if (p.conversation.type === ConversationType.DIRECT) {
+        const otherParticipant = p.conversation.participants.find(
+          (cp) => cp.user_id !== user.id,
+        );
+        if (otherParticipant) {
+          partner = {
+            id: otherParticipant.user.id,
+            full_name: otherParticipant.user.profile?.full_name || (otherParticipant.user.role === 'ADMIN' ? 'Admin' : 'Unknown User'),
+            phone: otherParticipant.user.phone,
+            role: otherParticipant.user.role,
+            isOnline: this.isUserOnline(otherParticipant.user.id),
+          };
         }
       }
-    }
 
-    return convs.map((conv) =>
-      Object.assign(conv, {
-        unread_count: countMap.get(conv.id) || 0,
-      }),
-    );
+      return {
+        id: p.conversation.id,
+        type: p.conversation.type,
+        name: p.conversation.name,
+        is_default_group: p.conversation.is_default_group,
+        last_message_at: p.conversation.last_message_at,
+        created_at: p.conversation.created_at,
+        updated_at: p.conversation.updated_at,
+        unread_count: p.unread_count,
+        partner,
+      };
+    });
   }
 
   async getConversationById(id: string, user: User): Promise<ChatConversation> {
-    const conv = await this.conversationRepository.findOne({ where: { id } });
+    const conv = await this.conversationRepository.findOne({
+      where: { id },
+      relations: { participants: true },
+    });
     if (!conv) {
       throw new NotFoundException('Conversation not found');
     }
-    if (
-      user.role !== UserRole.ADMIN &&
-      conv.user_one_id !== user.id &&
-      conv.user_two_id !== user.id
-    ) {
+    
+    const isParticipant = conv.participants.some((p) => p.user_id === user.id);
+    if (!isParticipant && user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('No permission to view this conversation');
     }
     return conv;
@@ -132,13 +167,18 @@ export class ChatService {
   async findMessagesByConversationId(
     conversationId: string,
     user: User,
+    page: number = 1,
+    limit: number = 50,
   ): Promise<ChatMessage[]> {
     await this.getConversationById(conversationId, user);
+    
     return this.messageRepository.find({
       where: { conversation_id: conversationId },
-      order: { created_at: 'ASC' },
+      order: { created_at: 'DESC' }, // Reverse order for pagination (latest first)
+      skip: (page - 1) * limit,
+      take: limit,
       relations: { media_file: true },
-    });
+    }).then(msgs => msgs.reverse()); // Reverse again to return oldest -> newest for the UI
   }
 
   async getMessageById(id: string, user: User): Promise<ChatMessage> {
@@ -153,21 +193,34 @@ export class ChatService {
   async createConversation(
     otherUserId: string,
     user: User,
-  ): Promise<ChatConversation> {
-    let conv = await this.conversationRepository.findOne({
-      where: [
-        { user_one_id: user.id, user_two_id: otherUserId },
-        { user_one_id: otherUserId, user_two_id: user.id },
-      ],
-    });
-    if (!conv) {
-      conv = this.conversationRepository.create({
-        user_one_id: user.id,
-        user_two_id: otherUserId,
-      });
-      conv = await this.conversationRepository.save(conv);
+  ): Promise<any> {
+    if (user.id === otherUserId) {
+      throw new BadRequestException('Cannot start a conversation with yourself');
     }
-    return conv;
+
+    // Find existing DIRECT conversation between these two
+    const existing = await this.conversationRepository.createQueryBuilder('conv')
+      .innerJoin('conv.participants', 'p1', 'p1.user_id = :userId', { userId: user.id })
+      .innerJoin('conv.participants', 'p2', 'p2.user_id = :otherId', { otherId: otherUserId })
+      .where('conv.type = :type', { type: ConversationType.DIRECT })
+      .getOne();
+
+    if (existing) {
+      return existing;
+    }
+
+    // Create new
+    const conv = this.conversationRepository.create({
+      type: ConversationType.DIRECT,
+    });
+    const savedConv = await this.conversationRepository.save(conv);
+
+    await this.participantRepository.save([
+      this.participantRepository.create({ conversation_id: savedConv.id, user_id: user.id }),
+      this.participantRepository.create({ conversation_id: savedConv.id, user_id: otherUserId }),
+    ]);
+
+    return savedConv;
   }
 
   async sendMessage(
@@ -195,11 +248,20 @@ export class ChatService {
       last_message_at: new Date(),
     });
 
-    const recipientId =
-      conv.user_one_id === user.id ? conv.user_two_id : conv.user_one_id;
-    if (!this.isUserOnline(recipientId)) {
+    // Update unread count for other participants
+    await this.participantRepository
+      .createQueryBuilder()
+      .update(ChatParticipant)
+      .set({ unread_count: () => 'unread_count + 1' })
+      .where('conversation_id = :convId', { convId: conversationId })
+      .andWhere('user_id != :userId', { userId: user.id })
+      .execute();
+
+    // Send push notifications to offline users
+    const offlineParticipants = conv.participants.filter(p => p.user_id !== user.id && !this.isUserOnline(p.user_id));
+    for (const p of offlineParticipants) {
       await this.notifyOfflineRecipient(
-        recipientId,
+        p.user_id,
         user,
         message,
         messageType || MessageType.TEXT,
@@ -215,19 +277,14 @@ export class ChatService {
     conversationId: string,
     user: User,
   ): Promise<{ updated_count: number; read_at: Date }> {
-    await this.getConversationById(conversationId, user);
     const readAt = new Date();
-    const result = await this.messageRepository
-      .createQueryBuilder()
-      .update(ChatMessage)
-      .set({ is_read: true, read_at: readAt })
-      .where('conversation_id = :conversationId', { conversationId })
-      .andWhere('sender_id != :userId', { userId: user.id })
-      .andWhere('is_read = :isRead', { isRead: false })
-      .execute();
+    await this.participantRepository.update(
+      { conversation_id: conversationId, user_id: user.id },
+      { unread_count: 0, last_read_at: readAt }
+    );
 
     return {
-      updated_count: result.affected || 0,
+      updated_count: 1, // We don't have individual message read statuses anymore
       read_at: readAt,
     };
   }

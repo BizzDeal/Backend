@@ -4,29 +4,35 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
+  OneToMany,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+import { ConversationType } from '../../../common/enums';
+import { ChatParticipant } from './chat-participant.entity';
+import { ChatMessage } from './chat-message.entity';
 
 @Entity('chat_conversations')
 export class ChatConversation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid' })
-  user_one_id: string;
+  @Column({
+    type: 'enum',
+    enum: ConversationType,
+    default: ConversationType.DIRECT,
+  })
+  type: ConversationType;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_one_id' })
-  user_one: User;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  name: string | null;
 
-  @Column({ type: 'uuid' })
-  user_two_id: string;
+  @Column({ type: 'boolean', default: false })
+  is_default_group: boolean;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_two_id' })
-  user_two: User;
+  @OneToMany(() => ChatParticipant, participant => participant.conversation)
+  participants: ChatParticipant[];
+
+  @OneToMany(() => ChatMessage, message => message.conversation)
+  messages: ChatMessage[];
 
   @Column({ type: 'timestamptz', nullable: true })
   last_message_at: Date | null;

@@ -9,6 +9,7 @@ import { AuditModule } from '../audit/audit.module';
 import { MediaModule } from '../media/media.module';
 import { BusinessesModule } from '../businesses/businesses.module';
 import { LocationModule } from '../location/location.module';
+import { ChatModule } from '../chat/chat.module';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 
@@ -22,6 +23,7 @@ import { UsersController } from './users.controller';
     MediaModule,
     BusinessesModule,
     LocationModule,
+    ChatModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

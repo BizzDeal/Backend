@@ -47,11 +47,7 @@ export class ChatMessage {
   @JoinColumn({ name: 'media_file_id' })
   media_file: MediaFile | null;
 
-  @Column({ type: 'boolean', default: false })
-  is_read: boolean;
 
-  @Column({ type: 'timestamptz', nullable: true })
-  read_at: Date | null;
 
   @Column({ type: 'boolean', default: false })
   is_edited: boolean;
