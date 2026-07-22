@@ -53,6 +53,11 @@ export const registerDeviceSchema = z.object({
     message: 'Invalid device type',
   }),
   device_name: z.string().max(255).optional().nullable(),
+  device_model: z.string().max(255).optional().nullable(),
+  operating_system: z.string().max(255).optional().nullable(),
+  os_version: z.string().max(255).optional().nullable(),
+  manufacturer: z.string().max(255).optional().nullable(),
+  is_virtual: z.boolean().optional().nullable(),
 });
 
 export const notificationQuerySchema = z.object({

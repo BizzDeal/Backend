@@ -338,6 +338,11 @@ export class NotificationsService {
     deviceType: DeviceType,
     deviceName: string | null | undefined,
     user: User,
+    deviceModel: string | null = null,
+    operatingSystem: string | null = null,
+    osVersion: string | null = null,
+    manufacturer: string | null = null,
+    isVirtual: boolean | null = null,
   ): Promise<UserDevice> {
     let device = await this.deviceRepository.findOne({
       where: { user_id: user.id, fcm_token: fcmToken },
@@ -356,6 +361,11 @@ export class NotificationsService {
         fcm_token: fcmToken,
         device_type: deviceType || DeviceType.ANDROID,
         device_name: deviceName || null,
+        device_model: deviceModel,
+        operating_system: operatingSystem,
+        os_version: osVersion,
+        manufacturer: manufacturer,
+        is_virtual: isVirtual,
         is_active: true,
         last_used_at: new Date(),
       });
@@ -365,13 +375,18 @@ export class NotificationsService {
       if (deviceName !== undefined) {
         device.device_name = deviceName || null;
       }
+      device.device_model = deviceModel || device.device_model;
+      device.operating_system = operatingSystem || device.operating_system;
+      device.os_version = osVersion || device.os_version;
+      device.manufacturer = manufacturer || device.manufacturer;
+      if (isVirtual !== null) device.is_virtual = isVirtual;
       device.last_used_at = new Date();
     }
     const savedDevice = await this.deviceRepository.save(device);
 
     if (isNewOrReactivated && otherActiveDevicesCount >= 1) {
       const deviceDisplayName =
-        savedDevice.device_name || savedDevice.device_type || 'Unknown Device';
+        savedDevice.device_name || savedDevice.device_model || savedDevice.operating_system || savedDevice.device_type || 'Unknown Device';
       const totalActiveDevices = otherActiveDevicesCount + 1;
       await this.create({
         user_id: user.id,

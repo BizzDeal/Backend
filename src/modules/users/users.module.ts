@@ -10,6 +10,8 @@ import { MediaModule } from '../media/media.module';
 import { BusinessesModule } from '../businesses/businesses.module';
 import { LocationModule } from '../location/location.module';
 import { ChatModule } from '../chat/chat.module';
+import { MailModule } from '../mail/mail.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 
@@ -24,6 +26,8 @@ import { UsersController } from './users.controller';
     BusinessesModule,
     LocationModule,
     ChatModule,
+    MailModule,
+    NotificationsModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

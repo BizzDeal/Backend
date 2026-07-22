@@ -9,7 +9,8 @@ import { BusinessesService } from './businesses.service';
 import { BusinessesController } from './businesses.controller';
 import { MediaModule } from '../media/media.module';
 import { AuditModule } from '../audit/audit.module';
-
+import { MailModule } from '../mail/mail.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { SettingsModule } from '../settings/settings.module';
 
 @Module({
@@ -21,6 +22,8 @@ import { SettingsModule } from '../settings/settings.module';
     MediaModule,
     AuditModule,
     SettingsModule,
+    MailModule,
+    NotificationsModule,
   ],
   controllers: [BusinessesController],
   providers: [BusinessesService],

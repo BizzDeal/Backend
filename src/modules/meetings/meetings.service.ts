@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Meeting } from './entities/meeting.entity';
 import { MeetingAttendee } from './entities/meeting-attendee.entity';
 import { User } from '../users/entities/user.entity';
@@ -14,9 +14,12 @@ import {
   MeetingStatus,
   AttendeeStatus,
   NotificationType,
+  MediaPurpose,
 } from '../../common/enums';
+import { MediaFile } from '../media/entities/media-file.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MeetingQueryDto } from './dto/meetings.dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class MeetingsService {
@@ -27,7 +30,10 @@ export class MeetingsService {
     private readonly attendeeRepository: Repository<MeetingAttendee>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(MediaFile)
+    private readonly mediaRepository: Repository<MediaFile>,
     private readonly notificationsService: NotificationsService,
+    private readonly mailService: MailService,
   ) {}
 
   private checkNotCustomer(user: User): void {
@@ -182,6 +188,48 @@ export class MeetingsService {
             type: NotificationType.MEETING,
             data: { meeting_id: saved.id },
           });
+
+          const targetUser = await this.userRepository.findOne({ where: { id: attendee.user_id } });
+          if (targetUser) {
+            await this.mailService.sendMeetingEmail(
+              targetUser.email,
+              'CANCELED',
+              saved.title,
+              saved.meeting_date.toLocaleDateString(),
+              saved.meeting_date.toLocaleTimeString()
+            );
+          }
+        }
+      }
+    } else if (
+      oldStatus !== saved.status || 
+      data.meeting_date !== undefined || 
+      data.location !== undefined || 
+      data.meeting_link !== undefined
+    ) {
+      const attendees = await this.attendeeRepository.find({
+        where: { meeting_id: saved.id },
+      });
+      for (const attendee of attendees) {
+        if (attendee.user_id !== user.id) {
+          await this.notificationsService.create({
+            user_id: attendee.user_id,
+            title: 'Meeting Updated',
+            message: `Meeting "${saved.title}" has been updated.`,
+            type: NotificationType.MEETING,
+            data: { meeting_id: saved.id },
+          });
+
+          const targetUser = await this.userRepository.findOne({ where: { id: attendee.user_id } });
+          if (targetUser) {
+            await this.mailService.sendMeetingEmail(
+              targetUser.email,
+              'UPDATED',
+              saved.title,
+              saved.meeting_date.toLocaleDateString(),
+              saved.meeting_date.toLocaleTimeString()
+            );
+          }
         }
       }
     }
@@ -225,6 +273,17 @@ export class MeetingsService {
           type: NotificationType.MEETING,
           data: { meeting_id: meeting.id, attendee_id: attendee.id },
         });
+
+        const targetUser = await this.userRepository.findOne({ where: { id: targetUserId } });
+        if (targetUser) {
+          await this.mailService.sendMeetingEmail(
+            targetUser.email,
+            'CREATED',
+            meeting.title,
+            meeting.meeting_date.toLocaleDateString(),
+            meeting.meeting_date.toLocaleTimeString()
+          );
+        }
       }
     }
 
@@ -381,12 +440,29 @@ export class MeetingsService {
       where: { meeting_id: meetingId },
     });
 
+    const userIds = members.map(m => m.id);
+    let profilePicMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const profilePics = await this.mediaRepository.find({
+        where: {
+          uploaded_by_id: In(userIds),
+          purpose: MediaPurpose.PROFILE_PIC,
+        },
+      });
+      profilePics.forEach((pic) => {
+        if (pic.uploaded_by_id) {
+          profilePicMap.set(pic.uploaded_by_id, pic.file_url);
+        }
+      });
+    }
+
     return members.map((member) => {
       const record = attendees.find((a) => a.user_id === member.id);
       return {
         id: member.id,
         full_name: member.profile?.full_name || null,
         phone: member.phone,
+        profile_pic: profilePicMap.get(member.id) || null,
         status: record ? record.status : 'PENDING',
       };
     });

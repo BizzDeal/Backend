@@ -34,6 +34,21 @@ export class UserDevice {
   @Column({ type: 'varchar', length: 255, nullable: true })
   device_name: string | null;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  device_model: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  operating_system: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  os_version: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  manufacturer: string | null;
+
+  @Column({ type: 'boolean', nullable: true })
+  is_virtual: boolean | null;
+
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 

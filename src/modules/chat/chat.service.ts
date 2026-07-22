@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Like, ILike } from 'typeorm';
+import { Repository, In, Like, ILike, Not } from 'typeorm';
 import { ChatConversation } from './entities/chat-conversation.entity';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatParticipant } from './entities/chat-participant.entity';
@@ -82,8 +82,8 @@ export class ChatService implements OnModuleInit {
     if (search) {
       return this.userRepository.find({
         where: [
-          { profile: { full_name: ILike(`%${search}%`) }, status: UserStatus.ACTIVE },
-          { phone: ILike(`%${search}%`), status: UserStatus.ACTIVE },
+          { profile: { full_name: ILike(`%${search}%`) }, status: UserStatus.ACTIVE, id: Not(user.id) },
+          { phone: ILike(`%${search}%`), status: UserStatus.ACTIVE, id: Not(user.id) },
         ],
         relations: { profile: true },
         take: 20,
@@ -91,7 +91,7 @@ export class ChatService implements OnModuleInit {
     } else {
       // Default contact is Admin
       return this.userRepository.find({
-        where: { role: UserRole.ADMIN, status: UserStatus.ACTIVE },
+        where: { role: UserRole.ADMIN, status: UserStatus.ACTIVE, id: Not(user.id) },
         relations: { profile: true },
       });
     }

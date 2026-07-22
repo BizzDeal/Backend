@@ -152,6 +152,21 @@ export class RegisterDeviceDto {
     example: 'Samsung Galaxy S23 Ultra',
   })
   device_name?: string;
+
+  @ApiPropertyOptional({ type: String, example: 'SM-S918B' })
+  device_model?: string;
+
+  @ApiPropertyOptional({ type: String, example: 'android' })
+  operating_system?: string;
+
+  @ApiPropertyOptional({ type: String, example: '13' })
+  os_version?: string;
+
+  @ApiPropertyOptional({ type: String, example: 'samsung' })
+  manufacturer?: string;
+
+  @ApiPropertyOptional({ type: Boolean, example: false })
+  is_virtual?: boolean;
 }
 
 export class NotificationQueryDto {

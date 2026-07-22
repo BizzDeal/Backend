@@ -209,6 +209,11 @@ export class NotificationsController {
       body.device_type,
       body.device_name || null,
       user,
+      body.device_model || null,
+      body.operating_system || null,
+      body.os_version || null,
+      body.manufacturer || null,
+      body.is_virtual ?? null,
     );
   }
 

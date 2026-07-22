@@ -19,12 +19,15 @@ import {
   UserStatus,
   BusinessStatus,
   MediaPurpose,
+  NotificationType,
 } from '../../common/enums';
 import { UpdateProfileDto } from './schemas/users.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { LocationService } from '../location/services/location.service';
 import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 import { ChatService } from '../chat/chat.service';
+import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 interface CreateUserData {
   email: string;
@@ -56,6 +59,8 @@ export class UsersService {
     private readonly analyticsService: AnalyticsService,
     private readonly locationService: LocationService,
     private readonly chatService: ChatService,
+    private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(filter?: RegionFilterDto): Promise<
@@ -641,6 +646,17 @@ export class UsersService {
     // Add the newly approved member to the default group
     await this.chatService.addUserToDefaultGroup(memberId);
 
+    // Send Notification and Email
+    if (oldStatus !== UserStatus.ACTIVE) {
+      await this.notificationsService.create({
+        user_id: memberId,
+        title: 'Member Account Approved',
+        message: 'Your BizzDeal member account has been approved and is now active.',
+        type: NotificationType.GENERAL,
+      });
+      await this.mailService.sendMemberStatusEmail(user.email, UserStatus.ACTIVE);
+    }
+
     return {
       success: true,
       message: 'Member approved successfully',
@@ -683,6 +699,15 @@ export class UsersService {
       await this.analyticsService.trackMemberRejectedOrSuspended();
     }
 
+    // Send Notification and Email
+    await this.notificationsService.create({
+      user_id: memberId,
+      title: 'Member Account Update',
+      message: 'We regret to inform you that your BizzDeal member account application has been rejected.',
+      type: NotificationType.GENERAL,
+    });
+    await this.mailService.sendMemberStatusEmail(user.email, UserStatus.REJECTED);
+
     return {
       success: true,
       message: 'Member rejected successfully',
@@ -724,6 +749,15 @@ export class UsersService {
     if (oldStatus === UserStatus.ACTIVE) {
       await this.analyticsService.trackMemberRejectedOrSuspended();
     }
+
+    // Send Notification and Email
+    await this.notificationsService.create({
+      user_id: memberId,
+      title: 'Member Account Suspended',
+      message: 'Your BizzDeal member account has been suspended.',
+      type: NotificationType.GENERAL,
+    });
+    await this.mailService.sendMemberStatusEmail(user.email, UserStatus.SUSPENDED);
 
     return {
       success: true,

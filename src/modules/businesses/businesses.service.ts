@@ -19,6 +19,7 @@ import {
   UserStatus,
   BusinessStatus,
   MediaPurpose,
+  NotificationType,
 } from '../../common/enums';
 import {
   UpdateBusinessDto,
@@ -26,6 +27,8 @@ import {
 } from './schemas/businesses.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { SettingsService } from '../settings/settings.service';
+import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class BusinessesService {
@@ -43,6 +46,8 @@ export class BusinessesService {
     private readonly auditService: AuditService,
     private readonly analyticsService: AnalyticsService,
     private readonly settingsService: SettingsService,
+    private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private isUUID(str: string): boolean {
@@ -725,6 +730,29 @@ export class BusinessesService {
     const enriched = await this.enrichBusinessesWithMediaAndCategory(
       updated ? [updated] : [business],
     );
+
+    if (updated && updated.owner) {
+      const titleMap = {
+        [BusinessStatus.ACTIVE]: 'Business Profile Approved',
+        [BusinessStatus.REJECTED]: 'Business Profile Update',
+        [BusinessStatus.SUSPENDED]: 'Business Profile Suspended'
+      };
+      const messageMap = {
+        [BusinessStatus.ACTIVE]: `Your business profile for ${updated.name} has been approved and is now live.`,
+        [BusinessStatus.REJECTED]: `We regret to inform you that your business profile for ${updated.name} has been rejected.`,
+        [BusinessStatus.SUSPENDED]: `Your business profile for ${updated.name} has been suspended.`
+      };
+
+      if (titleMap[status]) {
+        await this.notificationsService.create({
+          user_id: updated.owner.id,
+          title: titleMap[status],
+          message: messageMap[status],
+          type: NotificationType.GENERAL,
+        });
+        await this.mailService.sendBusinessStatusEmail(updated.owner.email, status, updated.name);
+      }
+    }
 
     return {
       success: true,
