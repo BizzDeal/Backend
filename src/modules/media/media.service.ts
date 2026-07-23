@@ -34,15 +34,20 @@ export class MediaService {
 
     const fileRef = bucket.file(destinationPath);
 
+    const downloadToken = randomUUID();
+
     await fileRef.save(file.buffer, {
       metadata: {
         contentType: file.mimetype,
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken,
+        },
       },
     });
 
     let fileUrl: string;
     if (process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
-      fileUrl = `http://${process.env.FIREBASE_STORAGE_EMULATOR_HOST}/v0/b/${bucket.name}/o/${encodeURIComponent(destinationPath)}?alt=media`;
+      fileUrl = `http://${process.env.FIREBASE_STORAGE_EMULATOR_HOST}/v0/b/${bucket.name}/o/${encodeURIComponent(destinationPath)}?alt=media&token=${downloadToken}`;
     } else {
       try {
         await fileRef.makePublic();
@@ -51,7 +56,7 @@ export class MediaService {
           `Could not make file public directly: ${err instanceof Error ? err.message : err}`,
         );
       }
-      fileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destinationPath)}?alt=media`;
+      fileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destinationPath)}?alt=media&token=${downloadToken}`;
     }
 
     let fileType = MediaType.DOCUMENT;
