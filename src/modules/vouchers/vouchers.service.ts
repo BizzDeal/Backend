@@ -28,6 +28,7 @@ import {
   OfferStatus,
   BusinessStatus,
   UserRole,
+  UserStatus,
   OfferType,
   DiscountType,
   WalletTransactionType,

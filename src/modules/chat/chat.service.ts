@@ -128,7 +128,7 @@ export class ChatService implements OnModuleInit {
             full_name: otherParticipant.user.profile?.full_name || (otherParticipant.user.role === 'ADMIN' ? 'Admin' : 'Unknown User'),
             phone: otherParticipant.user.phone,
             role: otherParticipant.user.role,
-            profile_pic_url: otherParticipant.user.profile?.profile_pic_url || null,
+            profile_pic_url: null,
             isOnline: this.isUserOnline(otherParticipant.user.id),
           };
         }
