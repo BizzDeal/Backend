@@ -1,28 +1,50 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
 import { UserStatus, BusinessStatus } from '../../common/enums';
 
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter;
   private readonly logger = new Logger(MailService.name);
+  private readonly brevoApiKey: string;
 
   constructor(private readonly configService: ConfigService) {
-    const host = this.configService.get<string>('MAIL_HOST');
-    const port = this.configService.get<number>('MAIL_PORT') || 587;
-    const user = this.configService.get<string>('MAIL_USER');
-    const pass = this.configService.get<string>('MAIL_PASSWORD');
+    this.brevoApiKey = this.configService.get<string>('BREVO_API_KEY') || this.configService.get<string>('BREVO_SMTP_KEY') || '';
+    if (!this.brevoApiKey || this.brevoApiKey.startsWith('xsmtpsib')) {
+      this.logger.warn('WARNING: You are using an SMTP key or no key. The HTTP API requires a Brevo API Key starting with xkeysib-. Email sending will fail.');
+    }
+  }
 
-    this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: this.configService.get<string>('MAIL_SECURE') === 'true' || port === 465,
-      auth: {
-        user,
-        pass,
-      },
-    });
+  private async sendViaBrevo(to: string, subject: string, html: string): Promise<boolean> {
+    const fromName = this.configService.get<string>('MAIL_FROM_NAME') || 'BizzDeal';
+    const fromEmail = this.configService.get<string>('MAIL_FROM') || 'support@bizzdeal.in';
+
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': this.brevoApiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: fromName, email: fromEmail },
+          to: [{ email: to }],
+          subject: subject,
+          htmlContent: html,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        this.logger.error(`Brevo API Error: ${response.status} - ${errorData}`);
+        return false;
+      }
+
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Failed to send email via Brevo: ${error.message}`, error.stack);
+      return false;
+    }
   }
 
   private getBackendUrl(): string {
@@ -61,33 +83,25 @@ export class MailService {
   }
 
   async sendOtpEmail(to: string, otp: string): Promise<boolean> {
-    const fromName = this.configService.get<string>('MAIL_FROM_NAME') || 'BizzDeal';
-    const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER');
-
-    const mailOptions = {
-      from: `"${fromName}" <${fromEmail}>`,
-      to,
-      subject: 'Your BizzDeal OTP Verification Code',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          ${this.getHeaderHtml()}
-          <h2 style="color: #4f46e5; text-align: center;">BizzDeal Verification</h2>
-          <p style="color: #374151;">Please use the following One Time Password (OTP) to proceed with your request. This code is valid for 10 minutes.</p>
-          <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-            <h1 style="font-size: 36px; letter-spacing: 5px; margin: 0; color: #1f2937;">${otp}</h1>
-          </div>
-          <p style="color: #6b7280; font-size: 14px;">If you didn't request this code, you can safely ignore this email.</p>
-          ${this.getFooterHtml()}
+    const subject = 'Your BizzDeal OTP Verification Code';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        ${this.getHeaderHtml()}
+        <h2 style="color: #4f46e5; text-align: center;">BizzDeal Verification</h2>
+        <p style="color: #374151;">Please use the following One Time Password (OTP) to proceed with your request. This code is valid for 10 minutes.</p>
+        <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <h1 style="font-size: 36px; letter-spacing: 5px; margin: 0; color: #1f2937;">${otp}</h1>
         </div>
-      `,
-    };
+        <p style="color: #6b7280; font-size: 14px;">If you didn't request this code, you can safely ignore this email.</p>
+        ${this.getFooterHtml()}
+      </div>
+    `;
 
-    try {
-      await this.transporter.sendMail(mailOptions);
+    const success = await this.sendViaBrevo(to, subject, html);
+    if (success) {
       this.logger.log(`OTP email sent successfully to ${to}`);
       return true;
-    } catch (error) {
-      this.logger.error(`Failed to send OTP email to ${to}: ${error.message}`, error.stack);
+    } else {
       throw new Error('Failed to send email. Please verify your email configuration.');
     }
   }
@@ -95,34 +109,25 @@ export class MailService {
   async sendConfirmationEmail(to: string, token: string): Promise<boolean> {
     const backendUrl = this.getBackendUrl();
     const confirmationLink = `${backendUrl}/auth/verify-email?token=${token}`;
-
-    const fromName = this.configService.get<string>('MAIL_FROM_NAME') || 'BizzDeal';
-    const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER');
-
-    const mailOptions = {
-      from: `"${fromName}" <${fromEmail}>`,
-      to,
-      subject: 'Verify Your BizzDeal Account',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          ${this.getHeaderHtml()}
-          <h2 style="color: #4f46e5; text-align: center;">Welcome to BizzDeal!</h2>
-          <p style="color: #374151;">Thank you for registering. Please click the link below to verify your email address and finalize your account.</p>
-          <div style="margin: 20px 0; text-align: center;">
-            <a href="${confirmationLink}" style="color: #4f46e5; text-decoration: underline; font-weight: bold; word-break: break-all;">${confirmationLink}</a>
-          </div>
-          <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, you can safely ignore this email.</p>
-          ${this.getFooterHtml()}
+    const subject = 'Verify Your BizzDeal Account';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        ${this.getHeaderHtml()}
+        <h2 style="color: #4f46e5; text-align: center;">Welcome to BizzDeal!</h2>
+        <p style="color: #374151;">Thank you for registering. Please click the link below to verify your email address and finalize your account.</p>
+        <div style="margin: 20px 0; text-align: center;">
+          <a href="${confirmationLink}" style="color: #4f46e5; text-decoration: underline; font-weight: bold; word-break: break-all;">${confirmationLink}</a>
         </div>
-      `,
-    };
+        <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, you can safely ignore this email.</p>
+        ${this.getFooterHtml()}
+      </div>
+    `;
 
-    try {
-      await this.transporter.sendMail(mailOptions);
+    const success = await this.sendViaBrevo(to, subject, html);
+    if (success) {
       this.logger.log(`Confirmation email sent successfully to ${to}`);
       return true;
-    } catch (error) {
-      this.logger.error(`Failed to send confirmation email to ${to}: ${error.message}`, error.stack);
+    } else {
       throw new Error('Failed to send confirmation email. Please verify your email configuration.');
     }
   }
@@ -148,31 +153,21 @@ export class MailService {
       return false;
     }
 
-    const fromName = this.configService.get<string>('MAIL_FROM_NAME') || 'BizzDeal';
-    const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER');
+    const subject = `BizzDeal: ${title}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        ${this.getHeaderHtml()}
+        <h2 style="color: ${color}; text-align: center;">${title}</h2>
+        <p style="color: #374151; font-size: 16px;">${message}</p>
+        ${this.getFooterHtml()}
+      </div>
+    `;
 
-    const mailOptions = {
-      from: `"${fromName}" <${fromEmail}>`,
-      to,
-      subject: `BizzDeal: ${title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          ${this.getHeaderHtml()}
-          <h2 style="color: ${color}; text-align: center;">${title}</h2>
-          <p style="color: #374151; font-size: 16px;">${message}</p>
-          ${this.getFooterHtml()}
-        </div>
-      `,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
+    const success = await this.sendViaBrevo(to, subject, html);
+    if (success) {
       this.logger.log(`Member status email sent to ${to} (${status})`);
-      return true;
-    } catch (error) {
-      this.logger.error(`Failed to send member status email to ${to}: ${error.message}`);
-      return false;
     }
+    return success;
   }
 
   async sendBusinessStatusEmail(to: string, status: BusinessStatus, businessName: string): Promise<boolean> {
@@ -196,31 +191,21 @@ export class MailService {
       return false;
     }
 
-    const fromName = this.configService.get<string>('MAIL_FROM_NAME') || 'BizzDeal';
-    const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER');
+    const subject = `BizzDeal: ${title}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        ${this.getHeaderHtml()}
+        <h2 style="color: ${color}; text-align: center;">${title}</h2>
+        <p style="color: #374151; font-size: 16px;">${message}</p>
+        ${this.getFooterHtml()}
+      </div>
+    `;
 
-    const mailOptions = {
-      from: `"${fromName}" <${fromEmail}>`,
-      to,
-      subject: `BizzDeal: ${title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          ${this.getHeaderHtml()}
-          <h2 style="color: ${color}; text-align: center;">${title}</h2>
-          <p style="color: #374151; font-size: 16px;">${message}</p>
-          ${this.getFooterHtml()}
-        </div>
-      `,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
+    const success = await this.sendViaBrevo(to, subject, html);
+    if (success) {
       this.logger.log(`Business status email sent to ${to} (${status})`);
-      return true;
-    } catch (error) {
-      this.logger.error(`Failed to send business status email to ${to}: ${error.message}`);
-      return false;
     }
+    return success;
   }
 
   async sendMeetingEmail(to: string, eventType: 'CREATED' | 'UPDATED' | 'CANCELED', meetingTitle: string, date: string, time: string): Promise<boolean> {
@@ -240,35 +225,25 @@ export class MailService {
       color = '#ef4444';
     }
 
-    const fromName = this.configService.get<string>('MAIL_FROM_NAME') || 'BizzDeal';
-    const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER');
-
-    const mailOptions = {
-      from: `"${fromName}" <${fromEmail}>`,
-      to,
-      subject: `BizzDeal: ${title} - ${meetingTitle}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          ${this.getHeaderHtml()}
-          <h2 style="color: ${color}; text-align: center;">${title}</h2>
-          <p style="color: #374151; font-size: 16px;">${message}</p>
-          <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid ${color};">
-            <p style="margin: 0 0 10px 0; color: #111827;"><strong>Meeting:</strong> ${meetingTitle}</p>
-            <p style="margin: 0 0 10px 0; color: #111827;"><strong>Date:</strong> ${date}</p>
-            <p style="margin: 0; color: #111827;"><strong>Time:</strong> ${time}</p>
-          </div>
-          ${this.getFooterHtml()}
+    const subject = `BizzDeal: ${title} - ${meetingTitle}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        ${this.getHeaderHtml()}
+        <h2 style="color: ${color}; text-align: center;">${title}</h2>
+        <p style="color: #374151; font-size: 16px;">${message}</p>
+        <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid ${color};">
+          <p style="margin: 0 0 10px 0; color: #111827;"><strong>Meeting:</strong> ${meetingTitle}</p>
+          <p style="margin: 0 0 10px 0; color: #111827;"><strong>Date:</strong> ${date}</p>
+          <p style="margin: 0; color: #111827;"><strong>Time:</strong> ${time}</p>
         </div>
-      `,
-    };
+        ${this.getFooterHtml()}
+      </div>
+    `;
 
-    try {
-      await this.transporter.sendMail(mailOptions);
+    const success = await this.sendViaBrevo(to, subject, html);
+    if (success) {
       this.logger.log(`Meeting email (${eventType}) sent to ${to}`);
-      return true;
-    } catch (error) {
-      this.logger.error(`Failed to send meeting email to ${to}: ${error.message}`);
-      return false;
     }
+    return success;
   }
 }
