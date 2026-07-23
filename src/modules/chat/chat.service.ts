@@ -82,16 +82,15 @@ export class ChatService implements OnModuleInit {
     if (search) {
       return this.userRepository.find({
         where: [
-          { profile: { full_name: ILike(`%${search}%`) }, status: UserStatus.ACTIVE, id: Not(user.id) },
-          { phone: ILike(`%${search}%`), status: UserStatus.ACTIVE, id: Not(user.id) },
+          { profile: { full_name: ILike(`%${search}%`) }, status: UserStatus.ACTIVE, id: Not(user.id), role: In([UserRole.ADMIN, UserRole.MEMBER]) },
+          { phone: ILike(`%${search}%`), status: UserStatus.ACTIVE, id: Not(user.id), role: In([UserRole.ADMIN, UserRole.MEMBER]) },
         ],
         relations: { profile: true },
         take: 20,
       });
     } else {
-      // Default contact is Admin
       return this.userRepository.find({
-        where: { role: UserRole.ADMIN, status: UserStatus.ACTIVE, id: Not(user.id) },
+        where: { role: In([UserRole.ADMIN, UserRole.MEMBER]), status: UserStatus.ACTIVE, id: Not(user.id) },
         relations: { profile: true },
       });
     }
@@ -129,6 +128,7 @@ export class ChatService implements OnModuleInit {
             full_name: otherParticipant.user.profile?.full_name || (otherParticipant.user.role === 'ADMIN' ? 'Admin' : 'Unknown User'),
             phone: otherParticipant.user.phone,
             role: otherParticipant.user.role,
+            profile_pic_url: otherParticipant.user.profile?.profile_pic_url || null,
             isOnline: this.isUserOnline(otherParticipant.user.id),
           };
         }
@@ -151,14 +151,17 @@ export class ChatService implements OnModuleInit {
   async getConversationById(id: string, user: User): Promise<ChatConversation> {
     const conv = await this.conversationRepository.findOne({
       where: { id },
-      relations: { participants: true },
+      relations: { participants: true }, // Keep relations for other usages that might expect it
     });
     if (!conv) {
       throw new NotFoundException('Conversation not found');
     }
     
-    const isParticipant = conv.participants.some((p) => p.user_id === user.id);
-    if (!isParticipant && user.role !== UserRole.ADMIN) {
+    const participantCount = await this.participantRepository.count({
+      where: { conversation_id: id, user_id: user.id }
+    });
+    
+    if (participantCount === 0 && user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('No permission to view this conversation');
     }
     return conv;

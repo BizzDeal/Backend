@@ -167,11 +167,12 @@ export class VouchersService {
     const now = new Date();
 
     const isAdmin = user.role === UserRole.ADMIN;
+    const isMember = user.role === UserRole.MEMBER && user.status === UserStatus.ACTIVE;
     const isBusinessOwner = voucher.business?.owner_id === user.id;
 
-    if (!isAdmin && !isBusinessOwner) {
+    if (!isAdmin && !isMember && !isBusinessOwner) {
       throw new ForbiddenException(
-        'Only the business owner or an admin can redeem this voucher',
+        'Only active members or an admin can redeem this voucher',
       );
     }
 
@@ -504,8 +505,9 @@ export class VouchersService {
     const isAdmin = user?.role === UserRole.ADMIN;
     const isCustomer = user && voucher.customer_id === user.id;
     const isBusinessOwner = user && voucher.business?.owner_id === user.id;
+    const isMember = user?.role === UserRole.MEMBER && user?.status === UserStatus.ACTIVE;
 
-    if (!isAdmin && !isCustomer && !isBusinessOwner) {
+    if (!isAdmin && !isCustomer && !isBusinessOwner && !isMember) {
       throw new ForbiddenException(
         'You do not have permission to view this voucher',
       );
@@ -531,6 +533,7 @@ export class VouchersService {
       ...voucherData,
       customer_name,
       customer_phone,
+      wallet_balance,
       offer_type: voucher.offer?.offer_type,
       discount_type: voucher.offer?.discount_type,
       discount_value: voucher.offer?.discount_value ? Number(voucher.offer.discount_value) : null,
