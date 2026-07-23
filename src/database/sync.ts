@@ -9,6 +9,8 @@ import { PaymentSetting } from '../modules/payment-settings/entities/payment-set
 import { seedBusinessCategories } from './seeds/business-categories.seed';
 import { seedLocations } from './seeds/locations.seed';
 import { seedPaymentSettings } from './seeds/payment-settings.seed';
+import { seedAdminUser } from './seeds/admin.seed';
+import { User } from '../modules/users/entities/user.entity';
 
 dotenv.config();
 
@@ -84,6 +86,9 @@ async function bootstrap() {
 
     const paymentSettingsRepo = app.get(getRepositoryToken(PaymentSetting));
     await seedPaymentSettings(paymentSettingsRepo);
+
+    const userRepo = app.get(getRepositoryToken(User));
+    await seedAdminUser(userRepo);
 
     logger.log(
       'Database synchronization & all individual seed scripts completed successfully.',
