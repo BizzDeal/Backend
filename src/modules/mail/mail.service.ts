@@ -67,7 +67,7 @@ export class MailService {
     const baseUrl = this.getBaseUrl();
     return `
       <div style="text-align: center; margin-bottom: 20px;">
-        <img src="${baseUrl}/assets/logo-text.png" alt="BizzDeal Logo" style="max-height: 50px;">
+        <img src="https://api.bizzdeal.in/assets/logo-text.png" alt="BizzDeal Logo" style="max-height: 50px;">
       </div>
     `;
   }
@@ -76,7 +76,7 @@ export class MailService {
     const baseUrl = this.getBaseUrl();
     return `
       <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
-        <img src="${baseUrl}/assets/icon-only.jpg" alt="BizzDeal Icon" style="max-height: 30px; margin-bottom: 10px; border-radius: 4px;">
+        <img src="https://api.bizzdeal.in/assets/icon-only.jpg" alt="BizzDeal Icon" style="max-height: 30px; margin-bottom: 10px; border-radius: 4px;">
         <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} BizzDeal. All rights reserved.</p>
       </div>
     `;
