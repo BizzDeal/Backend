@@ -135,7 +135,6 @@ export class VouchersService {
       business_id: offer.business_id,
       status: VoucherStatus.ISSUED,
       issued_at: now,
-      expires_at: offer.end_date,
     });
 
     const savedVoucher = await this.voucherRepository.save(voucher);
@@ -166,13 +165,6 @@ export class VouchersService {
     }
 
     const now = new Date();
-    if (voucher.status === VoucherStatus.EXPIRED || now > voucher.expires_at) {
-      if (voucher.status !== VoucherStatus.EXPIRED) {
-        voucher.status = VoucherStatus.EXPIRED;
-        await this.voucherRepository.save(voucher);
-      }
-      throw new BadRequestException('Voucher has expired');
-    }
 
     const isAdmin = user.role === UserRole.ADMIN;
     const isBusinessOwner = voucher.business?.owner_id === user.id;
@@ -446,12 +438,18 @@ export class VouchersService {
       
       const businessName = v.business ? v.business.name : 'Unknown';
       const offerTitle = v.offer ? v.offer.title : 'Unknown';
+      const offer_type = v.offer ? v.offer.offer_type : undefined;
+      const discount_type = v.offer ? v.offer.discount_type : undefined;
+      const discount_value = v.offer ? (v.offer.discount_value ? Number(v.offer.discount_value) : null) : null;
+      
       const discountText = v.offer ? 
-        (v.offer.discount_type === 'PERCENTAGE' 
-          ? `${v.offer.discount_value}% OFF` 
-          : v.offer.discount_type === 'FIXED_AMOUNT' 
-            ? `₹${v.offer.discount_value} OFF` 
-            : 'Special Deal') 
+        (v.offer.offer_type === 'CASHBACK'
+          ? `₹${discount_value} Cashback`
+          : v.offer.discount_type === 'PERCENTAGE' 
+            ? `${discount_value}% OFF` 
+            : v.offer.discount_type === 'FIXED_AMOUNT' 
+              ? `₹${discount_value} Flat OFF` 
+              : 'Special Deal') 
         : 'Special Deal';
         
       delete (voucherData as any).customer;
@@ -463,7 +461,10 @@ export class VouchersService {
         customer_avatar,
         businessName,
         offerTitle,
-        discountText
+        discountText,
+        offer_type,
+        discount_type,
+        discount_value,
       };
     });
 
@@ -530,15 +531,19 @@ export class VouchersService {
       ...voucherData,
       customer_name,
       customer_phone,
-      wallet_balance,
+      offer_type: voucher.offer?.offer_type,
+      discount_type: voucher.offer?.discount_type,
+      discount_value: voucher.offer?.discount_value ? Number(voucher.offer.discount_value) : null,
       businessName: voucher.business?.name || 'Unknown',
       offerTitle: voucher.offer?.title || 'Unknown',
       discountText: voucher.offer ? 
-        (voucher.offer.discount_type === 'PERCENTAGE' 
-          ? `${voucher.offer.discount_value}% OFF` 
-          : voucher.offer.discount_type === 'FIXED_AMOUNT' 
-            ? `₹${voucher.offer.discount_value} OFF` 
-            : 'Special Deal') 
+        (voucher.offer.offer_type === 'CASHBACK'
+          ? `₹${voucher.offer.discount_value} Cashback`
+          : voucher.offer.discount_type === 'PERCENTAGE' 
+            ? `${voucher.offer.discount_value}% OFF` 
+            : voucher.offer.discount_type === 'FIXED_AMOUNT' 
+              ? `₹${voucher.offer.discount_value} Flat OFF` 
+              : 'Special Deal') 
         : 'Special Deal'
     } as any;
   }

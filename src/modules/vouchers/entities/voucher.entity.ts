@@ -44,6 +44,7 @@ export class Voucher {
   @Column({
     type: 'enum',
     enum: VoucherStatus,
+    enumName: 'vouchers_status_enum',
     default: VoucherStatus.ISSUED,
   })
   status: VoucherStatus;
@@ -53,9 +54,6 @@ export class Voucher {
 
   @Column({ type: 'timestamptz', nullable: true })
   redeemed_at: Date | null;
-
-  @Column({ type: 'timestamptz' })
-  expires_at: Date;
 
   @Column({ type: 'uuid', nullable: true })
   redeemed_by_id: string | null;

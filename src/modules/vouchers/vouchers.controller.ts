@@ -125,10 +125,13 @@ export class VouchersController {
       const parsedQuery = voucherQuerySchema.parse(query || {});
       return await this.vouchersService.findAll(parsedQuery, user);
     } catch (err: any) {
-      throw new BadRequestException({
-        message: 'Invalid query parameters',
-        errors: err.errors || err.message,
-      });
+      if (err.name === 'ZodError') {
+        throw new BadRequestException({
+          message: 'Invalid query parameters',
+          errors: err.errors,
+        });
+      }
+      throw err;
     }
   }
 
@@ -154,10 +157,13 @@ export class VouchersController {
           : parsedQuery;
       return await this.vouchersService.findAll(customerQuery, user);
     } catch (err: any) {
-      throw new BadRequestException({
-        message: 'Invalid query parameters',
-        errors: err.errors || err.message,
-      });
+      if (err.name === 'ZodError') {
+        throw new BadRequestException({
+          message: 'Invalid query parameters',
+          errors: err.errors,
+        });
+      }
+      throw err;
     }
   }
 

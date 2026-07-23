@@ -46,7 +46,6 @@ export enum OfferStatus {
 export enum VoucherStatus {
   ISSUED = 'ISSUED',
   REDEEMED = 'REDEEMED',
-  EXPIRED = 'EXPIRED',
   CANCELLED = 'CANCELLED',
 }
 

@@ -70,15 +70,17 @@ export class RedeemVoucherDto {
   wallet_amount_to_use?: number;
 }
 
+const emptyToUndefined = (val: unknown) => (val === '' || val === null ? undefined : val);
+
 export const voucherQuerySchema = z.object({
-  status: z.nativeEnum(VoucherStatus).optional(),
-  customer_id: z.string().uuid().optional(),
-  business_id: z.string().uuid().optional(),
-  offer_id: z.string().uuid().optional(),
-  voucher_code: z.string().optional(),
-  states: z.string().optional(),
-  districts: z.string().optional(),
-  search: z.string().optional(),
+  status: z.preprocess(emptyToUndefined, z.nativeEnum(VoucherStatus).optional()),
+  customer_id: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
+  business_id: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
+  offer_id: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
+  voucher_code: z.preprocess(emptyToUndefined, z.string().optional()),
+  states: z.preprocess(emptyToUndefined, z.string().optional()),
+  districts: z.preprocess(emptyToUndefined, z.string().optional()),
+  search: z.preprocess(emptyToUndefined, z.string().optional()),
 }).merge(paginationQuerySchema);
 
 export class VoucherQueryDto extends PaginationQueryDto {

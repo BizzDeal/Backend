@@ -123,6 +123,8 @@ export class BusinessesService {
       const whatsapp = b.owner?.profile?.whatsapp || phone || '';
       const owner_name = b.owner?.profile?.full_name || '';
       const owner_email = b.owner ? (b.owner.email || '') : '';
+      const state_name = b.state ? b.state.name : null;
+      const district_name = b.district ? b.district.name : null;
       const initials = (b.name || 'BI')
         .split(' ')
         .map((w) => w[0])
@@ -132,14 +134,19 @@ export class BusinessesService {
 
       delete (biz as any).category;
       delete (biz as any).owner;
+      delete (biz as any).state;
+      delete (biz as any).district;
       return {
         ...biz,
         categoryName,
         category_name: categoryName,
         phone,
+        owner_phone: phone,
         whatsapp,
         owner_name,
         owner_email,
+        state_name,
+        district_name,
         initials,
         logo_url: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
         logoUrl: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
@@ -535,7 +542,7 @@ export class BusinessesService {
 
     const business = await this.businessRepository.findOne({ 
       where: { id },
-      relations: { category: true, owner: { profile: true } }
+      relations: { category: true, owner: { profile: true }, state: true, district: true }
     });
     if (!business) {
       throw new NotFoundException('Business not found');
