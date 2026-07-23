@@ -24,6 +24,7 @@ import {
 } from '../../common/enums';
 
 import { SettingsService } from '../settings/settings.service';
+import { PaginatedResponseDto } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class OffersService {
@@ -96,7 +97,7 @@ export class OffersService {
     return this.transformOfferAsync(savedOffer);
   }
 
-  async findAll(query: OfferQueryDto, user?: User): Promise<Offer[]> {
+  async findAll(query: OfferQueryDto, user?: User): Promise<PaginatedResponseDto<any>> {
     const qb = this.offerRepository.createQueryBuilder('offer');
     qb.leftJoinAndSelect('offer.business', 'business');
     qb.leftJoinAndSelect('offer.image', 'image');
@@ -184,8 +185,23 @@ export class OffersService {
     }
 
     qb.orderBy('offer.created_at', 'DESC');
-    const offers = await qb.getMany();
-    return Promise.all(offers.map((o) => this.transformOfferAsync(o)));
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [offers, totalItems] = await qb.getManyAndCount();
+    const data = await Promise.all(offers.map((o) => this.transformOfferAsync(o)));
+    return {
+      data,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
   }
 
   async findMegaDeals(query: OfferQueryDto, user?: User): Promise<Offer[]> {
@@ -241,7 +257,7 @@ export class OffersService {
     const settings = await this.settingsService.getSettings();
     // For now, trending offers are all active offers (can be refined later)
     const allOffers = await this.findAll({ ...query, status: OfferStatus.APPROVED }, user);
-    return allOffers.slice(0, settings.home_feed_limit);
+    return allOffers.data.slice(0, settings.home_feed_limit);
   }
 
   async findOne(id: string, user?: User): Promise<Offer> {

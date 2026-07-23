@@ -14,12 +14,15 @@ import { BusinessProfile } from '../businesses/entities/business-profile.entity'
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
 import { User } from '../users/entities/user.entity';
+import { Profile } from '../users/entities/profile.entity';
+import { CustomerBusiness } from '../businesses/entities/customer-business.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
 import {
+  VoucherQueryDto,
   IssueVoucherDto,
   RedeemVoucherDto,
-  VoucherQueryDto,
 } from './schemas/vouchers.schema';
+import { PaginatedResponseDto } from '../../common/dto/pagination.dto';
 import {
   VoucherStatus,
   OfferStatus,
@@ -186,6 +189,32 @@ export class VouchersService {
       voucher.redeemed_by_id = user.id;
       const savedVoucher = await manager.save(Voucher, voucher);
 
+      // Track primary store and customer visits
+      if (voucher.customer_id) {
+        const profile = await manager.findOne(Profile, { where: { user_id: voucher.customer_id } });
+        if (profile && !profile.primary_business_id) {
+          profile.primary_business_id = voucher.business_id;
+          await manager.save(Profile, profile);
+        }
+
+        let customerBusiness = await manager.findOne(CustomerBusiness, {
+          where: { customer_id: voucher.customer_id, business_id: voucher.business_id },
+        });
+
+        if (!customerBusiness) {
+          customerBusiness = manager.create(CustomerBusiness, {
+            customer_id: voucher.customer_id,
+            business_id: voucher.business_id,
+            total_visits: 1,
+            last_visited_at: now,
+          });
+        } else {
+          customerBusiness.total_visits = Number(customerBusiness.total_visits) + 1;
+          customerBusiness.last_visited_at = now;
+        }
+        await manager.save(CustomerBusiness, customerBusiness);
+      }
+
       let calculatedAmount = 0;
       let remainingAmount = 0;
       const { offer } = voucher;
@@ -328,8 +357,7 @@ export class VouchersService {
       return savedVoucher;
     });
   }
-
-  async findAll(query: VoucherQueryDto, user?: User): Promise<any[]> {
+  async findAll(query: VoucherQueryDto, user?: User): Promise<PaginatedResponseDto<any>> {
     const qb = this.voucherRepository.createQueryBuilder('voucher');
     qb.leftJoinAndSelect('voucher.business', 'business');
     qb.leftJoinAndSelect('voucher.offer', 'offer');
@@ -372,6 +400,13 @@ export class VouchersService {
       }
     }
 
+    if (query.search) {
+      qb.andWhere(
+        '(voucher.voucher_code ILIKE :kw OR offer.title ILIKE :kw OR business.name ILIKE :kw OR profile.full_name ILIKE :kw)',
+        { kw: `%${query.search}%` }
+      );
+    }
+
     if (user?.role === UserRole.CUSTOMER) {
       qb.andWhere('voucher.customer_id = :userId', { userId: user.id });
     } else if (user?.role === UserRole.MEMBER) {
@@ -379,7 +414,13 @@ export class VouchersService {
     }
 
     qb.orderBy('voucher.created_at', 'DESC');
-    const vouchers = await qb.getMany();
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [vouchers, totalItems] = await qb.getManyAndCount();
     
     // Fetch customer avatars
     const customerIds = vouchers.map((v) => v.customer_id).filter((id) => id);
@@ -397,7 +438,7 @@ export class VouchersService {
       }
     });
 
-    return vouchers.map((v) => {
+    const data = vouchers.map((v) => {
       const { ...voucherData } = v;
       const customer_name = v.customer?.profile?.full_name || 'Unknown';
       const customer_phone = v.customer ? (v.customer as any).phone : null;
@@ -425,6 +466,16 @@ export class VouchersService {
         discountText
       };
     });
+
+    return {
+      data,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
   }
 
   async findOne(id: string, user?: User): Promise<Voucher> {

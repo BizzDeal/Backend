@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { VoucherStatus } from '../../../common/enums';
+import { paginationQuerySchema, PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 export const issueVoucherSchema = z.object({
   offer_id: z.string().uuid({ message: 'Valid offer_id UUID is required' }),
@@ -77,9 +78,10 @@ export const voucherQuerySchema = z.object({
   voucher_code: z.string().optional(),
   states: z.string().optional(),
   districts: z.string().optional(),
-});
+  search: z.string().optional(),
+}).merge(paginationQuerySchema);
 
-export class VoucherQueryDto {
+export class VoucherQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     enum: VoucherStatus,
     description: 'Filter vouchers by status',
@@ -120,4 +122,9 @@ export class VoucherQueryDto {
     description: 'Comma-separated district UUIDs for filtering',
   })
   districts?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search keyword matching voucher code, offer title, business name, or customer name',
+  })
+  search?: string;
 }

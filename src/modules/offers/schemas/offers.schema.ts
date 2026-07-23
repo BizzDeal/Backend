@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OfferType, DiscountType, OfferStatus } from '../../../common/enums';
+import { paginationQuerySchema, PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 export const createOfferSchema = z
   .object({
@@ -213,9 +214,9 @@ export const offerQuerySchema = z.object({
   my_offers: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
   states: z.string().optional(),
   districts: z.string().optional(),
-});
+}).merge(paginationQuerySchema);
 
-export class OfferQueryDto {
+export class OfferQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     type: String,
     description: 'Filter by specific business UUID',

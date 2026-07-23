@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { DeviceType, NotificationType, UserRole } from '../../../common/enums';
+import { DeviceType, NotificationType } from '../../../common/enums';
+import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 export class CreateNotificationDto {
   @ApiPropertyOptional({
@@ -169,7 +170,7 @@ export class RegisterDeviceDto {
   is_virtual?: boolean;
 }
 
-export class NotificationQueryDto {
+export class NotificationQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     type: String,
     format: 'uuid',
@@ -192,4 +193,9 @@ export class NotificationQueryDto {
     example: NotificationType.GENERAL,
   })
   type?: NotificationType;
+
+  @ApiPropertyOptional({
+    description: 'Search keyword matching title or message',
+  })
+  search?: string;
 }

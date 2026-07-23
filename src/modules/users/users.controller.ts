@@ -41,6 +41,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole, UserStatus } from '../../common/enums';
 import { RegionFilterDto } from '../../common/dto/region-filter.dto';
+import { userQuerySchema, UserQueryDto } from './schemas/users.schema';
 
 @ApiTags('Users')
 @Controller('users')
@@ -60,10 +61,17 @@ export class UsersController {
     description:
       'List of users returned successfully along with profile_pic_url.',
   })
-  async findAll(@Query() filter?: RegionFilterDto): Promise<
-    (Omit<User, 'pin_hash'> & { profile_pic_url: string | null })[]
-  > {
-    return this.usersService.findAll(filter);
+  async findAll(@Query() queryParams: any) {
+    let query: UserQueryDto = {};
+    try {
+      query = userQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.usersService.findAll(query);
   }
 
   @Post('user-exist')
@@ -99,8 +107,17 @@ export class UsersController {
     status: 200,
     description: 'List of members returned successfully.',
   })
-  async findMembers(@Query('status') status?: UserStatus, @Query() filter?: RegionFilterDto) {
-    return this.usersService.findMembers(status, filter);
+  async findMembers(@Query('status') status?: UserStatus, @Query() queryParams?: any) {
+    let query: UserQueryDto = {};
+    try {
+      query = userQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.usersService.findMembers(status, query);
   }
 
   @Get('customers')
@@ -115,8 +132,17 @@ export class UsersController {
     status: 200,
     description: 'List of customers returned successfully.',
   })
-  async findCustomers(@Query() filter?: RegionFilterDto) {
-    return this.usersService.findCustomers(filter);
+  async findCustomers(@Query() queryParams?: any) {
+    let query: UserQueryDto = {};
+    try {
+      query = userQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.usersService.findCustomers(query);
   }
 
   @Post('profile')

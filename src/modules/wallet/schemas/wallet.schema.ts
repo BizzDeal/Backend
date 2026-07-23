@@ -4,6 +4,7 @@ import {
   WalletTransactionType,
   WalletReferenceType,
 } from '../../../common/enums';
+import { paginationQuerySchema, PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 const numberPreprocess = (val: unknown) => {
   if (val === '' || val === null || val === undefined) return val;
@@ -113,9 +114,10 @@ export const walletQuerySchema = z.object({
   reference_type: z.nativeEnum(WalletReferenceType).optional(),
   states: z.string().optional(),
   districts: z.string().optional(),
-});
+  search: z.string().optional(),
+}).merge(paginationQuerySchema);
 
-export class WalletQueryDto {
+export class WalletQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     type: String,
     description: 'Filter transactions by user UUID (Admin only)',
@@ -145,4 +147,9 @@ export class WalletQueryDto {
     description: 'Comma-separated district UUIDs for filtering',
   })
   districts?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search keyword matching transaction description, customer full name, email, phone, or voucher code',
+  })
+  search?: string;
 }

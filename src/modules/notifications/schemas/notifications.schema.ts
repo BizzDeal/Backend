@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { DeviceType, NotificationType, UserRole } from '../../../common/enums';
+import { paginationQuerySchema, PaginationQueryDto } from '../../../common/dto/pagination.dto';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export const createNotificationSchema = z.object({
   user_id: z.string().optional(),
@@ -71,4 +73,5 @@ export const notificationQuerySchema = z.object({
       return undefined;
     }),
   type: z.nativeEnum(NotificationType).optional(),
-});
+  search: z.string().optional(),
+}).merge(paginationQuerySchema);

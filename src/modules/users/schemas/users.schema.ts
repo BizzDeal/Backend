@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { paginationQuerySchema, PaginationQueryDto } from '../../../common/dto/pagination.dto';
+import { regionFilterSchemaBase, RegionFilterDto } from '../../../common/dto/region-filter.dto';
 
 export const userExistSchema = z.object({
   email: z.string().email('Valid email address is required'),
@@ -166,4 +168,26 @@ export class MemberActionDto {
     example: 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
   })
   memberId: string;
+}
+
+export const userQuerySchema = z.object({
+  ...regionFilterSchemaBase,
+  search: z.string().optional(),
+}).merge(paginationQuerySchema);
+
+export class UserQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    description: 'Comma-separated list of state UUIDs to filter data by region.',
+  })
+  states?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated list of district UUIDs to filter data by region.',
+  })
+  districts?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search term for name, email, or phone',
+  })
+  search?: string;
 }

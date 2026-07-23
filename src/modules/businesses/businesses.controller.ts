@@ -162,9 +162,15 @@ export class BusinessesController {
   })
   async getByCategory(
     @Param('categoryId') categoryId: string,
+    @Query() queryParams: any,
     @CurrentUser() user?: User,
   ) {
-    return this.businessesService.findByCategory(categoryId, {}, user);
+    let query: BusinessQueryDto = {};
+    try {
+      const parsed = businessQuerySchema.parse(queryParams || {});
+      query = { ...parsed };
+    } catch (err: any) {}
+    return this.businessesService.findByCategory(categoryId, query, user);
   }
 
   @Get()
@@ -179,8 +185,21 @@ export class BusinessesController {
     status: 200,
     description: 'List of businesses returned successfully.',
   })
-  async findAll(@CurrentUser() user?: User) {
-    return this.businessesService.findAll({}, user);
+  async findAll(
+    @Query() queryParams: any,
+    @CurrentUser() user?: User
+  ) {
+    let query: BusinessQueryDto = {};
+    try {
+      const parsed = businessQuerySchema.parse(queryParams || {});
+      query = { ...parsed };
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.businessesService.findAll(query, user);
   }
 
   @Get(':id')

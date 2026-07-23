@@ -12,6 +12,7 @@ import { User } from '../users/entities/user.entity';
 import { UserRole, NotificationType, DeviceType } from '../../common/enums';
 import { FirebaseService } from '../../common/firebase/firebase.service';
 import { NotificationQueryDto } from './dto/notifications.dto';
+import { PaginatedResponseDto } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class NotificationsService {
@@ -30,24 +31,44 @@ export class NotificationsService {
   async findAll(
     user: User,
     query?: NotificationQueryDto,
-  ): Promise<Notification[]> {
-    const whereCondition: FindOptionsWhere<Notification> = {};
+  ): Promise<PaginatedResponseDto<Notification>> {
+    const qb = this.notificationRepository.createQueryBuilder('notif');
     if (user.role !== UserRole.ADMIN) {
-      whereCondition.user_id = user.id;
+      qb.andWhere('notif.user_id = :userId', { userId: user.id });
     } else if (query?.user_id) {
-      whereCondition.user_id = query.user_id;
+      qb.andWhere('notif.user_id = :userId', { userId: query.user_id });
     }
     if (query?.is_read !== undefined) {
-      whereCondition.is_read = query.is_read;
+      qb.andWhere('notif.is_read = :isRead', { isRead: query.is_read });
     }
     if (query?.type !== undefined) {
-      whereCondition.type = query.type;
+      qb.andWhere('notif.type = :type', { type: query.type });
+    }
+    if (query?.search) {
+      qb.andWhere(
+        '(notif.title ILIKE :kw OR notif.message ILIKE :kw)',
+        { kw: `%${query.search}%` }
+      );
     }
 
-    return this.notificationRepository.find({
-      where: whereCondition,
-      order: { created_at: 'DESC' },
-    });
+    qb.orderBy('notif.created_at', 'DESC');
+
+    const page = query?.page || 1;
+    const limit = query?.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [notifications, totalItems] = await qb.getManyAndCount();
+
+    return {
+      data: notifications,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
   }
 
   async findOne(id: string, user: User): Promise<Notification> {

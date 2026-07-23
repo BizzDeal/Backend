@@ -11,6 +11,7 @@ import {
 import { User } from './user.entity';
 import { State } from '../../location/entities/state.entity';
 import { District } from '../../location/entities/district.entity';
+import { BusinessProfile } from '../../businesses/entities/business-profile.entity';
 
 @Entity('profiles')
 export class Profile {
@@ -46,6 +47,13 @@ export class Profile {
   @ManyToOne(() => District, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'district_id' })
   district: District | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  primary_business_id: string | null;
+
+  @ManyToOne(() => BusinessProfile, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'primary_business_id' })
+  primary_business: BusinessProfile | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

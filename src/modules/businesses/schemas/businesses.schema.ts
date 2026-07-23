@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BusinessStatus } from '../../../common/enums';
+import { paginationQuerySchema, PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 export const updateBusinessSchema = z.object({
   name: z.string().min(2).optional(),
@@ -110,9 +111,9 @@ export const businessQuerySchema = z.object({
   exclude_owner_id: z.string().optional(),
   states: z.string().optional(),
   districts: z.string().optional(),
-});
+}).merge(paginationQuerySchema);
 
-export class BusinessQueryDto {
+export class BusinessQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description:
       'Search keyword matching across business details (name, description, website, gst_number), owner details (full_name, phone, whatsapp, email, address), and category details (name, slug, description)',

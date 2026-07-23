@@ -259,9 +259,20 @@ export class OffersController {
   })
   async getByBusinessId(
     @Param('businessId') businessId: string,
+    @Query() queryParams: any,
     @CurrentUser() user: User,
   ) {
-    return this.offersService.findAll({ business_id: businessId }, user);
+    let query: OfferQueryDto = { business_id: businessId };
+    try {
+      const parsed = offerQuerySchema.parse(queryParams || {});
+      query = { ...parsed, business_id: businessId };
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.offersService.findAll(query, user);
   }
 
   @Get(':id')

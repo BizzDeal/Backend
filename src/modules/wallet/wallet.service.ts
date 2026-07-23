@@ -15,6 +15,7 @@ import {
   DebitWalletDto,
   WalletQueryDto,
 } from './schemas/wallet.schema';
+import { PaginatedResponseDto } from '../../common/dto/pagination.dto';
 import {
   WalletTransactionType,
   WalletReferenceType,
@@ -79,7 +80,7 @@ export class WalletService {
   async getHistory(
     query: WalletQueryDto,
     currentUser: User,
-  ): Promise<WalletTransaction[]> {
+  ): Promise<PaginatedResponseDto<WalletTransaction>> {
     if (
       query.user_id &&
       query.user_id !== currentUser.id &&
@@ -122,14 +123,40 @@ export class WalletService {
       }
     }
 
+    if (query.search) {
+      qb.leftJoin('tx.user', 'user_search');
+      qb.leftJoin('user_search.profile', 'profile');
+      qb.leftJoin('vouchers', 'voucher', 'voucher.id = tx.reference_id AND tx.reference_type = :voucherType', { voucherType: WalletReferenceType.VOUCHER });
+      qb.andWhere(
+        '(tx.description ILIKE :kw OR profile.full_name ILIKE :kw OR user_search.email ILIKE :kw OR user_search.phone ILIKE :kw OR voucher.voucher_code ILIKE :kw)',
+        { kw: `%${query.search}%` }
+      );
+    }
+
     qb.orderBy('tx.created_at', 'DESC');
-    return qb.getMany();
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [transactions, totalItems] = await qb.getManyAndCount();
+    
+    return {
+      data: transactions,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
   }
 
   async getSavings(
     query: WalletQueryDto,
     currentUser: User,
-  ): Promise<WalletTransaction[]> {
+  ): Promise<PaginatedResponseDto<WalletTransaction>> {
     if (
       query.user_id &&
       query.user_id !== currentUser.id &&
@@ -170,8 +197,34 @@ export class WalletService {
       }
     }
 
+    if (query.search) {
+      qb.leftJoin('tx.user', 'user_search');
+      qb.leftJoin('user_search.profile', 'profile');
+      qb.leftJoin('vouchers', 'voucher', 'voucher.id = tx.reference_id AND tx.reference_type = :voucherType', { voucherType: WalletReferenceType.VOUCHER });
+      qb.andWhere(
+        '(tx.description ILIKE :kw OR profile.full_name ILIKE :kw OR user_search.email ILIKE :kw OR user_search.phone ILIKE :kw OR voucher.voucher_code ILIKE :kw)',
+        { kw: `%${query.search}%` }
+      );
+    }
+
     qb.orderBy('tx.created_at', 'DESC');
-    return qb.getMany();
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [transactions, totalItems] = await qb.getManyAndCount();
+    
+    return {
+      data: transactions,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
   }
 
   async creditWallet(

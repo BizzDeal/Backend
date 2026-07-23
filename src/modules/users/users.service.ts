@@ -21,13 +21,14 @@ import {
   MediaPurpose,
   NotificationType,
 } from '../../common/enums';
-import { UpdateProfileDto } from './schemas/users.schema';
+import { UpdateProfileDto, UserQueryDto } from './schemas/users.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { LocationService } from '../location/services/location.service';
 import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 import { ChatService } from '../chat/chat.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PaginatedResponseDto } from '../../common/dto/pagination.dto';
 
 interface CreateUserData {
   email: string;
@@ -63,29 +64,38 @@ export class UsersService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async findAll(filter?: RegionFilterDto): Promise<
-    (Omit<User, 'pin_hash'> & { profile_pic_url: string | null; profile: Profile })[]
-  > {
+  async findAll(query: UserQueryDto = {}) {
     const whereCondition: any = {};
-    if (filter?.states) {
-      whereCondition['profile.state_id'] = In(filter.states.split(','));
+    if (query.states) {
+      whereCondition['profile.state_id'] = In(query.states.split(','));
     }
-    if (filter?.districts) {
-      whereCondition['profile.district_id'] = In(filter.districts.split(','));
+    if (query.districts) {
+      whereCondition['profile.district_id'] = In(query.districts.split(','));
     }
     
     // Using query builder to handle nested where properly if needed, but find() with relations works too.
     const qb = this.usersRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile');
       
-    if (filter?.states) {
-      qb.andWhere('profile.state_id IN (:...states)', { states: filter.states.split(',') });
+    if (query.states) {
+      qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });
     }
-    if (filter?.districts) {
-      qb.andWhere('profile.district_id IN (:...districts)', { districts: filter.districts.split(',') });
+    if (query.districts) {
+      qb.andWhere('profile.district_id IN (:...districts)', { districts: query.districts.split(',') });
+    }
+    if (query.search) {
+      qb.andWhere(
+        '(profile.full_name ILIKE :kw OR user.email ILIKE :kw OR user.phone ILIKE :kw OR profile.whatsapp ILIKE :kw)',
+        { kw: `%${query.search}%` }
+      );
     }
 
-    const users = await qb.getMany();
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [users, totalItems] = await qb.getManyAndCount();
     if (users.length === 0) return [];
 
     const userIds = users.map((u) => u.id);
@@ -103,7 +113,7 @@ export class UsersService {
       }
     });
 
-    return users.map((user) => {
+    const data = users.map((user) => {
       const { pin_hash: _pin_hash, ...userWithoutPin } = user;
       return {
         ...userWithoutPin,
@@ -115,6 +125,18 @@ export class UsersService {
         profile_pic_url: profilePicMap.get(user.id) || null,
       };
     });
+
+    return {
+      success: true,
+      message: 'Users fetched successfully',
+      data,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
   }
 
   async findOneByPhone(phone: string): Promise<User | null> {
@@ -198,7 +220,7 @@ export class UsersService {
     return { exists: !!user };
   }
 
-  async findMembers(status?: UserStatus, filter?: RegionFilterDto) {
+  async findMembers(status?: UserStatus, query: UserQueryDto = {}) {
     const qb = this.usersRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile')
       .where('user.role = :role', { role: UserRole.MEMBER });
@@ -206,21 +228,39 @@ export class UsersService {
     if (status) {
       qb.andWhere('user.status = :status', { status });
     }
-    if (filter?.states) {
-      qb.andWhere('profile.state_id IN (:...states)', { states: filter.states.split(',') });
+    if (query.states) {
+      qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });
     }
-    if (filter?.districts) {
-      qb.andWhere('profile.district_id IN (:...districts)', { districts: filter.districts.split(',') });
+    if (query.districts) {
+      qb.andWhere('profile.district_id IN (:...districts)', { districts: query.districts.split(',') });
+    }
+    if (query.search) {
+      qb.andWhere(
+        '(profile.full_name ILIKE :kw OR user.email ILIKE :kw OR user.phone ILIKE :kw OR profile.whatsapp ILIKE :kw)',
+        { kw: `%${query.search}%` }
+      );
     }
 
     qb.orderBy('user.created_at', 'DESC');
-    const members = await qb.getMany();
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [members, totalItems] = await qb.getManyAndCount();
 
     if (members.length === 0) {
       return {
         success: true,
         message: 'Members fetched successfully',
         data: [],
+        meta: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems,
+          totalPages: Math.ceil(totalItems / limit),
+        },
       };
     }
 
@@ -272,29 +312,53 @@ export class UsersService {
       success: true,
       message: 'Members fetched successfully',
       data,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
     };
   }
 
-  async findCustomers(filter?: RegionFilterDto) {
+  async findCustomers(query: UserQueryDto = {}) {
     const qb = this.usersRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile')
       .where('user.role = :role', { role: UserRole.CUSTOMER });
 
-    if (filter?.states) {
-      qb.andWhere('profile.state_id IN (:...states)', { states: filter.states.split(',') });
+    if (query.states) {
+      qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });
     }
-    if (filter?.districts) {
-      qb.andWhere('profile.district_id IN (:...districts)', { districts: filter.districts.split(',') });
+    if (query.districts) {
+      qb.andWhere('profile.district_id IN (:...districts)', { districts: query.districts.split(',') });
+    }
+    if (query.search) {
+      qb.andWhere(
+        '(profile.full_name ILIKE :kw OR user.email ILIKE :kw OR user.phone ILIKE :kw OR profile.whatsapp ILIKE :kw)',
+        { kw: `%${query.search}%` }
+      );
     }
     
     qb.orderBy('user.created_at', 'DESC');
-    const customers = await qb.getMany();
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [customers, totalItems] = await qb.getManyAndCount();
 
     if (customers.length === 0) {
       return {
         success: true,
         message: 'Customers fetched successfully',
         data: [],
+        meta: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems,
+          totalPages: Math.ceil(totalItems / limit),
+        },
       };
     }
 
@@ -330,6 +394,12 @@ export class UsersService {
       success: true,
       message: 'Customers fetched successfully',
       data,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
     };
   }
 

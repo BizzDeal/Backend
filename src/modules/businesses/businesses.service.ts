@@ -356,13 +356,24 @@ export class BusinessesService {
 
     qb.orderBy('business.created_at', 'DESC');
 
-    const items = await qb.getMany();
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    const [items, totalItems] = await qb.getManyAndCount();
     const enriched = await this.enrichBusinessesWithMediaAndCategory(items);
 
     return {
       success: true,
       message: 'Businesses fetched successfully',
       data: enriched,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
     };
   }
 
