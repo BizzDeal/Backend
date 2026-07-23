@@ -39,7 +39,18 @@ export async function seedLocations(dataSource: DataSource): Promise<void> {
     logger.log(`Found States Excel file at: ${statesFilePath}. Parsing & seeding...`);
     try {
       const buffer = fs.readFileSync(statesFilePath);
+      // Silence annoying 'Bad uncompressed size' warnings from xlsx library
+      const originalConsoleError = console.error;
+      console.error = (...args: any[]) => {
+        if (typeof args[0] === 'string' && args[0].includes('Bad uncompressed size')) return;
+        originalConsoleError(...args);
+      };
+      
       const workbook = xlsx.read(buffer, { type: 'buffer' });
+      
+      // Restore console.error
+      console.error = originalConsoleError;
+      
       const sheetName = workbook.SheetNames[0];
       const rows = xlsx.utils.sheet_to_json<any[]>(workbook.Sheets[sheetName], { header: 1, defval: '' });
 
@@ -79,7 +90,18 @@ export async function seedLocations(dataSource: DataSource): Promise<void> {
     logger.log(`Found Districts Excel file at: ${districtsFilePath}. Parsing & seeding...`);
     try {
       const buffer = fs.readFileSync(districtsFilePath);
+      // Silence annoying 'Bad uncompressed size' warnings from xlsx library
+      const originalConsoleError = console.error;
+      console.error = (...args: any[]) => {
+        if (typeof args[0] === 'string' && args[0].includes('Bad uncompressed size')) return;
+        originalConsoleError(...args);
+      };
+      
       const workbook = xlsx.read(buffer, { type: 'buffer' });
+      
+      // Restore console.error
+      console.error = originalConsoleError;
+
       const sheetName = workbook.SheetNames[0];
       const rows = xlsx.utils.sheet_to_json<any[]>(workbook.Sheets[sheetName], { header: 1, defval: '' });
 
