@@ -75,7 +75,8 @@ export class UsersService {
     
     // Using query builder to handle nested where properly if needed, but find() with relations works too.
     const qb = this.usersRepository.createQueryBuilder('user')
-      .leftJoinAndSelect('user.profile', 'profile');
+      .leftJoinAndSelect('user.profile', 'profile')
+      .where('user.status != :unverifiedStatus', { unverifiedStatus: UserStatus.UNVERIFIED });
       
     if (query.states) {
       qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });
@@ -231,6 +232,8 @@ export class UsersService {
       
     if (status) {
       qb.andWhere('user.status = :status', { status });
+    } else {
+      qb.andWhere('user.status != :unverifiedStatus', { unverifiedStatus: UserStatus.UNVERIFIED });
     }
     if (query.states) {
       qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });
@@ -328,7 +331,8 @@ export class UsersService {
   async findCustomers(query: UserQueryDto = {}) {
     const qb = this.usersRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile')
-      .where('user.role = :role', { role: UserRole.CUSTOMER });
+      .where('user.role = :role', { role: UserRole.CUSTOMER })
+      .andWhere('user.status != :unverifiedStatus', { unverifiedStatus: UserStatus.UNVERIFIED });
 
     if (query.states) {
       qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });

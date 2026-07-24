@@ -70,9 +70,10 @@ export class WsJwtAuthGuard implements CanActivate {
 
       if (
         user.status === UserStatus.SUSPENDED ||
-        user.status === UserStatus.REJECTED
+        user.status === UserStatus.REJECTED ||
+        user.status === UserStatus.UNVERIFIED
       ) {
-        throw new WsException('User account is suspended or rejected');
+        throw new WsException('User account is unverified, suspended, or rejected');
       }
 
       return user;

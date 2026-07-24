@@ -327,7 +327,10 @@ export class BusinessesService {
         },
       );
     }
-    // Admin sees all statuses unless specifically filtered
+    // Exclude businesses owned by unverified members
+    qb.andWhere('(owner.id IS NULL OR owner.status != :unverifiedOwnerStatus)', {
+      unverifiedOwnerStatus: UserStatus.UNVERIFIED,
+    });
 
     if (query.exclude_owner_id) {
       qb.andWhere('business.owner_id != :exOwnerId', {
@@ -412,6 +415,10 @@ export class BusinessesService {
       isFeatured: true,
     });
 
+    qb.andWhere('(owner.id IS NULL OR owner.status != :unverifiedOwnerStatus)', {
+      unverifiedOwnerStatus: UserStatus.UNVERIFIED,
+    });
+
     this.applySearchFilters(qb, query);
 
     if (query.category_id) {
@@ -469,6 +476,10 @@ export class BusinessesService {
         },
       );
     }
+
+    qb.andWhere('(owner.id IS NULL OR owner.status != :unverifiedOwnerStatus)', {
+      unverifiedOwnerStatus: UserStatus.UNVERIFIED,
+    });
 
     this.applySearchFilters(qb, query);
 

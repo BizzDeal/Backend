@@ -5,6 +5,7 @@ import { ChatConversation } from './entities/chat-conversation.entity';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatParticipant } from './entities/chat-participant.entity';
 import { User } from '../users/entities/user.entity';
+import { MediaFile } from '../media/entities/media-file.entity';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatWsDocsController } from './chat-ws-docs.controller';
@@ -15,7 +16,7 @@ import { MediaModule } from '../media/media.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChatConversation, ChatMessage, ChatParticipant, User]),
+    TypeOrmModule.forFeature([ChatConversation, ChatMessage, ChatParticipant, User, MediaFile]),
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
     }),

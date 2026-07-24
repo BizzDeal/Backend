@@ -12,8 +12,9 @@ import { ChatConversation } from './entities/chat-conversation.entity';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatParticipant } from './entities/chat-participant.entity';
 import { User } from '../users/entities/user.entity';
-import { UserRole, MessageType, NotificationType, ConversationType, UserStatus } from '../../common/enums';
+import { UserRole, MessageType, NotificationType, ConversationType, UserStatus, MediaPurpose } from '../../common/enums';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MediaFile } from '../media/entities/media-file.entity';
 
 @Injectable()
 export class ChatService implements OnModuleInit {
@@ -29,8 +30,31 @@ export class ChatService implements OnModuleInit {
     private readonly participantRepository: Repository<ChatParticipant>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(MediaFile)
+    private readonly mediaRepository: Repository<MediaFile>,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  private async getProfilePicMap(userIds: string[]): Promise<Map<string, string>> {
+    const profilePicMap = new Map<string, string>();
+    if (!userIds || userIds.length === 0) return profilePicMap;
+
+    const mediaFiles = await this.mediaRepository.find({
+      where: {
+        uploaded_by_id: In(userIds),
+        purpose: In([MediaPurpose.PROFILE_PIC, MediaPurpose.BUSINESS_LOGO]),
+      },
+      order: { created_at: 'DESC' },
+    });
+
+    mediaFiles.forEach((pic) => {
+      if (pic.uploaded_by_id && !profilePicMap.has(pic.uploaded_by_id)) {
+        profilePicMap.set(pic.uploaded_by_id, pic.file_url);
+      }
+    });
+
+    return profilePicMap;
+  }
 
   async onModuleInit() {
     await this.ensureDefaultGroupExists();
@@ -50,6 +74,11 @@ export class ChatService implements OnModuleInit {
   }
 
   async addUserToDefaultGroup(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user || user.status === UserStatus.UNVERIFIED) {
+      return;
+    }
+
     const group = await this.conversationRepository.findOne({ where: { is_default_group: true } });
     if (group) {
       const exists = await this.participantRepository.findOne({
@@ -78,9 +107,10 @@ export class ChatService implements OnModuleInit {
     return this.onlineUsers.has(userId);
   }
 
-  async getContacts(user: User, search?: string): Promise<User[]> {
+  async getContacts(user: User, search?: string): Promise<any[]> {
+    let users: User[] = [];
     if (search) {
-      return this.userRepository.find({
+      users = await this.userRepository.find({
         where: [
           { profile: { full_name: ILike(`%${search}%`) }, status: UserStatus.ACTIVE, id: Not(user.id), role: In([UserRole.ADMIN, UserRole.MEMBER]) },
           { phone: ILike(`%${search}%`), status: UserStatus.ACTIVE, id: Not(user.id), role: In([UserRole.ADMIN, UserRole.MEMBER]) },
@@ -89,11 +119,29 @@ export class ChatService implements OnModuleInit {
         take: 20,
       });
     } else {
-      return this.userRepository.find({
+      users = await this.userRepository.find({
         where: { role: In([UserRole.ADMIN, UserRole.MEMBER]), status: UserStatus.ACTIVE, id: Not(user.id) },
         relations: { profile: true },
       });
     }
+
+    const userIds = users.map((u) => u.id);
+    const profilePicMap = await this.getProfilePicMap(userIds);
+
+    return users.map((u) => ({
+      id: u.id,
+      full_name: u.profile?.full_name || (u.role === UserRole.ADMIN ? 'Admin' : 'Unknown User'),
+      phone: u.phone,
+      role: u.role,
+      status: u.status,
+      profile_pic_url: profilePicMap.get(u.id) || null,
+      profile: u.profile
+        ? {
+            ...u.profile,
+            profile_pic_url: profilePicMap.get(u.id) || null,
+          }
+        : null,
+    }));
   }
 
   async findConversations(user: User): Promise<any[]> {
@@ -116,7 +164,29 @@ export class ChatService implements OnModuleInit {
       },
     });
 
-    return participants.map((p) => {
+    const partnerUserIds = participants
+      .map((p) =>
+        p.conversation.type === ConversationType.DIRECT
+          ? p.conversation.participants.find((cp) => cp.user_id !== user.id)?.user_id
+          : null,
+      )
+      .filter((id): id is string => Boolean(id));
+
+    const profilePicMap = await this.getProfilePicMap(partnerUserIds);
+
+    return participants
+      .filter((p) => {
+        if (p.conversation.type === ConversationType.DIRECT) {
+          const otherParticipant = p.conversation.participants.find(
+            (cp) => cp.user_id !== user.id,
+          );
+          if (!otherParticipant || otherParticipant.user?.status === UserStatus.UNVERIFIED) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map((p) => {
       let partner: any = null;
       if (p.conversation.type === ConversationType.DIRECT) {
         const otherParticipant = p.conversation.participants.find(
@@ -128,7 +198,7 @@ export class ChatService implements OnModuleInit {
             full_name: otherParticipant.user.profile?.full_name || (otherParticipant.user.role === 'ADMIN' ? 'Admin' : 'Unknown User'),
             phone: otherParticipant.user.phone,
             role: otherParticipant.user.role,
-            profile_pic_url: null,
+            profile_pic_url: profilePicMap.get(otherParticipant.user.id) || null,
             isOnline: this.isUserOnline(otherParticipant.user.id),
           };
         }
@@ -199,6 +269,11 @@ export class ChatService implements OnModuleInit {
   ): Promise<any> {
     if (user.id === otherUserId) {
       throw new BadRequestException('Cannot start a conversation with yourself');
+    }
+
+    const otherUser = await this.userRepository.findOne({ where: { id: otherUserId } });
+    if (!otherUser || otherUser.status === UserStatus.UNVERIFIED) {
+      throw new BadRequestException('Cannot start a conversation with an unverified user');
     }
 
     // Find existing DIRECT conversation between these two
