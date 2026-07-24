@@ -444,4 +444,16 @@ export class NotificationsService {
     }
     return device;
   }
+
+  async toggleDeviceStatus(id: string, is_active: boolean, user: User): Promise<UserDevice> {
+    const device = await this.getDeviceById(id, user);
+    device.is_active = is_active;
+    return this.deviceRepository.save(device);
+  }
+
+  async deleteDevice(id: string, user: User): Promise<void> {
+    const device = await this.getDeviceById(id, user);
+    await this.deviceRepository.remove(device);
+  }
 }
+

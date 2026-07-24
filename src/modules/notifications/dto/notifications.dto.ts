@@ -199,3 +199,13 @@ export class NotificationQueryDto extends PaginationQueryDto {
   })
   search?: string;
 }
+
+export class UpdateDeviceStatusDto {
+  @ApiProperty({
+    type: Boolean,
+    description: 'Active status of the device for receiving notifications',
+    example: true,
+  })
+  is_active: boolean;
+}
+

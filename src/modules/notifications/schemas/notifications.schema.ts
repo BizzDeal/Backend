@@ -75,3 +75,21 @@ export const notificationQuerySchema = z.object({
   type: z.nativeEnum(NotificationType).optional(),
   search: z.string().optional(),
 }).merge(paginationQuerySchema);
+
+export const updateDeviceStatusSchema = z.object({
+  is_active: z.union([
+    z.boolean(),
+    z.string().transform((val) => val === 'true' || val === '1'),
+    z.number().transform((val) => val === 1),
+  ]),
+});
+
+
+
+export type CreateNotificationDto = z.infer<typeof createNotificationSchema>;
+export type SendBulkNotificationDto = z.infer<typeof sendBulkNotificationSchema>;
+export type BroadcastRoleNotificationDto = z.infer<typeof broadcastRoleNotificationSchema>;
+export type RegisterDeviceDto = z.infer<typeof registerDeviceSchema>;
+export type UpdateDeviceStatusDto = z.infer<typeof updateDeviceStatusSchema>;
+export type NotificationQueryDto = z.infer<typeof notificationQuerySchema>;
+

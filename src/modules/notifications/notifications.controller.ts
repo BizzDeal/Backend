@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -27,6 +28,7 @@ import {
   SendBulkNotificationDto,
   BroadcastRoleNotificationDto,
   RegisterDeviceDto,
+  UpdateDeviceStatusDto,
   NotificationQueryDto,
 } from './dto/notifications.dto';
 import {
@@ -34,8 +36,10 @@ import {
   sendBulkNotificationSchema,
   broadcastRoleNotificationSchema,
   registerDeviceSchema,
+  updateDeviceStatusSchema,
   notificationQuerySchema,
 } from './schemas/notifications.schema';
+
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
 @ApiTags('Notifications')
@@ -232,6 +236,51 @@ export class NotificationsController {
   async getDeviceById(@Param('id') id: string, @CurrentUser() user: User) {
     return this.notificationsService.getDeviceById(id, user);
   }
+
+  @Patch('devices/:id/status')
+  @Patch('devices/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update Device Active Status',
+    description:
+      'Activates or deactivates a specific registered user device for receiving push notifications.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Device status updated successfully.',
+  })
+  @ApiResponse({ status: 404, description: 'Device not found.' })
+  async toggleDeviceStatus(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateDeviceStatusSchema))
+    body: UpdateDeviceStatusDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.notificationsService.toggleDeviceStatus(
+      id,
+      body.is_active,
+      user,
+    );
+  }
+
+
+  @Delete('devices/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete Registered Device',
+    description:
+      'Removes a specific registered user device by UUID from the database.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Device deleted successfully.',
+  })
+  @ApiResponse({ status: 404, description: 'Device not found.' })
+  async deleteDevice(@Param('id') id: string, @CurrentUser() user: User) {
+    await this.notificationsService.deleteDevice(id, user);
+    return { message: 'Device deleted successfully' };
+  }
+
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
