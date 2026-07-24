@@ -241,6 +241,7 @@ export class AuthService {
       status: UserStatus.UNVERIFIED, // Members are unverified by default until email is confirmed
     });
 
+    try {
       if (dto.phone && dto.reference_code) {
         await this.referralsService.updateReferralOnRegistration(
           dto.reference_code,
@@ -249,58 +250,66 @@ export class AuthService {
         );
       }
 
-    let logoId: string | null = null;
-    if (files?.business_logo?.[0]) {
-      const logoMedia = await this.mediaService.saveFile(
-        files.business_logo[0],
-        newUser.id,
-        MediaPurpose.BUSINESS_LOGO,
-      );
-      logoId = logoMedia.id;
-    }
+      let logoId: string | null = null;
+      if (files?.business_logo?.[0]) {
+        const logoMedia = await this.mediaService.saveFile(
+          files.business_logo[0],
+          newUser.id,
+          MediaPurpose.BUSINESS_LOGO,
+        );
+        logoId = logoMedia.id;
+      }
 
-    // Save the business profile details
-    await this.businessesService.createBusiness({
-      owner_id: newUser.id,
-      category_id: dto.category_id,
-      name: dto.business_name,
-      description: dto.business_description,
-      website: dto.website,
-      gst_number: dto.gst_number,
-      address: dto.business_address,
-      state_id: dto.business_state_id,
-      district_id: dto.business_district_id,
-      logo_id: logoId,
-      status: BusinessStatus.PENDING,
-    });
+      // Save the business profile details
+      await this.businessesService.createBusiness({
+        owner_id: newUser.id,
+        category_id: dto.category_id,
+        name: dto.business_name,
+        description: dto.business_description,
+        website: dto.website,
+        gst_number: dto.gst_number,
+        address: dto.business_address,
+        state_id: dto.business_state_id,
+        district_id: dto.business_district_id,
+        logo_id: logoId,
+        status: BusinessStatus.PENDING,
+      });
 
-    if (files?.profile_pic?.[0]) {
+      if (files?.profile_pic?.[0]) {
+        await this.mediaService.saveFile(
+          files.profile_pic[0],
+          newUser.id,
+          MediaPurpose.PROFILE_PIC,
+        );
+      }
+
       await this.mediaService.saveFile(
-        files.profile_pic[0],
+        files.payment_receipt[0],
         newUser.id,
-        MediaPurpose.PROFILE_PIC,
+        MediaPurpose.PAYMENT_RECEIPT,
       );
+
+      const verificationToken = await this.jwtService.signAsync(
+        { sub: newUser.id, purpose: 'email_verification' },
+        { expiresIn: '1h' },
+      );
+      await this.mailService.sendConfirmationEmail(newUser.email, verificationToken);
+
+      const tokens = await this.generateTokens(newUser);
+
+      const profileRes = await this.usersService.getProfile(newUser.id);
+      return {
+        ...tokens,
+        user: profileRes.data,
+      };
+    } catch (error) {
+      // Rollback logic
+      await this.usersService.deleteUser(newUser.id);
+      if (dto.phone && dto.reference_code) {
+        await this.referralsService.revertReferralRegistration(newUser.id);
+      }
+      throw error;
     }
-
-    await this.mediaService.saveFile(
-      files.payment_receipt[0],
-      newUser.id,
-      MediaPurpose.PAYMENT_RECEIPT,
-    );
-
-    const verificationToken = await this.jwtService.signAsync(
-      { sub: newUser.id, purpose: 'email_verification' },
-      { expiresIn: '1h' },
-    );
-    await this.mailService.sendConfirmationEmail(newUser.email, verificationToken);
-
-    const tokens = await this.generateTokens(newUser);
-
-    const profileRes = await this.usersService.getProfile(newUser.id);
-    return {
-      ...tokens,
-      user: profileRes.data,
-    };
   }
 
   async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {

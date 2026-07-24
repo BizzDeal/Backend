@@ -213,6 +213,10 @@ export class UsersService {
     return updatedUser;
   }
 
+  async deleteUser(id: string): Promise<void> {
+    await this.usersRepository.delete(id);
+  }
+
   async checkUserExist(email: string): Promise<{
     exists: boolean;
   }> {
@@ -430,6 +434,12 @@ export class UsersService {
     });
 
     let business: BusinessProfile | null = null;
+    let primary_business_name: string | null = null;
+    let primary_business_id: string | null = null;
+    let primary_business_category_name: string | null = null;
+    let primary_business_state_name: string | null = null;
+    let primary_business_district_name: string | null = null;
+    
     if (user.role === UserRole.MEMBER) {
       business = await this.businessRepository.findOne({
         where: { owner_id: user.id },
@@ -439,6 +449,18 @@ export class UsersService {
           where: { id: business.logo_id },
         });
         if (logoFile) business_logo_url = logoFile.file_url;
+      }
+    } else if (user.role === UserRole.CUSTOMER && user.profile?.primary_business_id) {
+      const pb = await this.businessRepository.findOne({
+        where: { id: user.profile.primary_business_id },
+        relations: { category: true, state: true, district: true }
+      });
+      if (pb) {
+        primary_business_name = pb.name;
+        primary_business_id = pb.id;
+        primary_business_category_name = pb.category?.name || null;
+        primary_business_state_name = pb.state?.name || null;
+        primary_business_district_name = pb.district?.name || null;
       }
     }
 
@@ -473,6 +495,16 @@ export class UsersService {
         user.role === UserRole.MEMBER ? business?.state_id || null : undefined,
       business_district_id:
         user.role === UserRole.MEMBER ? business?.district_id || null : undefined,
+      primary_business_name:
+        user.role === UserRole.CUSTOMER ? primary_business_name : undefined,
+      primary_business_id:
+        user.role === UserRole.CUSTOMER ? primary_business_id : undefined,
+      primary_business_category_name:
+        user.role === UserRole.CUSTOMER ? primary_business_category_name : undefined,
+      primary_business_state_name:
+        user.role === UserRole.CUSTOMER ? primary_business_state_name : undefined,
+      primary_business_district_name:
+        user.role === UserRole.CUSTOMER ? primary_business_district_name : undefined,
     };
   }
 

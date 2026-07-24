@@ -185,20 +185,29 @@ export class VouchersService {
 
       // Track primary store and customer visits
       if (voucher.customer_id) {
+        let targetBusinessId = voucher.business_id;
+
+        if (user.role === UserRole.MEMBER) {
+          const redeemingBusiness = await manager.findOne(BusinessProfile, { where: { owner_id: user.id } });
+          if (redeemingBusiness) {
+            targetBusinessId = redeemingBusiness.id;
+          }
+        }
+
         const profile = await manager.findOne(Profile, { where: { user_id: voucher.customer_id } });
         if (profile && !profile.primary_business_id) {
-          profile.primary_business_id = voucher.business_id;
+          profile.primary_business_id = targetBusinessId;
           await manager.save(Profile, profile);
         }
 
         let customerBusiness = await manager.findOne(CustomerBusiness, {
-          where: { customer_id: voucher.customer_id, business_id: voucher.business_id },
+          where: { customer_id: voucher.customer_id, business_id: targetBusinessId },
         });
 
         if (!customerBusiness) {
           customerBusiness = manager.create(CustomerBusiness, {
             customer_id: voucher.customer_id,
-            business_id: voucher.business_id,
+            business_id: targetBusinessId,
             total_visits: 1,
             last_visited_at: now,
           });

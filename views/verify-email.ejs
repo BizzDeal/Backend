@@ -94,24 +94,7 @@
       margin: 0 0 30px;
     }
 
-    .btn {
-      display: inline-block;
-      background: var(--bizzdeal-gradient-primary);
-      color: white;
-      text-decoration: none;
-      padding: 12px 24px;
-      border-radius: 14px;
-      font-weight: 500;
-      font-size: 16px;
-      transition: opacity 0.2s;
-      box-shadow: 0 6px 20px rgba(33, 150, 243, 0.35);
-      border: none;
-      cursor: pointer;
-    }
 
-    .btn:hover {
-      opacity: 0.9;
-    }
   </style>
 </head>
 <body>
@@ -131,15 +114,7 @@
     <h1><%= success ? 'Email Verified!' : 'Oops, something went wrong' %></h1>
     <p><%= message %></p>
 
-    <% if (success) { %>
-      <a href="#" class="btn" onclick="closeWindow()">Continue to App</a>
-    <% } %>
   </div>
 
-  <script>
-    function closeWindow() {
-      alert('Return to the BizzDeal app to continue.');
-    }
-  </script>
 </body>
 </html>

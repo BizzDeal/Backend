@@ -1,0 +1,1 @@
+import { Client } from 'pg'; const client = new Client({ connectionString: 'postgres://postgres:postgres@localhost:5432/bizzdeal' }); client.connect().then(() => client.query('SELECT id, full_name, role, status FROM users ORDER BY created_at DESC LIMIT 5')).then(res => { console.log(res.rows); client.end(); }).catch(console.error);

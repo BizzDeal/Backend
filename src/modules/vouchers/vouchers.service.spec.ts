@@ -8,7 +8,11 @@ import {
 import { VouchersService } from './vouchers.service';
 import { Voucher } from './entities/voucher.entity';
 import { Offer } from '../offers/entities/offer.entity';
-import { Business } from '../businesses/entities/business.entity';
+import { BusinessProfile as Business } from '../businesses/entities/business-profile.entity';
+import { Wallet } from '../wallet/entities/wallet.entity';
+import { MediaFile } from '../media/entities/media-file.entity';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { AppEventsGateway } from '../events/events.gateway';
 import {
   VoucherStatus,
   OfferStatus,
@@ -101,6 +105,22 @@ describe('VouchersService', () => {
         {
           provide: getRepositoryToken(User),
           useValue: mockUserRepo,
+        },
+        {
+          provide: getRepositoryToken(Wallet),
+          useValue: { findOne: jest.fn().mockResolvedValue(null) },
+        },
+        {
+          provide: getRepositoryToken(MediaFile),
+          useValue: {},
+        },
+        {
+          provide: AnalyticsService,
+          useValue: { trackVoucherIssued: jest.fn(), trackVoucherRedeemed: jest.fn() },
+        },
+        {
+          provide: AppEventsGateway,
+          useValue: { emitToUser: jest.fn() },
         },
       ],
     }).compile();
@@ -425,6 +445,7 @@ describe('VouchersService', () => {
     beforeEach(() => {
       mockQb = {
         leftJoin: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         getOne: jest.fn().mockResolvedValue({

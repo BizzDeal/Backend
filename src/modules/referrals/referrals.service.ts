@@ -191,4 +191,15 @@ export class ReferralsService {
       await this.referralRepository.save(matchingReferral);
     }
   }
+
+  async revertReferralRegistration(referredUserId: string): Promise<void> {
+    const referral = await this.referralRepository.findOne({
+      where: { referred_user_id: referredUserId },
+    });
+    if (referral) {
+      referral.referred_user_id = null;
+      referral.status = ReferralStatus.PENDING;
+      await this.referralRepository.save(referral);
+    }
+  }
 }
