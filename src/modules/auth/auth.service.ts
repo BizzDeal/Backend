@@ -135,6 +135,23 @@ export class AuthService {
       );
     }
 
+    if (user.role === UserRole.MEMBER) {
+      if (user.status === UserStatus.UNVERIFIED) {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Email verification required.',
+          errorCode: 'MEMBER_UNVERIFIED'
+        });
+      }
+      if (user.status === UserStatus.PENDING) {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Account pending admin approval.',
+          errorCode: 'MEMBER_PENDING'
+        });
+      }
+    }
+
     const isPinValid = await bcrypt.compare(dto.pin, user.pin_hash);
     if (!isPinValid) {
       throw new UnauthorizedException('Invalid email or PIN');
