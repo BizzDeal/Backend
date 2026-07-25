@@ -184,11 +184,13 @@ export class AuthService {
     refreshToken: string;
     user: Omit<User, 'pin_hash'>;
   }> {
-    if (!files?.payment_receipt?.[0]) {
-      throw new BadRequestException(
-        'Payment receipt file is mandatory for member registration',
-      );
-    }
+    // Payment receipt file upload is now optional
+    // if (!files?.payment_receipt?.[0]) {
+    //   throw new BadRequestException(
+    //     'Payment receipt file is mandatory for member registration',
+    //   );
+    // }
+
 
     // Check if email is already registered
     const existingUser = await this.usersService.findOneByEmail(dto.email);
@@ -300,11 +302,13 @@ export class AuthService {
         );
       }
 
-      await this.mediaService.saveFile(
-        files.payment_receipt[0],
-        newUser.id,
-        MediaPurpose.PAYMENT_RECEIPT,
-      );
+      if (files?.payment_receipt?.[0]) {
+        await this.mediaService.saveFile(
+          files.payment_receipt[0],
+          newUser.id,
+          MediaPurpose.PAYMENT_RECEIPT,
+        );
+      }
 
       const verificationToken = await this.jwtService.signAsync(
         { sub: newUser.id, purpose: 'email_verification' },

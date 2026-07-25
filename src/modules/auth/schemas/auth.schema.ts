@@ -169,12 +169,12 @@ export class RegisterMemberDto {
   })
   profile_pic?: any;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: 'string',
     format: 'binary',
-    description: 'Mandatory payment receipt image/document upload',
+    description: 'Optional payment receipt image/document upload',
   })
-  payment_receipt: any;
+  payment_receipt?: any;
 
   @ApiPropertyOptional({
     type: 'string',

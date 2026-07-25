@@ -1,10 +1,12 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MediaFile } from './entities/media-file.entity';
 import { FirebaseService } from '../../common/firebase/firebase.service';
 import { MediaType, MediaPurpose } from '../../common/enums';
+import { FILE_SIZE_LIMITS } from '../../common/constants/file-limit.constants';
 import { randomUUID } from 'crypto';
+import sharp from 'sharp';
 
 @Injectable()
 export class MediaService {
@@ -18,27 +20,71 @@ export class MediaService {
 
   /**
    * Uploads a file to Firebase Storage and records its metadata in the DB.
+   * Enforces file size limits and compresses image uploads authoritatively to WebP format via sharp.
    */
   async saveFile(
     file: Express.Multer.File,
     userId: string,
     purpose: MediaPurpose = MediaPurpose.GENERAL,
   ): Promise<MediaFile> {
+    if (!file) {
+      throw new BadRequestException('No file provided for upload.');
+    }
+
+    const isAudio = file.mimetype ? file.mimetype.startsWith('audio/') : false;
+    const maxAllowedSize = isAudio
+      ? FILE_SIZE_LIMITS.MAX_AUDIO_FILE_SIZE_BYTES
+      : FILE_SIZE_LIMITS.MAX_GENERAL_FILE_SIZE_BYTES;
+
+    if (file.size > maxAllowedSize) {
+      const limitMB = maxAllowedSize / (1024 * 1024);
+      const actualMB = (file.size / (1024 * 1024)).toFixed(2);
+      throw new BadRequestException(
+        `File size (${actualMB} MB) exceeds the maximum allowed limit of ${limitMB} MB`,
+      );
+    }
+
     const bucket = this.firebaseService.getBucket();
     const uniqueId = randomUUID();
     const cleanFileName = (file.originalname || 'file').replace(
       /[^a-zA-Z0-9.\-_]/g,
       '_',
     );
-    const destinationPath = `uploads/${userId}/${purpose}/${uniqueId}-${cleanFileName}`;
+
+    let uploadBuffer = file.buffer;
+    let uploadMimeType = file.mimetype;
+    let uploadSize = file.size;
+
+    // Authoritative WebP Image Compression via sharp (excluding vector SVGs)
+    if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/svg+xml') {
+      try {
+        const compressedBuffer = await sharp(file.buffer)
+          .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toBuffer();
+
+        uploadBuffer = compressedBuffer;
+        uploadMimeType = 'image/webp';
+        uploadSize = compressedBuffer.length;
+      } catch (err) {
+        this.logger.warn(
+          `Image compression failed for ${file.originalname}, falling back to raw buffer: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
+
+    const dotIndex = cleanFileName.lastIndexOf('.');
+    const baseFileName = dotIndex > 0 ? cleanFileName.substring(0, dotIndex) : cleanFileName;
+    const finalFileName = uploadMimeType === 'image/webp' ? `${baseFileName}.webp` : cleanFileName;
+
+    const destinationPath = `uploads/${userId}/${purpose}/${uniqueId}-${finalFileName}`;
 
     const fileRef = bucket.file(destinationPath);
-
     const downloadToken = randomUUID();
 
-    await fileRef.save(file.buffer, {
+    await fileRef.save(uploadBuffer, {
       metadata: {
-        contentType: file.mimetype,
+        contentType: uploadMimeType,
         metadata: {
           firebaseStorageDownloadTokens: downloadToken,
         },
@@ -74,8 +120,8 @@ export class MediaService {
       public_id: destinationPath,
       file_type: fileType,
       purpose,
-      mime_type: file.mimetype,
-      file_size: file.size,
+      mime_type: uploadMimeType,
+      file_size: uploadSize,
     });
 
     return this.mediaRepository.save(mediaRecord);

@@ -180,10 +180,13 @@ export class UsersController {
     description: 'Profile updated successfully.',
   })
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'profile_pic', maxCount: 1 },
-      { name: 'business_logo', maxCount: 1 },
-    ]),
+    FileFieldsInterceptor(
+      [
+        { name: 'profile_pic', maxCount: 1 },
+        { name: 'business_logo', maxCount: 1 },
+      ],
+      { limits: { fileSize: 10 * 1024 * 1024 } },
+    ),
   )
   async updateProfile(
     @CurrentUser() user: User,

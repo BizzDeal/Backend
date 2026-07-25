@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig from './config/database.config';
@@ -23,12 +25,34 @@ import { EventsModule } from './modules/events/events.module';
 import { PaymentSettingsModule } from './modules/payment-settings/payment-settings.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { MailModule } from './modules/mail/mail.module';
+import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [databaseConfig],
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          name: 'default',
+          ttl: configService.get<number>('THROTTLE_TTL') || 60000,
+          limit: configService.get<number>('THROTTLE_LIMIT') || 120,
+        },
+        {
+          name: 'auth',
+          ttl: configService.get<number>('THROTTLE_AUTH_TTL') || 60000,
+          limit: configService.get<number>('THROTTLE_AUTH_LIMIT') || 5,
+        },
+        {
+          name: 'upload',
+          ttl: configService.get<number>('THROTTLE_UPLOAD_TTL') || 60000,
+          limit: configService.get<number>('THROTTLE_UPLOAD_LIMIT') || 10,
+        },
+      ],
     }),
     DatabaseModule,
     FirebaseModule,
@@ -52,6 +76,13 @@ import { MailModule } from './modules/mail/mail.module';
     SettingsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
+

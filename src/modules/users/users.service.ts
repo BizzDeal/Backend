@@ -411,6 +411,89 @@ export class UsersService {
     };
   }
 
+  private calculateProfileCompletion(
+    user: User,
+    profilePicUrl: string | null,
+    businessLogoUrl: string | null,
+    business: BusinessProfile | null
+  ) {
+    let completion_score = 0;
+    const missing_fields: string[] = [];
+    const completed_fields: string[] = [];
+
+    const hasFullName = user.profile?.full_name && user.profile.full_name !== 'Customer' && user.profile.full_name.trim().length >= 2;
+    const hasPhone = !!user.phone && user.phone.trim().length >= 10;
+    const hasEmail = !!user.email && !user.email.includes('@bizzdeal.com');
+    const hasState = !!user.profile?.state_id;
+    
+    // Optional Fields
+    const hasDistrict = !!user.profile?.district_id;
+    const hasAddress = !!user.profile?.address && user.profile.address !== 'Not Provided';
+    const hasProfilePic = !!profilePicUrl;
+    const hasWhatsapp = !!user.profile?.whatsapp && user.profile.whatsapp.trim().length >= 10;
+
+    let isPass = false;
+
+    if (user.role === UserRole.CUSTOMER) {
+      if (hasFullName) { completed_fields.push('full_name'); completion_score += 25; } else { missing_fields.push('full_name'); }
+      if (hasPhone) { completed_fields.push('phone'); completion_score += 25; } else { missing_fields.push('phone'); }
+      if (hasEmail) { completed_fields.push('email'); completion_score += 25; } else { missing_fields.push('email'); }
+      if (hasState) { completed_fields.push('state_id'); completion_score += 25; } else { missing_fields.push('state_id'); }
+
+      // Optional fields just for completion list (not missing list)
+      if (hasDistrict) { completed_fields.push('district_id'); }
+      if (hasAddress) { completed_fields.push('address'); }
+      if (hasProfilePic) { completed_fields.push('profile_picture'); }
+
+      completion_score = Math.min(completion_score, 100);
+      isPass = !!(hasFullName && hasPhone && hasEmail && hasState);
+    } else {
+      // MEMBER
+      const hasBusinessName = business?.name && business.name.trim().length >= 2;
+      const hasCategory = !!business?.category_id;
+      const hasBusinessState = !!business?.state_id;
+      const hasBusinessDesc = business?.description && business.description.trim().length >= 5;
+      
+      // Optional Business Fields
+      const hasBusinessDistrict = !!business?.district_id;
+      const hasBusinessAddress = !!business?.address;
+      const hasLogo = !!businessLogoUrl;
+      const hasWebsite = !!business?.website;
+      const hasGst = !!business?.gst_number;
+
+      if (hasFullName) { completed_fields.push('full_name'); completion_score += 12.5; } else { missing_fields.push('full_name'); }
+      if (hasPhone) { completed_fields.push('phone'); completion_score += 12.5; } else { missing_fields.push('phone'); }
+      if (hasEmail) { completed_fields.push('email'); completion_score += 12.5; } else { missing_fields.push('email'); }
+      if (hasState) { completed_fields.push('state_id'); completion_score += 12.5; } else { missing_fields.push('state_id'); }
+      
+      if (hasBusinessName) { completed_fields.push('business_name'); completion_score += 12.5; } else { missing_fields.push('business_name'); }
+      if (hasCategory) { completed_fields.push('category_id'); completion_score += 12.5; } else { missing_fields.push('category_id'); }
+      if (hasBusinessState) { completed_fields.push('business_state_id'); completion_score += 12.5; } else { missing_fields.push('business_state_id'); }
+      if (hasBusinessDesc) { completed_fields.push('business_description'); completion_score += 12.5; } else { missing_fields.push('business_description'); }
+
+      // Optional fields
+      if (hasDistrict) { completed_fields.push('district_id'); }
+      if (hasAddress) { completed_fields.push('address'); }
+      if (hasWhatsapp) { completed_fields.push('whatsapp'); }
+      if (hasBusinessDistrict) { completed_fields.push('business_district_id'); }
+      if (hasBusinessAddress) { completed_fields.push('business_address'); }
+      if (hasLogo) { completed_fields.push('business_logo'); }
+      if (hasWebsite) { completed_fields.push('website'); }
+      if (hasGst) { completed_fields.push('gst_number'); }
+
+      completion_score = Math.min(Math.round(completion_score), 100);
+      isPass = !!(hasFullName && hasPhone && hasEmail && hasState && hasBusinessName && hasCategory && hasBusinessState && hasBusinessDesc);
+    }
+
+    return {
+      completion_score: Math.round(completion_score),
+      grade: isPass ? 'PASS' : 'INCOMPLETE',
+      is_profile_completed: isPass,
+      missing_fields,
+      completed_fields,
+    };
+  }
+
   private async buildUserProfileData(user: User) {
     const mediaFiles = await this.mediaRepository.find({
       where: {
@@ -468,9 +551,12 @@ export class UsersService {
       }
     }
 
+    const completionData = this.calculateProfileCompletion(user, profile_pic_url, business_logo_url, business);
+
     const { pin_hash: _pin_hash, ...userWithoutPin } = user;
     return {
       ...userWithoutPin,
+      ...completionData,
       full_name: user.profile?.full_name || null,
       whatsapp: user.profile?.whatsapp || null,
       address: user.profile?.address || null,

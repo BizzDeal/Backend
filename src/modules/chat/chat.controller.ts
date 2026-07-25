@@ -241,7 +241,11 @@ export class ChatController {
 
   @Post('upload')
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
   @ApiOperation({
     summary: 'Upload Chat Media File',
     description:

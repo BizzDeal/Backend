@@ -71,7 +71,11 @@ export class OffersController {
     status: 403,
     description: 'Forbidden: Cannot create offer for another user business.',
   })
-  @UseInterceptors(FileInterceptor('offer_image'))
+  @UseInterceptors(
+    FileInterceptor('offer_image', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
   async create(
     @CurrentUser() user: User,
     @Body(new ZodValidationPipe(createOfferSchema)) dto: CreateOfferDto,
@@ -319,7 +323,11 @@ export class OffersController {
     status: 403,
     description: 'Forbidden: Insufficient rights.',
   })
-  @UseInterceptors(FileInterceptor('offer_image'))
+  @UseInterceptors(
+    FileInterceptor('offer_image', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
   async update(
     @Param('id') id: string,
     @CurrentUser() user: User,

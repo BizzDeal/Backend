@@ -385,6 +385,25 @@ describe('AuthController (e2e)', () => {
       expect(res.body.user.phone).toBe('9999000008');
     });
 
+    it('should register a member successfully without payment_receipt file upload', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register-member')
+        .field('full_name', 'No Receipt Entrepreneur')
+        .field('phone', '9999000009')
+        .field('pin', '5678')
+        .field('email', 'noreceipt.entrepreneur@example.com')
+        .field('address', '789 No Receipt Way, Hyderabad')
+        .field('state_id', testStateId)
+        .field('district_id', testDistrictId)
+        .field('business_name', 'No Receipt Business Enterprise')
+        .field('category_id', testCategoryId)
+        .field('business_description', 'Providing IT no receipt services')
+        .expect(201);
+
+      expect(res.body.accessToken).toBeDefined();
+      expect(res.body.user.phone).toBe('9999000009');
+    });
+
     it('should register a member successfully and update the referral record when a valid reference_code is given', async () => {
       // 1. Create a referrer user
       const referrer = userRepository.create({

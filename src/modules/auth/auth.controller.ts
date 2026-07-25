@@ -29,6 +29,7 @@ import { AuthService } from './auth.service';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Throttle } from '@nestjs/throttler';
 import {
   loginSchema,
   registerMemberSchema,
@@ -51,6 +52,11 @@ import {
 } from './schemas/auth.schema';
 
 @ApiTags('Authentication')
+@Throttle({ auth: { limit: 5, ttl: 60000 }, default: { limit: 5, ttl: 60000 } })
+@ApiResponse({
+  status: 429,
+  description: 'Too many requests. Rate limit exceeded.',
+})
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -130,7 +136,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register Member / Entrepreneur',
     description:
-      'Registers a new member account with optional profile_pic and mandatory payment_receipt file uploads. An email verification link is sent to the user. Status is set to UNVERIFIED until the link is clicked, after which it becomes PENDING for admin approval.',
+      'Registers a new member account with optional profile_pic, business_logo, and payment_receipt file uploads. An email verification link is sent to the user. Status is set to UNVERIFIED until the link is clicked, after which it becomes PENDING for admin approval.',
   })
   @ApiResponse({
     status: 201,
