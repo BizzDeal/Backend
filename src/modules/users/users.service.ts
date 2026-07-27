@@ -241,6 +241,9 @@ export class UsersService {
     if (query.districts) {
       qb.andWhere('profile.district_id IN (:...districts)', { districts: query.districts.split(',') });
     }
+    if (query.exclude_districts) {
+      qb.andWhere('profile.district_id NOT IN (:...exclude_districts)', { exclude_districts: query.exclude_districts.split(',') });
+    }
     if (query.search) {
       qb.andWhere(
         '(profile.full_name ILIKE :kw OR user.email ILIKE :kw OR user.phone ILIKE :kw OR profile.whatsapp ILIKE :kw)',
@@ -302,6 +305,7 @@ export class UsersService {
 
     const data = members.map((user) => {
       const { pin_hash: _pin_hash, ...userWithoutPin } = user;
+      const b = businessMap.get(user.id);
       return {
         ...userWithoutPin,
         full_name: user.profile?.full_name || null,
@@ -311,7 +315,12 @@ export class UsersService {
         district_id: user.profile?.district_id || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
         payment_receipt_url: receiptMap.get(user.id) || null,
-        business_id: businessMap.get(user.id)?.id || null,
+        business_id: b?.id || null,
+        businessProfile: b ? {
+          business_name: b.name,
+          description: b.description,
+          category_id: b.category_id
+        } : undefined
       };
     });
 
@@ -435,18 +444,32 @@ export class UsersService {
     let isPass = false;
 
     if (user.role === UserRole.CUSTOMER) {
-      if (hasFullName) { completed_fields.push('full_name'); completion_score += 25; } else { missing_fields.push('full_name'); }
-      if (hasPhone) { completed_fields.push('phone'); completion_score += 25; } else { missing_fields.push('phone'); }
-      if (hasEmail) { completed_fields.push('email'); completion_score += 25; } else { missing_fields.push('email'); }
-      if (hasState) { completed_fields.push('state_id'); completion_score += 25; } else { missing_fields.push('state_id'); }
+      const customerFields = [
+        { name: 'full_name', has: hasFullName, mandatory: true },
+        { name: 'phone', has: hasPhone, mandatory: true },
+        { name: 'email', has: hasEmail, mandatory: true },
+        { name: 'state_id', has: hasState, mandatory: true },
+        { name: 'district_id', has: hasDistrict, mandatory: false },
+        { name: 'address', has: hasAddress, mandatory: false },
+        { name: 'profile_picture', has: hasProfilePic, mandatory: false },
+        { name: 'whatsapp', has: hasWhatsapp, mandatory: false }
+      ];
 
-      // Optional fields just for completion list (not missing list)
-      if (hasDistrict) { completed_fields.push('district_id'); }
-      if (hasAddress) { completed_fields.push('address'); }
-      if (hasProfilePic) { completed_fields.push('profile_picture'); }
+      let mandatoryPass = true;
+      let scoreIncrement = 100 / customerFields.length;
 
-      completion_score = Math.min(completion_score, 100);
-      isPass = !!(hasFullName && hasPhone && hasEmail && hasState);
+      for (const field of customerFields) {
+        if (field.has) {
+          completed_fields.push(field.name);
+          completion_score += scoreIncrement;
+        } else if (field.mandatory) {
+          missing_fields.push(field.name);
+          mandatoryPass = false;
+        }
+      }
+
+      completion_score = Math.min(Math.round(completion_score), 100);
+      isPass = mandatoryPass;
     } else {
       // MEMBER
       const hasBusinessName = business?.name && business.name.trim().length >= 2;
@@ -461,28 +484,41 @@ export class UsersService {
       const hasWebsite = !!business?.website;
       const hasGst = !!business?.gst_number;
 
-      if (hasFullName) { completed_fields.push('full_name'); completion_score += 12.5; } else { missing_fields.push('full_name'); }
-      if (hasPhone) { completed_fields.push('phone'); completion_score += 12.5; } else { missing_fields.push('phone'); }
-      if (hasEmail) { completed_fields.push('email'); completion_score += 12.5; } else { missing_fields.push('email'); }
-      if (hasState) { completed_fields.push('state_id'); completion_score += 12.5; } else { missing_fields.push('state_id'); }
-      
-      if (hasBusinessName) { completed_fields.push('business_name'); completion_score += 12.5; } else { missing_fields.push('business_name'); }
-      if (hasCategory) { completed_fields.push('category_id'); completion_score += 12.5; } else { missing_fields.push('category_id'); }
-      if (hasBusinessState) { completed_fields.push('business_state_id'); completion_score += 12.5; } else { missing_fields.push('business_state_id'); }
-      if (hasBusinessDesc) { completed_fields.push('business_description'); completion_score += 12.5; } else { missing_fields.push('business_description'); }
+      const memberFields = [
+        { name: 'full_name', has: hasFullName, mandatory: true },
+        { name: 'phone', has: hasPhone, mandatory: true },
+        { name: 'email', has: hasEmail, mandatory: true },
+        { name: 'state_id', has: hasState, mandatory: true },
+        { name: 'business_name', has: hasBusinessName, mandatory: true },
+        { name: 'category_id', has: hasCategory, mandatory: true },
+        { name: 'business_state_id', has: hasBusinessState, mandatory: true },
+        { name: 'business_description', has: hasBusinessDesc, mandatory: true },
+        { name: 'whatsapp', has: hasWhatsapp, mandatory: false },
+        { name: 'district_id', has: hasDistrict, mandatory: false },
+        { name: 'address', has: hasAddress, mandatory: false },
+        { name: 'profile_picture', has: hasProfilePic, mandatory: false },
+        { name: 'business_district_id', has: hasBusinessDistrict, mandatory: false },
+        { name: 'business_address', has: hasBusinessAddress, mandatory: false },
+        { name: 'business_logo', has: hasLogo, mandatory: false },
+        { name: 'website', has: hasWebsite, mandatory: false },
+        { name: 'gst_number', has: hasGst, mandatory: false },
+      ];
 
-      // Optional fields
-      if (hasDistrict) { completed_fields.push('district_id'); }
-      if (hasAddress) { completed_fields.push('address'); }
-      if (hasWhatsapp) { completed_fields.push('whatsapp'); }
-      if (hasBusinessDistrict) { completed_fields.push('business_district_id'); }
-      if (hasBusinessAddress) { completed_fields.push('business_address'); }
-      if (hasLogo) { completed_fields.push('business_logo'); }
-      if (hasWebsite) { completed_fields.push('website'); }
-      if (hasGst) { completed_fields.push('gst_number'); }
+      let mandatoryPass = true;
+      let scoreIncrement = 100 / memberFields.length;
+
+      for (const field of memberFields) {
+        if (field.has) {
+          completed_fields.push(field.name);
+          completion_score += scoreIncrement;
+        } else if (field.mandatory) {
+          missing_fields.push(field.name);
+          mandatoryPass = false;
+        }
+      }
 
       completion_score = Math.min(Math.round(completion_score), 100);
-      isPass = !!(hasFullName && hasPhone && hasEmail && hasState && hasBusinessName && hasCategory && hasBusinessState && hasBusinessDesc);
+      isPass = mandatoryPass;
     }
 
     return {

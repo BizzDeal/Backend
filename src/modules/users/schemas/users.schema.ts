@@ -26,7 +26,7 @@ export const updateProfileSchema = z.object({
   email: z.string().email('Invalid email address').optional().nullable().or(z.literal('')),
   address: z.string().optional().nullable().or(z.literal('')),
   state_id: z.string().uuid().optional().nullable().or(z.literal('')),
-  district_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  district_id: z.string().uuid('Valid district UUID is required'),
   category_id: z.string().uuid().optional().or(z.literal('')),
   business_name: z.string().min(2).optional().or(z.literal('')),
   business_description: z.string().min(5).optional().or(z.literal('')),
@@ -34,7 +34,7 @@ export const updateProfileSchema = z.object({
   gst_number: z.string().optional().nullable().or(z.literal('')),
   business_address: z.string().optional().nullable().or(z.literal('')),
   business_state_id: z.string().uuid().optional().nullable().or(z.literal('')),
-  business_district_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  business_district_id: z.string().uuid('Valid district UUID is required').optional().nullable().or(z.literal('')),
 });
 
 export class UpdateProfileDto {
@@ -80,12 +80,12 @@ export class UpdateProfileDto {
   })
   state_id?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: String,
     description: 'UUID of the district',
     example: 'b2222222-3333-4444-5555-666666666666',
   })
-  district_id?: string;
+  district_id: string;
 
   @ApiPropertyOptional({
     type: String,
@@ -185,6 +185,11 @@ export class UserQueryDto extends PaginationQueryDto {
     description: 'Comma-separated list of district UUIDs to filter data by region.',
   })
   districts?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated list of district UUIDs to exclude from results.',
+  })
+  exclude_districts?: string;
 
   @ApiPropertyOptional({
     description: 'Search term for name, email, or phone',

@@ -218,6 +218,90 @@ export class ChatService implements OnModuleInit {
     });
   }
 
+  async getChatList(user: User, search?: string, page: number = 1, limit: number = 20) {
+    const [contacts, conversations] = await Promise.all([
+      this.getContacts(user, search),
+      this.findConversations(user)
+    ]);
+    
+    // Merge contacts and conversations logic similar to frontend
+    const map = new Map<string, any>();
+    contacts.forEach(contact => {
+      map.set(contact.id, {
+        contact,
+        conversationId: null,
+        unread_count: 0,
+        last_message_at: null,
+        isGroup: false,
+      });
+    });
+
+    conversations.forEach(conv => {
+      if (conv.type === 'GROUP') {
+        map.set('group_' + conv.id, {
+          contact: { full_name: conv.name || 'Community Group', role: 'GROUP', profile_pic_url: null, id: 'group_' + conv.id },
+          conversationId: conv.id,
+          unread_count: conv.unread_count,
+          last_message_at: conv.last_message_at,
+          isGroup: true,
+          isDefaultGroup: conv.is_default_group,
+        });
+      } else if (conv.partner) {
+        if (map.has(conv.partner.id)) {
+          const item = map.get(conv.partner.id)!;
+          item.conversationId = conv.id;
+          item.unread_count = conv.unread_count;
+          item.last_message_at = conv.last_message_at;
+          if (conv.partner.profile_pic_url) {
+            item.contact.profile_pic_url = conv.partner.profile_pic_url;
+          }
+        } else {
+          map.set(conv.partner.id, {
+            contact: conv.partner,
+            conversationId: conv.id,
+            unread_count: conv.unread_count,
+            last_message_at: conv.last_message_at,
+            isGroup: false,
+          });
+        }
+      }
+    });
+
+    let unifiedList = Array.from(map.values()).sort((a, b) => {
+      if (a.isGroup && !b.isGroup) return -1;
+      if (b.isGroup && !a.isGroup) return 1;
+
+      if (a.contact.role === 'ADMIN' && b.contact.role !== 'ADMIN') return -1;
+      if (b.contact.role === 'ADMIN' && a.contact.role !== 'ADMIN') return 1;
+      
+      const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+      const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    if (search) {
+      const q = search.toLowerCase().trim();
+      unifiedList = unifiedList.filter(item => 
+        (item.contact?.full_name && item.contact.full_name.toLowerCase().includes(q)) ||
+        (item.contact?.phone && item.contact.phone.toLowerCase().includes(q))
+      );
+    }
+
+    const totalItems = unifiedList.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const paginatedItems = unifiedList.slice((page - 1) * limit, page * limit);
+
+    return {
+      data: paginatedItems,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages
+      }
+    };
+  }
+
   async getConversationById(id: string, user: User): Promise<ChatConversation> {
     const conv = await this.conversationRepository.findOne({
       where: { id },
@@ -271,34 +355,56 @@ export class ChatService implements OnModuleInit {
       throw new BadRequestException('Cannot start a conversation with yourself');
     }
 
-    const otherUser = await this.userRepository.findOne({ where: { id: otherUserId } });
+    const otherUser = await this.userRepository.findOne({
+      where: { id: otherUserId },
+      relations: { profile: true },
+    });
     if (!otherUser || otherUser.status === UserStatus.UNVERIFIED) {
       throw new BadRequestException('Cannot start a conversation with an unverified user');
     }
 
     // Find existing DIRECT conversation between these two
-    const existing = await this.conversationRepository.createQueryBuilder('conv')
+    let conv = await this.conversationRepository.createQueryBuilder('conv')
       .innerJoin('conv.participants', 'p1', 'p1.user_id = :userId', { userId: user.id })
       .innerJoin('conv.participants', 'p2', 'p2.user_id = :otherId', { otherId: otherUserId })
       .where('conv.type = :type', { type: ConversationType.DIRECT })
       .getOne();
 
-    if (existing) {
-      return existing;
+    if (!conv) {
+      // Create new
+      conv = this.conversationRepository.create({
+        type: ConversationType.DIRECT,
+      });
+      const savedConv = await this.conversationRepository.save(conv);
+
+      await this.participantRepository.save([
+        this.participantRepository.create({ conversation_id: savedConv.id, user_id: user.id }),
+        this.participantRepository.create({ conversation_id: savedConv.id, user_id: otherUserId }),
+      ]);
+      conv = savedConv;
     }
 
-    // Create new
-    const conv = this.conversationRepository.create({
-      type: ConversationType.DIRECT,
-    });
-    const savedConv = await this.conversationRepository.save(conv);
+    const profilePicMap = await this.getProfilePicMap([otherUserId]);
+    const partner = {
+      id: otherUser.id,
+      full_name: otherUser.profile?.full_name || (otherUser.role === UserRole.ADMIN ? 'Admin' : 'Unknown User'),
+      phone: otherUser.phone,
+      role: otherUser.role,
+      profile_pic_url: profilePicMap.get(otherUser.id) || null,
+      isOnline: this.isUserOnline(otherUser.id),
+    };
 
-    await this.participantRepository.save([
-      this.participantRepository.create({ conversation_id: savedConv.id, user_id: user.id }),
-      this.participantRepository.create({ conversation_id: savedConv.id, user_id: otherUserId }),
-    ]);
-
-    return savedConv;
+    return {
+      id: conv.id,
+      type: conv.type,
+      name: conv.name,
+      is_default_group: conv.is_default_group,
+      last_message_at: conv.last_message_at,
+      created_at: conv.created_at,
+      updated_at: conv.updated_at,
+      unread_count: 0,
+      partner,
+    };
   }
 
   async sendMessage(

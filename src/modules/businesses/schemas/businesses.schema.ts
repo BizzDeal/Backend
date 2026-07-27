@@ -11,7 +11,7 @@ export const updateBusinessSchema = z.object({
   gst_number: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   state_id: z.string().uuid().optional().nullable(),
-  district_id: z.string().uuid().optional().nullable(),
+  district_id: z.string().uuid('Valid district UUID is required'),
 });
 
 export class UpdateBusinessDto {
@@ -58,11 +58,11 @@ export class UpdateBusinessDto {
   })
   state_id?: string | null;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: String,
     description: 'UUID of the district',
   })
-  district_id?: string | null;
+  district_id: string;
 
   @ApiPropertyOptional({
     type: 'string',

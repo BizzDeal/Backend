@@ -39,7 +39,10 @@ import {
   createConversationSchema,
   sendMessageSchema,
   editMessageSchema,
+  chatQuerySchema,
+  ChatQueryDto,
 } from './schemas/chat.schema';
+import { Query } from '@nestjs/common';
 
 @ApiTags('Chat')
 @Controller('chat')
@@ -98,6 +101,33 @@ export class ChatController {
   })
   async findConversations(@CurrentUser() user: User) {
     return this.chatService.findConversations(user);
+  }
+
+  @Get('list')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List Paginated Chat Contacts & Conversations',
+    description:
+      'Retrieves unified list of chat contacts and conversations with pagination.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list returned successfully.',
+  })
+  async getChatList(
+    @Query() queryParams: ChatQueryDto,
+    @CurrentUser() user: User
+  ) {
+    let query: ChatQueryDto = { page: 1, limit: 20 };
+    try {
+      query = chatQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.chatService.getChatList(user, query.search, query.page, query.limit);
   }
 
   @Get('conversations/:id')

@@ -238,13 +238,6 @@ export class AuthService {
     }
 
 
-      if (dto.phone && dto.reference_code) {
-        await this.referralsService.validateReferralCode(
-          dto.reference_code,
-          dto.phone,
-        );
-      }
-
     const pinHash = await bcrypt.hash(dto.pin, 10);
 
     const newUser = await this.usersService.create({
@@ -261,14 +254,6 @@ export class AuthService {
     });
 
     try {
-      if (dto.phone && dto.reference_code) {
-        await this.referralsService.updateReferralOnRegistration(
-          dto.reference_code,
-          dto.phone,
-          newUser.id,
-        );
-      }
-
       let logoId: string | null = null;
       if (files?.business_logo?.[0]) {
         const logoMedia = await this.mediaService.saveFile(
@@ -326,9 +311,6 @@ export class AuthService {
     } catch (error) {
       // Rollback logic
       await this.usersService.deleteUser(newUser.id);
-      if (dto.phone && dto.reference_code) {
-        await this.referralsService.revertReferralRegistration(newUser.id);
-      }
       throw error;
     }
   }

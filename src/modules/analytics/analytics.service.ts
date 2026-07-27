@@ -14,7 +14,6 @@ import {
   UserStatus,
   VoucherStatus,
   WalletTransactionType,
-  ReferralStatus,
 } from '../../common/enums';
 import {
   AdminAnalyticsOverviewDto,
@@ -416,14 +415,7 @@ export class AnalyticsService implements OnModuleInit {
         return 'EXISTS ' + sub.getQuery();
       }).getCount();
       
-    const convRef = await this.referralRepo.createQueryBuilder('ref')
-      .leftJoin('ref.referrer', 'referrer')
-      .where('ref.status = :status', { status: ReferralStatus.REWARDED })
-      .andWhere((qb) => {
-        const sub = qb.subQuery().select('1').from(User, 'u2').where('u2.id = ref.referrer_id');
-        applyLocationFilter(sub, 'u2');
-        return 'EXISTS ' + sub.getQuery();
-      }).getCount();
+    const convRef = 0; // Temporarily 0 since old statuses are removed
       
     const conversionRate = totalRef > 0 ? Number(((convRef / totalRef) * 100).toFixed(1)) : 0;
 
@@ -665,9 +657,7 @@ export class AnalyticsService implements OnModuleInit {
 
     // 5. Count Referrals
     const totalReferrals = await this.referralRepo.count();
-    const convertedReferrals = await this.referralRepo.count({
-      where: { status: ReferralStatus.REWARDED },
-    });
+    const convertedReferrals = 0; // Temporarily 0 since old statuses are removed
 
     let kpi = await this.kpiRepo.findOne({ where: { id: 'PLATFORM_SUMMARY' } });
     if (!kpi) {

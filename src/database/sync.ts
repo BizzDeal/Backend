@@ -60,6 +60,19 @@ async function fixEnumsBeforeSync() {
     logger.log('Dropping old chat tables to wipe data and apply new schema...');
     await ds.query(`DROP TABLE IF EXISTS "chat_messages" CASCADE;`);
     await ds.query(`DROP TABLE IF EXISTS "chat_conversations" CASCADE;`);
+
+    logger.log('Fixing null district_ids in profiles and business_profiles...');
+    const apState = await ds.query(`SELECT id FROM states WHERE name = 'Andhra Pradesh' LIMIT 1`);
+    if (apState && apState.length > 0) {
+      const stateId = apState[0].id;
+      const apDistrict = await ds.query(`SELECT id FROM districts WHERE state_id = $1 LIMIT 1`, [stateId]);
+      if (apDistrict && apDistrict.length > 0) {
+        const districtId = apDistrict[0].id;
+        await ds.query(`UPDATE profiles SET state_id = $1, district_id = $2 WHERE district_id IS NULL;`, [stateId, districtId]);
+        await ds.query(`UPDATE business_profiles SET state_id = $1, district_id = $2 WHERE district_id IS NULL;`, [stateId, districtId]);
+      }
+    }
+
     await ds.query(`NOTIFY pgrst, 'reload schema';`);
     logger.log('Pre-sync adjustments and schema cleanup successful.');
   } catch (err: any) {

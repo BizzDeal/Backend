@@ -28,7 +28,7 @@ export const registerMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
   address: z.string().min(5, 'Address must be at least 5 characters if provided').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   state_id: z.string().uuid('Valid state UUID is required'),
-  district_id: z.string().uuid('Valid district UUID is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  district_id: z.string().uuid('Valid district UUID is required'),
   business_name: z.string().min(2, 'Business name is required'),
   category_id: z.string().uuid('Valid business category UUID is required'),
   business_description: z.string().min(5, 'Business description is required'),
@@ -36,7 +36,7 @@ export const registerMemberSchema = z.object({
   gst_number: z.string().optional().or(z.literal('')).transform(val => val === '' ? null : val),
   business_address: z.string().min(5, 'Business address must be at least 5 characters').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   business_state_id: z.string().uuid('Valid state UUID is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
-  business_district_id: z.string().uuid('Valid district UUID is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  business_district_id: z.string().uuid('Valid district UUID is required'),
   reference_code: z.string().optional().or(z.literal('')).transform(val => val === '' ? null : val),
 });
 
@@ -90,12 +90,12 @@ export class RegisterMemberDto {
   })
   state_id: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: String,
     description: 'UUID of the selected district',
     example: 'b2222222-3333-4444-5555-666666666666',
   })
-  district_id?: string | null;
+  district_id: string;
 
   @ApiProperty({
     type: String,
@@ -146,12 +146,12 @@ export class RegisterMemberDto {
   })
   business_state_id?: string | null;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: String,
     description: 'UUID of the selected business district',
     example: 'b2222222-3333-4444-5555-666666666666',
   })
-  business_district_id?: string | null;
+  business_district_id: string;
 
 
 

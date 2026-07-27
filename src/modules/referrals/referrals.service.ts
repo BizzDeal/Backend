@@ -1,205 +1,208 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Referral } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
-import { UserRole, ReferralStatus } from '../../common/enums';
-import { AnalyticsService } from '../analytics/analytics.service';
+import { CreateReferralSlipDto, ReferralQueryDto, AdminReferralQueryDto } from './schemas/referrals.schema';
+import { ReferralType } from '../../common/enums';
 
 @Injectable()
 export class ReferralsService {
   constructor(
     @InjectRepository(Referral)
-    private readonly referralRepository: Repository<Referral>,
+    private referralRepo: Repository<Referral>,
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    private readonly analyticsService: AnalyticsService,
+    private userRepo: Repository<User>,
   ) {}
 
-  async findAll(user: User, filter?: any): Promise<Referral[]> {
-    const qb = this.referralRepository.createQueryBuilder('referral');
+  async createReferralSlip(referrerId: string, dto: CreateReferralSlipDto) {
+    const toMember = await this.userRepo.findOne({ where: { id: dto.to_member_id } });
+    if (!toMember) {
+      throw new NotFoundException('The receiving member does not exist.');
+    }
     
-    if (user.role !== UserRole.ADMIN) {
-      qb.andWhere('referral.referrer_id = :userId', { userId: user.id });
+    if (referrerId === dto.to_member_id) {
+      throw new BadRequestException('You cannot send a referral to yourself.');
     }
 
-    if (filter?.states || filter?.districts) {
-      qb.leftJoin('referral.referrer', 'referrer');
-      if (filter.states) {
-        qb.andWhere('referrer.state_id IN (:...states)', {
-          states: filter.states.split(','),
-        });
-      }
-      if (filter.districts) {
-        qb.andWhere('referrer.district_id IN (:...districts)', {
-          districts: filter.districts.split(','),
-        });
-      }
-    }
-
-    qb.orderBy('referral.created_at', 'DESC');
-    return qb.getMany();
-  }
-
-  async findOne(id: string, user: User): Promise<Referral> {
-    const referral = await this.referralRepository.findOne({ where: { id } });
-    if (!referral) {
-      throw new NotFoundException('Referral not found');
-    }
-    if (user.role !== UserRole.ADMIN && referral.referrer_id !== user.id) {
-      throw new ForbiddenException('No permission to view this referral');
-    }
-    return referral;
-  }
-
-  async create(
-    data: {
-      referred_phone: string;
-      referral_code: string;
-      reward_amount?: number;
-    },
-    user: User,
-  ): Promise<Referral> {
-    const referral = this.referralRepository.create({
-      referrer_id: user.id,
-      referred_phone: data.referred_phone,
-      referral_code: data.referral_code,
-      reward_amount: data.reward_amount || 0,
-      status: ReferralStatus.PENDING,
+    const referral = this.referralRepo.create({
+      referrer_id: referrerId,
+      to_member_id: dto.to_member_id,
+      referral_type: dto.referral_type,
+      told_to_call: dto.told_to_call,
+      card_given: dto.card_given,
+      contact_name: dto.contact_name,
+      contact_phone: dto.contact_phone,
+      contact_email: dto.contact_email || null,
+      contact_address: dto.contact_address || null,
+      comments: dto.comments || null,
+      rating: dto.rating || null,
     });
-    const saved = await this.referralRepository.save(referral);
-    if (saved) {
-      await this.analyticsService.trackReferralCreated();
-    }
-    return saved;
+
+    await this.referralRepo.save(referral);
+
+    return {
+      success: true,
+      message: 'Referral slip created successfully.',
+      data: referral,
+    };
   }
 
-  async checkContacts(phones: string[]): Promise<string[]> {
-    if (!phones || phones.length === 0) {
-      return [];
+  async getReferralSlips(userId: string, query: ReferralQueryDto) {
+    const { type, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.referralRepo.createQueryBuilder('referral')
+      .leftJoin('referral.referrer', 'referrer')
+      .leftJoin('referrer.profile', 'referrer_profile')
+      .leftJoin('referrer.business_profile', 'referrer_business')
+      .leftJoin('referral.to_member', 'to_member')
+      .leftJoin('to_member.profile', 'to_member_profile')
+      .leftJoin('to_member.business_profile', 'to_member_business')
+      .select([
+        'referral',
+        'referrer.id',
+        'referrer.phone',
+        'referrer.email',
+        'referrer_profile.full_name',
+        'referrer_business.name',
+        'to_member.id',
+        'to_member.phone',
+        'to_member.email',
+        'to_member_profile.full_name',
+        'to_member_business.name',
+      ])
+      .orderBy('referral.created_at', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    if (type === 'GIVEN') {
+      qb.where('referral.referrer_id = :userId', { userId });
+    } else if (type === 'RECEIVED') {
+      qb.where('referral.to_member_id = :userId', { userId });
+    } else {
+      qb.where('referral.referrer_id = :userId OR referral.to_member_id = :userId', { userId });
     }
 
-    // 1. Find all phones that already have a user account
-    const existingUsers = await this.userRepository.find({
-      where: { phone: In(phones) },
-      select: { phone: true },
-    });
-    const existingUserPhones = new Set(existingUsers.map((u) => u.phone));
+    const [items, total] = await qb.getManyAndCount();
 
-    // 2. Find all phones that have active referrals (status = PENDING or JOINED or REWARDED)
-    const existingReferrals = await this.referralRepository.find({
-      where: {
-        referred_phone: In(phones),
-        status: In([
-          ReferralStatus.PENDING,
-          ReferralStatus.JOINED,
-          ReferralStatus.REWARDED,
-        ]),
+    const formattedItems = items.map((ref) => ({
+      ...ref,
+      referrer: ref.referrer ? {
+        id: ref.referrer.id,
+        phone: ref.referrer.phone,
+        email: ref.referrer.email,
+        full_name: (ref.referrer as any).profile?.full_name || 'Member',
+        businessProfile: (ref.referrer as any).business_profile ? {
+          business_name: (ref.referrer as any).business_profile.name,
+        } : null,
+      } : null,
+      to_member: ref.to_member ? {
+        id: ref.to_member.id,
+        phone: ref.to_member.phone,
+        email: ref.to_member.email,
+        full_name: (ref.to_member as any).profile?.full_name || 'Member',
+        businessProfile: (ref.to_member as any).business_profile ? {
+          business_name: (ref.to_member as any).business_profile.name,
+        } : null,
+      } : null,
+    }));
+
+    return {
+      success: true,
+      data: formattedItems,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      select: { referred_phone: true },
-    });
-    const referredPhones = new Set(
-      existingReferrals.map((r) => r.referred_phone),
-    );
-
-    // 3. Filter input list to only return phones that are neither registered nor referred
-    return phones.filter(
-      (phone) => !existingUserPhones.has(phone) && !referredPhones.has(phone),
-    );
+    };
   }
 
-  async bulkCreate(
-    data: { referred_phones: string[]; referral_code: string },
-    user: User,
-  ): Promise<Referral[]> {
-    if (!data.referred_phones || data.referred_phones.length === 0) {
-      return [];
+  async getAdminReferralSlips(query: AdminReferralQueryDto) {
+    const { search, referral_type, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.referralRepo.createQueryBuilder('referral')
+      .leftJoin('referral.referrer', 'referrer')
+      .leftJoin('referrer.profile', 'referrer_profile')
+      .leftJoin('referrer.business_profile', 'referrer_business')
+      .leftJoin('referral.to_member', 'to_member')
+      .leftJoin('to_member.profile', 'to_member_profile')
+      .leftJoin('to_member.business_profile', 'to_member_business')
+      .select([
+        'referral',
+        'referrer.id',
+        'referrer.phone',
+        'referrer.email',
+        'referrer_profile.full_name',
+        'referrer_business.name',
+        'to_member.id',
+        'to_member.phone',
+        'to_member.email',
+        'to_member_profile.full_name',
+        'to_member_business.name',
+      ])
+      .orderBy('referral.created_at', 'DESC');
+
+    if (referral_type) {
+      qb.andWhere('referral.referral_type = :referral_type', { referral_type });
     }
 
-    return this.referralRepository.manager.transaction(async (manager) => {
-      const savedReferrals: Referral[] = [];
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim().toLowerCase()}%`;
+      qb.andWhere(
+        '(LOWER(referral.contact_name) LIKE :searchTerm OR LOWER(referral.contact_phone) LIKE :searchTerm OR LOWER(referrer_profile.full_name) LIKE :searchTerm OR LOWER(to_member_profile.full_name) LIKE :searchTerm)',
+        { searchTerm },
+      );
+    }
 
-      for (const phone of data.referred_phones) {
-        const referral = manager.create(Referral, {
-          referrer_id: user.id,
-          referred_phone: phone,
-          referral_code: data.referral_code,
-          reward_amount: 0,
-          status: ReferralStatus.PENDING,
-        });
-        const saved = await manager.save(Referral, referral);
-        if (saved) {
-          savedReferrals.push(saved);
-          await this.analyticsService.trackReferralCreated();
-        }
-      }
+    const totalCount = await this.referralRepo.count();
+    const insideCount = await this.referralRepo.count({ where: { referral_type: ReferralType.INSIDE } });
+    const outsideCount = await this.referralRepo.count({ where: { referral_type: ReferralType.OUTSIDE } });
 
-      return savedReferrals;
-    });
-  }
+    qb.skip(skip).take(limit);
 
-  async validateReferralCode(
-    referralCode: string,
-    phone: string,
-  ): Promise<void> {
-    const cleanInputPhone = phone.replace(/\D/g, '');
+    const [items, total] = await qb.getManyAndCount();
 
-    const referrals = await this.referralRepository.find({
-      where: {
-        referral_code: referralCode,
-        status: ReferralStatus.PENDING,
+    const formattedItems = items.map((ref) => ({
+      ...ref,
+      referrer: ref.referrer ? {
+        id: ref.referrer.id,
+        phone: ref.referrer.phone,
+        email: ref.referrer.email,
+        full_name: (ref.referrer as any).profile?.full_name || 'Member',
+        businessProfile: (ref.referrer as any).business_profile ? {
+          business_name: (ref.referrer as any).business_profile.name,
+        } : null,
+      } : null,
+      to_member: ref.to_member ? {
+        id: ref.to_member.id,
+        phone: ref.to_member.phone,
+        email: ref.to_member.email,
+        full_name: (ref.to_member as any).profile?.full_name || 'Member',
+        businessProfile: (ref.to_member as any).business_profile ? {
+          business_name: (ref.to_member as any).business_profile.name,
+        } : null,
+      } : null,
+    }));
+
+    return {
+      success: true,
+      data: formattedItems,
+      summary: {
+        totalCount,
+        insideCount,
+        outsideCount,
       },
-    });
-
-    const matchingReferral = referrals.find((ref) => {
-      const cleanRefPhone = ref.referred_phone.replace(/\D/g, '');
-      return cleanRefPhone.endsWith(cleanInputPhone) || cleanInputPhone.endsWith(cleanRefPhone);
-    });
-
-    if (!matchingReferral) {
-      throw new BadRequestException('Invalid reference code or phone number not referred');
-    }
-  }
-
-  async updateReferralOnRegistration(
-    referralCode: string,
-    phone: string,
-    referredUserId: string,
-  ): Promise<void> {
-    const cleanInputPhone = phone.replace(/\D/g, '');
-
-    const referrals = await this.referralRepository.find({
-      where: {
-        referral_code: referralCode,
-        status: ReferralStatus.PENDING,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-    });
-
-    const matchingReferral = referrals.find((ref) => {
-      const cleanRefPhone = ref.referred_phone.replace(/\D/g, '');
-      return cleanRefPhone.endsWith(cleanInputPhone) || cleanInputPhone.endsWith(cleanRefPhone);
-    });
-
-    if (matchingReferral) {
-      matchingReferral.referred_user_id = referredUserId;
-      matchingReferral.status = ReferralStatus.JOINED;
-      await this.referralRepository.save(matchingReferral);
-    }
-  }
-
-  async revertReferralRegistration(referredUserId: string): Promise<void> {
-    const referral = await this.referralRepository.findOne({
-      where: { referred_user_id: referredUserId },
-    });
-    if (referral) {
-      referral.referred_user_id = null;
-      referral.status = ReferralStatus.PENDING;
-      await this.referralRepository.save(referral);
-    }
+    };
   }
 }
+

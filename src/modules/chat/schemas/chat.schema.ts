@@ -42,3 +42,13 @@ export const sendMessageSchema = z
 export const editMessageSchema = z.object({
   message: z.string().min(1, { message: 'Message cannot be empty' }),
 });
+
+import { paginationQuerySchema, PaginationQueryDto } from '../../../common/dto/pagination.dto';
+
+export const chatQuerySchema = z.object({
+  search: z.string().optional(),
+}).merge(paginationQuerySchema);
+
+export class ChatQueryDto extends PaginationQueryDto {
+  search?: string;
+}

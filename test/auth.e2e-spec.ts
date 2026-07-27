@@ -6,7 +6,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import { FirebaseService } from './../src/common/firebase/firebase.service';
-import { UserRole, UserStatus, MediaPurpose, ReferralStatus } from './../src/common/enums';
+import { UserRole, UserStatus, MediaPurpose } from './../src/common/enums';
 import { User } from './../src/modules/users/entities/user.entity';
 import { RefreshToken } from './../src/modules/auth/entities/refresh-token.entity';
 import { Business } from './../src/modules/businesses/entities/business.entity';
@@ -76,7 +76,7 @@ describe('AuthController (e2e)', () => {
   async function cleanup() {
     if (!userRepository) return;
     for (const phone of testPhones) {
-      await referralRepository?.delete({ referred_phone: phone });
+      await referralRepository?.delete({ contact_phone: phone });
       const user = await userRepository.findOne({ where: { phone } });
       if (user) {
         await referralRepository?.delete({ referrer_id: user.id });
@@ -404,78 +404,6 @@ describe('AuthController (e2e)', () => {
       expect(res.body.user.phone).toBe('9999000009');
     });
 
-    it('should register a member successfully and update the referral record when a valid reference_code is given', async () => {
-      // 1. Create a referrer user
-      const referrer = userRepository.create({
-        full_name: 'Test Referrer',
-        phone: '9999000010',
-        pin_hash: 'dummy_hash',
-        role: UserRole.MEMBER,
-        status: UserStatus.ACTIVE,
-      });
-      await userRepository.save(referrer);
-
-      // 2. Create a pending referral record
-      const referral = referralRepository.create({
-        referrer_id: referrer.id,
-        referred_phone: '9999000011',
-        referral_code: 'BD-TESTREF-1111',
-        reward_amount: 0,
-        status: ReferralStatus.PENDING,
-      });
-      await referralRepository.save(referral);
-
-      // 3. Register the referred user
-      const res = await request(app.getHttpServer())
-        .post('/auth/register-member')
-        .field('full_name', 'Referred Entrepreneur')
-        .field('phone', '9999000011')
-        .field('pin', '5678')
-        .field('whatsapp', '9999000011')
-        .field('email', 'referred@example.com')
-        .field('address', '123 Referred Way, Hyderabad')
-        .field('state_id', testStateId)
-        .field('district_id', testDistrictId)
-        .field('business_name', 'Referred Enterprise')
-        .field('category_id', testCategoryId)
-        .field('business_description', 'IT consulting referred')
-        .field('website', 'https://referred.com')
-        .field('gst_number', '36AAAAA0000A1Z8')
-        .field('firebaseToken', 'valid-firebase-token-11')
-        .field('reference_code', 'BD-TESTREF-1111')
-        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf')
-        .expect(201);
-
-      // 4. Verify referral was updated
-      const updatedReferral = await referralRepository.findOne({
-        where: { id: referral.id },
-      });
-      expect(updatedReferral).toBeDefined();
-      expect(updatedReferral?.status).toBe(ReferralStatus.JOINED);
-      expect(updatedReferral?.referred_user_id).toBe(res.body.user.id);
-    });
-
-    it('should return 400 when an invalid reference_code is given during member registration', async () => {
-      await request(app.getHttpServer())
-        .post('/auth/register-member')
-        .field('full_name', 'Invalid Ref Entrepreneur')
-        .field('phone', '9999000012')
-        .field('pin', '5678')
-        .field('whatsapp', '9999000012')
-        .field('email', 'invalidref@example.com')
-        .field('address', '123 Invalid Way, Hyderabad')
-        .field('state_id', testStateId)
-        .field('district_id', testDistrictId)
-        .field('business_name', 'Invalid Ref Enterprise')
-        .field('category_id', testCategoryId)
-        .field('business_description', 'IT consulting invalid ref')
-        .field('website', 'https://invalidref.com')
-        .field('gst_number', '36AAAAA0000A1Z9')
-        .field('firebaseToken', 'valid-firebase-token-12')
-        .field('reference_code', 'BD-INVALIDCODE-9999')
-        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf')
-        .expect(400);
-    });
   });
 
   describe('POST /auth/login', () => {

@@ -3,11 +3,11 @@ import {
   Get,
   Post,
   Body,
-  Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
-  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,106 +17,93 @@ import {
 } from '@nestjs/swagger';
 import { ReferralsService } from './referrals.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { ActiveMemberGuard } from '../../common/guards/active-member.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UserRole } from '../../common/enums';
 import { User } from '../users/entities/user.entity';
-import { RegionFilterDto } from '../../common/dto/region-filter.dto';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import {
+  createReferralSlipSchema,
+  CreateReferralSlipDto,
+  referralQuerySchema,
+  ReferralQueryDto,
+  adminReferralQuerySchema,
+  AdminReferralQueryDto,
+} from './schemas/referrals.schema';
 
 @ApiTags('Referrals')
 @Controller('referrals')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class ReferralsController {
   constructor(private readonly referralsService: ReferralsService) {}
 
   @Post()
-  @UseGuards(ActiveMemberGuard)
+  @Roles(UserRole.MEMBER)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create Referral',
-    description: 'Creates a new referral record for the authenticated user.',
-  })
-  @ApiResponse({ status: 201, description: 'Referral created successfully.' })
-  async create(
-    @Body()
-    body: {
-      referred_phone: string;
-      referral_code: string;
-      reward_amount?: number;
-    },
-    @CurrentUser() user: User,
-  ) {
-    return this.referralsService.create(body, user);
-  }
-
-  @Get()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'List Referrals',
-    description:
-      'Retrieves all referrals for the authenticated user without pagination. Returns only foreign key IDs (referrer_id, referred_user_id) without nested relational objects.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Referrals list returned successfully.',
-  })
-  async findAll(
-    @CurrentUser() user: User,
-    @Query() filter?: RegionFilterDto,
-  ) {
-    return this.referralsService.findAll(user, filter);
-  }
-
-  @Get(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Get Referral By ID',
-    description:
-      'Retrieves details of a specific referral by UUID. Returns only foreign key IDs without nested relational objects.',
-  })
-  @ApiResponse({ status: 200, description: 'Referral details returned successfully.' })
-  @ApiResponse({ status: 404, description: 'Referral not found.' })
-  async findOne(@Param('id') id: string, @CurrentUser() user: User) {
-    return this.referralsService.findOne(id, user);
-  }
-
-  @Post('check-contacts')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Check Contacts Eligibility',
-    description:
-      'Checks a list of contact phone numbers against users and existing active referrals, returning those which do not have a BizzDeal account and are not already referred.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns array of eligible phone numbers.',
-  })
-  async checkContacts(
-    @Body() body: { phones: string[] },
-  ) {
-    return this.referralsService.checkContacts(body.phones);
-  }
-
-  @Post('bulk')
-  @UseGuards(ActiveMemberGuard)
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Bulk Create Referrals',
-    description:
-      'Creates multiple referral records in a single batch transaction.',
+    summary: 'Create a Referral Slip',
+    description: 'Creates a new member-to-member referral slip.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Bulk referrals created successfully.',
+    description: 'Referral slip created successfully.',
   })
-  async bulkCreate(
-    @Body()
-    body: {
-      referred_phones: string[];
-      referral_code: string;
-    },
+  async createReferralSlip(
     @CurrentUser() user: User,
+    @Body(new ZodValidationPipe(createReferralSlipSchema)) dto: CreateReferralSlipDto,
   ) {
-    return this.referralsService.bulkCreate(body, user);
+    return this.referralsService.createReferralSlip(user.id, dto);
+  }
+
+  @Get('admin')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get All Referral Slips for Admin',
+    description: 'Retrieves all referral slips across all members with optional filters and pagination.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of referral slips for admin returned successfully.',
+  })
+  async getAdminReferralSlips(@Query() queryParams: any) {
+    let query: AdminReferralQueryDto = {};
+    try {
+      query = adminReferralQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.referralsService.getAdminReferralSlips(query);
+  }
+
+  @Get()
+  @Roles(UserRole.MEMBER)
+  @ApiOperation({
+    summary: 'Get Referral Slips',
+    description: 'Retrieves all referral slips given or received by the current member.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of referral slips returned successfully.',
+  })
+  async getReferralSlips(
+    @CurrentUser() user: User,
+    @Query() queryParams: any,
+  ) {
+    let query: ReferralQueryDto = {};
+    try {
+      query = referralQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.referralsService.getReferralSlips(user.id, query);
   }
 }
+

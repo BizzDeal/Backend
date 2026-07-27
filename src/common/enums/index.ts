@@ -61,11 +61,9 @@ export enum WalletReferenceType {
   MANUAL = 'MANUAL',
 }
 
-export enum ReferralStatus {
-  PENDING = 'PENDING',
-  JOINED = 'JOINED',
-  REWARDED = 'REWARDED',
-  CANCELLED = 'CANCELLED',
+export enum ReferralType {
+  INSIDE = 'INSIDE',
+  OUTSIDE = 'OUTSIDE',
 }
 
 export enum NotificationType {
