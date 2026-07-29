@@ -137,6 +137,12 @@ export class AuthService {
 
     if (user.role === UserRole.MEMBER) {
       if (user.status === UserStatus.UNVERIFIED) {
+        const verificationToken = await this.jwtService.signAsync(
+          { sub: user.id, purpose: 'email_verification' },
+          { expiresIn: '1h' },
+        );
+        await this.mailService.sendConfirmationEmail(user.email, verificationToken);
+
         throw new UnauthorizedException({
           statusCode: 401,
           message: 'Email verification required.',

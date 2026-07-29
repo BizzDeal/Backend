@@ -114,9 +114,9 @@ export class MailService {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
         ${this.getHeaderHtml()}
         <h2 style="color: #4f46e5; text-align: center;">Welcome to BizzDeal!</h2>
-        <p style="color: #374151;">Thank you for registering. Please click the link below to verify your email address and finalize your account.</p>
+        <p style="color: #374151;">Thank you for registering. Please click the button below to verify your email address and finalize your account.</p>
         <div style="margin: 20px 0; text-align: center;">
-          <a href="${confirmationLink}" style="color: #4f46e5; text-decoration: underline; font-weight: bold; word-break: break-all;">${confirmationLink}</a>
+          <a href="${confirmationLink}" style="display: inline-block; padding: 12px 24px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Verify Email</a>
         </div>
         <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, you can safely ignore this email.</p>
         ${this.getFooterHtml()}
