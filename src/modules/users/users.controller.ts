@@ -281,6 +281,27 @@ export class UsersController {
     return this.usersService.deleteMember(dto.memberId, admin.id, ip);
   }
 
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Own Profile (GET)',
+    description:
+      'Retrieves the profile details of the currently authenticated user via GET.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile returned successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+  })
+  async getProfileGet(@CurrentUser() user: User) {
+    return this.usersService.getProfile(user.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

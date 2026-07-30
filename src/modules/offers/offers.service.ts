@@ -114,16 +114,17 @@ export class OffersService {
       });
     }
 
-    if (query.states || query.districts) {
+    if (query.state || query.district) {
       qb.leftJoin('business.owner', 'owner');
-      if (query.states) {
-        qb.andWhere('owner.state_id IN (:...states)', {
-          states: query.states.split(','),
+      qb.leftJoin('owner.profile', 'profile');
+      if (query.state) {
+        qb.andWhere('(business.state_id = :state OR profile.state_id = :state)', {
+          state: query.state,
         });
       }
-      if (query.districts) {
-        qb.andWhere('owner.district_id IN (:...districts)', {
-          districts: query.districts.split(','),
+      if (query.district) {
+        qb.andWhere('(business.district_id = :district OR profile.district_id = :district)', {
+          district: query.district,
         });
       }
     }
@@ -217,16 +218,16 @@ export class OffersService {
       });
     }
 
-    if (query.states || query.districts) {
+    if (query.state || query.district) {
       qb.leftJoin('business.owner', 'owner');
-      if (query.states) {
-        qb.andWhere('owner.state_id IN (:...states)', {
-          states: query.states.split(','),
+      if (query.state) {
+        qb.andWhere('owner.state_id = :state', {
+          state: query.state,
         });
       }
-      if (query.districts) {
-        qb.andWhere('owner.district_id IN (:...districts)', {
-          districts: query.districts.split(','),
+      if (query.district) {
+        qb.andWhere('owner.district_id = :district', {
+          district: query.district,
         });
       }
     }

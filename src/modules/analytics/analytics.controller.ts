@@ -9,6 +9,8 @@ import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 import { UserRole } from '../../common/enums';
 import {
   AdminAnalyticsOverviewDto,
@@ -66,5 +68,20 @@ export class AnalyticsController {
   async syncAnalytics() {
     await this.analyticsService.syncExistingData();
     return { success: true, message: 'Analytics synced successfully' };
+  }
+
+  @Get('member/summary')
+  @Roles(UserRole.MEMBER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get Member Analytics Summary',
+    description:
+      'Returns a summary of voucher activity and offer counts for the authenticated member.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Member analytics summary returned successfully.',
+  })
+  async getMemberSummary(@CurrentUser() user: User) {
+    return this.analyticsService.getMemberSummary(user.id);
   }
 }

@@ -279,6 +279,31 @@ export class OffersController {
     return this.offersService.findAll(query, user);
   }
 
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get My Offers',
+    description:
+      'Retrieves all offers created by the currently authenticated member (filtered by their business ownership).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of own offers returned successfully.',
+  })
+  async getMyOffers(@Query() query: any, @CurrentUser() user: User) {
+    try {
+      const parsedQuery = offerQuerySchema.parse(query || {});
+      return await this.offersService.findAll({ ...parsedQuery, my_offers: true }, user);
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+  }
+
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()

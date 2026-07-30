@@ -154,10 +154,10 @@ export class MeetingQueryDto {
   @ApiPropertyOptional({
     description: 'Comma-separated state UUIDs for filtering',
   })
-  states?: string;
+  state?: string;
 
   @ApiPropertyOptional({
     description: 'Comma-separated district UUIDs for filtering',
   })
-  districts?: string;
+  district?: string;
 }

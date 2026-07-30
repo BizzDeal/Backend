@@ -64,6 +64,6 @@ export const meetingQuerySchema = z.object({
       message: 'to_date must be a valid date-time string',
     })
     .optional(),
-  states: z.string().optional(),
-  districts: z.string().optional(),
+  state: z.string().optional(),
+  district: z.string().optional(),
 });

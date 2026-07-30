@@ -14,6 +14,7 @@ import {
   UserStatus,
   VoucherStatus,
   WalletTransactionType,
+  OfferStatus,
 } from '../../common/enums';
 import {
   AdminAnalyticsOverviewDto,
@@ -105,7 +106,7 @@ export class AnalyticsService implements OnModuleInit {
   // --- O(1) Instant Read Methods ---
 
   async getOverviewAnalytics(filter?: RegionFilterDto): Promise<{ success: boolean; data: AdminAnalyticsOverviewDto }> {
-    if (!filter?.states && !filter?.districts) {
+    if (!filter?.state && !filter?.district) {
       const kpi = await this.getOrCreatePlatformKpi();
       const recentMonths = await this.monthlyRepo.find({
         order: { period_month: 'ASC' },
@@ -135,43 +136,55 @@ export class AnalyticsService implements OnModuleInit {
       return { success: true, data };
     }
 
-    const states = filter.states ? filter.states.split(',') : [];
-    const districts = filter.districts ? filter.districts.split(',') : [];
+    const state = filter.state || null;
+    const district = filter.district || null;
 
-    const applyLocationFilter = (qb: any, alias: string) => {
-      if (states.length > 0) {
-        qb.andWhere(`${alias}.state_id IN (:...states)`, { states });
+    const applyProfileLocationFilter = (qb: any) => {
+      if (state) {
+        qb.andWhere('profile.state_id = :state', { state });
       }
-      if (districts.length > 0) {
-        qb.andWhere(`${alias}.district_id IN (:...districts)`, { districts });
+      if (district) {
+        qb.andWhere('profile.district_id = :district', { district });
       }
     };
 
-    const membersQb = this.userRepo.createQueryBuilder('user').where('user.role = :role', { role: UserRole.MEMBER });
-    applyLocationFilter(membersQb, 'user');
+    const membersQb = this.userRepo.createQueryBuilder('user')
+      .leftJoin('user.profile', 'profile')
+      .where('user.role = :role', { role: UserRole.MEMBER });
+    applyProfileLocationFilter(membersQb);
     const totalMembers = await membersQb.getCount();
 
     const activeMembersQb = this.userRepo.createQueryBuilder('user')
+      .leftJoin('user.profile', 'profile')
       .where('user.role = :role', { role: UserRole.MEMBER })
       .andWhere('user.status = :status', { status: UserStatus.ACTIVE });
-    applyLocationFilter(activeMembersQb, 'user');
+    applyProfileLocationFilter(activeMembersQb);
     const activeMembers = await activeMembersQb.getCount();
 
-    const customersQb = this.userRepo.createQueryBuilder('user').where('user.role = :role', { role: UserRole.CUSTOMER });
-    applyLocationFilter(customersQb, 'user');
+    const customersQb = this.userRepo.createQueryBuilder('user')
+      .leftJoin('user.profile', 'profile')
+      .where('user.role = :role', { role: UserRole.CUSTOMER });
+    applyProfileLocationFilter(customersQb);
     const totalCustomers = await customersQb.getCount();
 
     const vouchersQb = this.voucherRepo.createQueryBuilder('voucher')
       .leftJoin('voucher.business', 'business')
       .leftJoin('business.owner', 'owner')
+      .leftJoin('owner.profile', 'profile')
       .where('voucher.status = :status', { status: VoucherStatus.REDEEMED });
-    applyLocationFilter(vouchersQb, 'owner');
+    if (state) {
+      vouchersQb.andWhere('(business.state_id = :state OR profile.state_id = :state)', { state });
+    }
+    if (district) {
+      vouchersQb.andWhere('(business.district_id = :district OR profile.district_id = :district)', { district });
+    }
     const totalVouchers = await vouchersQb.getCount();
 
     const txQb = this.txRepo.createQueryBuilder('tx')
       .leftJoin('tx.user', 'user')
+      .leftJoin('user.profile', 'profile')
       .where('tx.type = :type', { type: WalletTransactionType.CREDIT });
-    applyLocationFilter(txQb, 'user');
+    applyProfileLocationFilter(txQb);
     
     const revenueResult = await txQb.clone()
       .select('SUM(tx.amount)', 'total')
@@ -212,7 +225,7 @@ export class AnalyticsService implements OnModuleInit {
   }
 
   async getDetailedAnalytics(filter?: RegionFilterDto): Promise<{ success: boolean; data: DetailedAnalyticsDto }> {
-    if (!filter?.states && !filter?.districts) {
+    if (!filter?.state && !filter?.district) {
       const kpi = await this.getOrCreatePlatformKpi();
       const recentMonths = await this.monthlyRepo.find({
         order: { period_month: 'ASC' },
@@ -284,15 +297,15 @@ export class AnalyticsService implements OnModuleInit {
       return { success: true, data };
     }
 
-    const states = filter.states ? filter.states.split(',') : [];
-    const districts = filter.districts ? filter.districts.split(',') : [];
+    const state = filter.state || null;
+    const district = filter.district || null;
 
     const applyLocationFilter = (qb: any, alias: string) => {
-      if (states.length > 0) {
-        qb.andWhere(`${alias}.state_id IN (:...states)`, { states });
+      if (state) {
+        qb.andWhere(`${alias}.state_id = :state`, { state });
       }
-      if (districts.length > 0) {
-        qb.andWhere(`${alias}.district_id IN (:...districts)`, { districts });
+      if (district) {
+        qb.andWhere(`${alias}.district_id = :district`, { district });
       }
     };
 
@@ -803,5 +816,51 @@ export class AnalyticsService implements OnModuleInit {
     await this.getOrCreateMonthlyMetric();
 
     this.logger.log('Analytics reconciliation completed successfully.');
+  }
+
+  async getMemberSummary(userId: string) {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(Date.now() - 7 * 86400000);
+
+    // Get business for this member
+    const business = await this.businessRepo.findOne({ where: { owner_id: userId } });
+
+    let totalVouchers = 0;
+    let redeemedToday = 0;
+    let redeemedThisWeek = 0;
+    let activeOffersCount = 0;
+
+    if (business) {
+      const allVouchers = await this.voucherRepo
+        .createQueryBuilder('voucher')
+        .where('voucher.business_id = :businessId', { businessId: business.id })
+        .getMany();
+
+      totalVouchers = allVouchers.length;
+      redeemedToday = allVouchers.filter(
+        (v) =>
+          v.status === VoucherStatus.REDEEMED &&
+          v.redeemed_at &&
+          new Date(v.redeemed_at) >= todayStart,
+      ).length;
+      redeemedThisWeek = allVouchers.filter(
+        (v) =>
+          v.status === VoucherStatus.REDEEMED &&
+          v.redeemed_at &&
+          new Date(v.redeemed_at) >= weekAgo,
+      ).length;
+    }
+
+    return {
+      success: true,
+      data: {
+        businessId: business?.id || null,
+        totalVouchers,
+        redeemedToday,
+        redeemedThisWeek,
+        activeOffersCount,
+      },
+    };
   }
 }

@@ -212,8 +212,8 @@ export const offerQuerySchema = z.object({
   search: z.string().optional(),
   q: z.string().optional(),
   my_offers: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
-  states: z.string().optional(),
-  districts: z.string().optional(),
+  state: z.string().optional(),
+  district: z.string().optional(),
 }).merge(paginationQuerySchema);
 
 export class OfferQueryDto extends PaginationQueryDto {
@@ -262,12 +262,12 @@ export class OfferQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Comma-separated state UUIDs for filtering',
   })
-  states?: string;
+  state?: string;
 
   @ApiPropertyOptional({
     description: 'Comma-separated district UUIDs for filtering',
   })
-  districts?: string;
+  district?: string;
 }
 
 export const offerActionSchema = z.object({

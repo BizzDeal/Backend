@@ -167,6 +167,34 @@ export class VouchersController {
     }
   }
 
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get My Vouchers',
+    description:
+      'Retrieves vouchers belonging to the authenticated user. Members see vouchers for their business; Customers see their claimed vouchers.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Voucher list returned successfully.',
+  })
+  async getMyVouchers(@Query() query: any, @CurrentUser() user: User) {
+    try {
+      const parsedQuery = voucherQuerySchema.parse(query || {});
+      return await this.vouchersService.findAll(parsedQuery, user);
+    } catch (err: any) {
+      if (err.name === 'ZodError') {
+        throw new BadRequestException({
+          message: 'Invalid query parameters',
+          errors: err.errors,
+        });
+      }
+      throw err;
+    }
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

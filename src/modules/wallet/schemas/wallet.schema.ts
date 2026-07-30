@@ -112,8 +112,8 @@ export const walletQuerySchema = z.object({
   user_id: z.string().uuid().optional(),
   type: z.nativeEnum(WalletTransactionType).optional(),
   reference_type: z.nativeEnum(WalletReferenceType).optional(),
-  states: z.string().optional(),
-  districts: z.string().optional(),
+  state: z.string().optional(),
+  district: z.string().optional(),
   search: z.string().optional(),
 }).merge(paginationQuerySchema);
 
@@ -141,12 +141,12 @@ export class WalletQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Comma-separated state UUIDs for filtering',
   })
-  states?: string;
+  state?: string;
 
   @ApiPropertyOptional({
     description: 'Comma-separated district UUIDs for filtering',
   })
-  districts?: string;
+  district?: string;
 
   @ApiPropertyOptional({
     description: 'Search keyword matching transaction description, customer full name, email, phone, or voucher code',

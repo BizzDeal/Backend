@@ -190,7 +190,9 @@ export class BusinessesService {
       !!query.phone ||
       !!query.whatsapp ||
       !!query.email ||
-      !!query.address;
+      !!query.address ||
+      !!query.state ||
+      !!query.district;
 
     const needsCategoryJoin =
       !!searchKeyword ||
@@ -213,14 +215,14 @@ export class BusinessesService {
       qb.leftJoin('business.category', 'category');
     }
 
-    if (query.states) {
-      qb.andWhere('business.state_id IN (:...states)', {
-        states: query.states.split(','),
+    if (query.state) {
+      qb.andWhere('(business.state_id = :state OR profile.state_id = :state)', {
+        state: query.state,
       });
     }
-    if (query.districts) {
-      qb.andWhere('business.district_id IN (:...districts)', {
-        districts: query.districts.split(','),
+    if (query.district) {
+      qb.andWhere('(business.district_id = :district OR profile.district_id = :district)', {
+        district: query.district,
       });
     }
 

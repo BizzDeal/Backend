@@ -109,16 +109,16 @@ export class WalletService {
       });
     }
 
-    if (query.states || query.districts) {
+    if (query.state || query.district) {
       qb.leftJoin('tx.user', 'user');
-      if (query.states) {
-        qb.andWhere('user.state_id IN (:...states)', {
-          states: query.states.split(','),
+      if (query.state) {
+        qb.andWhere('user.state_id = :state', {
+          state: query.state,
         });
       }
-      if (query.districts) {
-        qb.andWhere('user.district_id IN (:...districts)', {
-          districts: query.districts.split(','),
+      if (query.district) {
+        qb.andWhere('user.district_id = :district', {
+          district: query.district,
         });
       }
     }
@@ -183,16 +183,16 @@ export class WalletService {
       });
     }
 
-    if (query.states || query.districts) {
+    if (query.state || query.district) {
       qb.leftJoin('tx.user', 'user');
-      if (query.states) {
-        qb.andWhere('user.state_id IN (:...states)', {
-          states: query.states.split(','),
+      if (query.state) {
+        qb.andWhere('user.state_id = :state', {
+          state: query.state,
         });
       }
-      if (query.districts) {
-        qb.andWhere('user.district_id IN (:...districts)', {
-          districts: query.districts.split(','),
+      if (query.district) {
+        qb.andWhere('user.district_id = :district', {
+          district: query.district,
         });
       }
     }

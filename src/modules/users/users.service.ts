@@ -66,11 +66,11 @@ export class UsersService {
 
   async findAll(query: UserQueryDto = {}) {
     const whereCondition: any = {};
-    if (query.states) {
-      whereCondition['profile.state_id'] = In(query.states.split(','));
+    if (query.state) {
+      whereCondition['profile.state_id'] = query.state;
     }
-    if (query.districts) {
-      whereCondition['profile.district_id'] = In(query.districts.split(','));
+    if (query.district) {
+      whereCondition['profile.district_id'] = query.district;
     }
     
     // Using query builder to handle nested where properly if needed, but find() with relations works too.
@@ -78,11 +78,11 @@ export class UsersService {
       .leftJoinAndSelect('user.profile', 'profile')
       .where('user.status != :unverifiedStatus', { unverifiedStatus: UserStatus.UNVERIFIED });
       
-    if (query.states) {
-      qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });
+    if (query.state) {
+      qb.andWhere('profile.state_id = :state', { state: query.state });
     }
-    if (query.districts) {
-      qb.andWhere('profile.district_id IN (:...districts)', { districts: query.districts.split(',') });
+    if (query.district) {
+      qb.andWhere('profile.district_id = :district', { district: query.district });
     }
     if (query.search) {
       qb.andWhere(
@@ -167,7 +167,15 @@ export class UsersService {
   }
 
   async findOneById(id: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { id }, relations: { profile: true } });
+    return this.usersRepository.findOne({
+      where: { id },
+      relations: {
+        profile: {
+          state: true,
+          district: true,
+        },
+      },
+    });
   }
 
   async create(userData: CreateUserData): Promise<User> {
@@ -228,6 +236,8 @@ export class UsersService {
   async findMembers(status?: UserStatus, query: UserQueryDto = {}) {
     const qb = this.usersRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('profile.state', 'state')
+      .leftJoinAndSelect('profile.district', 'district')
       .where('user.role = :role', { role: UserRole.MEMBER });
       
     if (status) {
@@ -235,11 +245,11 @@ export class UsersService {
     } else {
       qb.andWhere('user.status != :unverifiedStatus', { unverifiedStatus: UserStatus.UNVERIFIED });
     }
-    if (query.states) {
-      qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });
+    if (query.state) {
+      qb.andWhere('profile.state_id = :state', { state: query.state });
     }
-    if (query.districts) {
-      qb.andWhere('profile.district_id IN (:...districts)', { districts: query.districts.split(',') });
+    if (query.district) {
+      qb.andWhere('profile.district_id = :district', { district: query.district });
     }
     if (query.exclude_districts) {
       qb.andWhere('profile.district_id NOT IN (:...exclude_districts)', { exclude_districts: query.exclude_districts.split(',') });
@@ -312,7 +322,9 @@ export class UsersService {
         whatsapp: user.profile?.whatsapp || null,
         address: user.profile?.address || null,
         state_id: user.profile?.state_id || null,
+        state_name: user.profile?.state?.name || null,
         district_id: user.profile?.district_id || null,
+        district_name: user.profile?.district?.name || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
         payment_receipt_url: receiptMap.get(user.id) || null,
         business_id: b?.id || null,
@@ -340,14 +352,16 @@ export class UsersService {
   async findCustomers(query: UserQueryDto = {}) {
     const qb = this.usersRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('profile.state', 'state')
+      .leftJoinAndSelect('profile.district', 'district')
       .where('user.role = :role', { role: UserRole.CUSTOMER })
       .andWhere('user.status != :unverifiedStatus', { unverifiedStatus: UserStatus.UNVERIFIED });
 
-    if (query.states) {
-      qb.andWhere('profile.state_id IN (:...states)', { states: query.states.split(',') });
+    if (query.state) {
+      qb.andWhere('profile.state_id = :state', { state: query.state });
     }
-    if (query.districts) {
-      qb.andWhere('profile.district_id IN (:...districts)', { districts: query.districts.split(',') });
+    if (query.district) {
+      qb.andWhere('profile.district_id = :district', { district: query.district });
     }
     if (query.search) {
       qb.andWhere(
@@ -402,7 +416,9 @@ export class UsersService {
         whatsapp: user.profile?.whatsapp || null,
         address: user.profile?.address || null,
         state_id: user.profile?.state_id || null,
+        state_name: user.profile?.state?.name || null,
         district_id: user.profile?.district_id || null,
+        district_name: user.profile?.district?.name || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
       };
     });
@@ -597,7 +613,9 @@ export class UsersService {
       whatsapp: user.profile?.whatsapp || null,
       address: user.profile?.address || null,
       state_id: user.profile?.state_id || null,
+      state_name: user.profile?.state?.name || null,
       district_id: user.profile?.district_id || null,
+      district_name: user.profile?.district?.name || null,
       profile_pic_url,
       payment_receipt_url:
         user.role === UserRole.MEMBER ? payment_receipt_url : undefined,

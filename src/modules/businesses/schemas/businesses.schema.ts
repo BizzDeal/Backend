@@ -109,8 +109,8 @@ export const businessQuerySchema = z.object({
   website: z.string().optional(),
   gst_number: z.string().optional(),
   exclude_owner_id: z.string().optional(),
-  states: z.string().optional(),
-  districts: z.string().optional(),
+  state: z.string().optional(),
+  district: z.string().optional(),
 }).merge(paginationQuerySchema);
 
 export class BusinessQueryDto extends PaginationQueryDto {
@@ -216,12 +216,12 @@ export class BusinessQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Comma-separated state UUIDs for filtering',
   })
-  states?: string;
+  state?: string;
 
   @ApiPropertyOptional({
     description: 'Comma-separated district UUIDs for filtering',
   })
-  districts?: string;
+  district?: string;
 }
 
 export const featureBusinessSchema = z.object({

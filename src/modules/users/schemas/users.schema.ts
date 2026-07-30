@@ -179,12 +179,12 @@ export class UserQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Comma-separated list of state UUIDs to filter data by region.',
   })
-  states?: string;
+  state?: string;
 
   @ApiPropertyOptional({
     description: 'Comma-separated list of district UUIDs to filter data by region.',
   })
-  districts?: string;
+  district?: string;
 
   @ApiPropertyOptional({
     description: 'Comma-separated list of district UUIDs to exclude from results.',

@@ -78,8 +78,8 @@ export const voucherQuerySchema = z.object({
   business_id: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
   offer_id: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
   voucher_code: z.preprocess(emptyToUndefined, z.string().optional()),
-  states: z.preprocess(emptyToUndefined, z.string().optional()),
-  districts: z.preprocess(emptyToUndefined, z.string().optional()),
+  state: z.preprocess(emptyToUndefined, z.string().optional()),
+  district: z.preprocess(emptyToUndefined, z.string().optional()),
   search: z.preprocess(emptyToUndefined, z.string().optional()),
 }).merge(paginationQuerySchema);
 
@@ -118,12 +118,12 @@ export class VoucherQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Comma-separated state UUIDs for filtering',
   })
-  states?: string;
+  state?: string;
 
   @ApiPropertyOptional({
     description: 'Comma-separated district UUIDs for filtering',
   })
-  districts?: string;
+  district?: string;
 
   @ApiPropertyOptional({
     description: 'Search keyword matching voucher code, offer title, business name, or customer name',
