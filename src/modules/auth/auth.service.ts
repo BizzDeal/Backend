@@ -30,7 +30,6 @@ import {
   LoginDto,
   RegisterMemberDto,
   RegisterCustomerDto,
-  RegisterAdminDto,
   ResetPinDto,
   SendOtpDto,
 } from './schemas/auth.schema';
@@ -186,9 +185,8 @@ export class AuthService {
       business_logo?: Express.Multer.File[];
     },
   ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: Omit<User, 'pin_hash'>;
+    success: boolean;
+    message: string;
   }> {
     // Payment receipt file upload is now optional
     // if (!files?.payment_receipt?.[0]) {
@@ -307,12 +305,9 @@ export class AuthService {
       );
       await this.mailService.sendConfirmationEmail(newUser.email, verificationToken);
 
-      const tokens = await this.generateTokens(newUser);
-
-      const profileRes = await this.usersService.getProfile(newUser.id);
       return {
-        ...tokens,
-        user: profileRes.data,
+        success: true,
+        message: 'Member registered successfully. Please check your email to verify your account.'
       };
     } catch (error) {
       // Rollback logic
@@ -353,9 +348,8 @@ export class AuthService {
     dto: RegisterCustomerDto,
     profile_image?: Express.Multer.File,
   ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: Omit<User, 'pin_hash'>;
+    success: boolean;
+    message: string;
   }> {
     // Check if email is already registered
     const existingUser = await this.usersService.findOneByEmail(dto.email);
@@ -395,69 +389,13 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.generateTokens(newUser);
-
     const { pin_hash: _pin_hash, ...userWithoutPin } = newUser;
     return {
-      ...tokens,
-      user: userWithoutPin,
+      success: true,
+      message: 'Customer registered successfully. Please login to continue.'
     };
   }
 
-  async registerAdmin(
-    dto: RegisterAdminDto,
-    profile_image?: Express.Multer.File,
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: Omit<User, 'pin_hash'>;
-  }> {
-    // Check if email is already registered
-    const existingUser = await this.usersService.findOneByEmail(dto.email);
-    if (existingUser) {
-      throw new ConflictException('Email is already registered');
-    }
-
-    // Check if phone number is already registered (if provided)
-    if (dto.phone) {
-      const existingPhoneUser = await this.usersService.findOneByPhone(dto.phone);
-      if (existingPhoneUser) {
-        throw new ConflictException('Phone number is already registered');
-      }
-    }
-
-    // Verify OTP
-    this.otpService.verifyOtp(dto.email, dto.otp);
-
-    const pinHash = await bcrypt.hash(dto.pin, 10);
-
-    const newUser = await this.usersService.create({
-      full_name: dto.full_name,
-      phone: dto.phone,
-      whatsapp: dto.whatsapp,
-      email: dto.email,
-      address: dto.address,
-      pin_hash: pinHash,
-      role: UserRole.ADMIN,
-      status: UserStatus.ACTIVE, // Admins are active by default
-    });
-
-    if (profile_image) {
-      await this.mediaService.saveFile(
-        profile_image,
-        newUser.id,
-        MediaPurpose.PROFILE_PIC,
-      );
-    }
-
-    const tokens = await this.generateTokens(newUser);
-
-    const { pin_hash: _pin_hash, ...userWithoutPin } = newUser;
-    return {
-      ...tokens,
-      user: userWithoutPin,
-    };
-  }
 
   async forgotPin(
     email: string,

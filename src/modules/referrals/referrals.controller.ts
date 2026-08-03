@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  Param,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,6 +31,8 @@ import {
   ReferralQueryDto,
   adminReferralQuerySchema,
   AdminReferralQueryDto,
+  appreciateReferralSchema,
+  AppreciateReferralDto,
 } from './schemas/referrals.schema';
 
 @ApiTags('Referrals')
@@ -104,6 +107,25 @@ export class ReferralsController {
       });
     }
     return this.referralsService.getReferralSlips(user.id, query);
+  }
+
+  @Post(':id/appreciate')
+  @Roles(UserRole.MEMBER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Appreciate a Received Referral',
+    description: 'Marks a received referral as appreciated, logging revenue and sending a thank you message.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Referral appreciated successfully.',
+  })
+  async appreciateReferral(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(appreciateReferralSchema)) dto: AppreciateReferralDto,
+  ) {
+    return this.referralsService.appreciateReferral(user.id, id, dto);
   }
 }
 

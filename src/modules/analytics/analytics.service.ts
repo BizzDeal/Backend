@@ -823,6 +823,12 @@ export class AnalyticsService implements OnModuleInit {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(Date.now() - 7 * 86400000);
 
+    // Get user and their profile to find the district
+    const user = await this.userRepo.findOne({ 
+      where: { id: userId }, 
+      relations: { profile: true } 
+    });
+
     // Get business for this member
     const business = await this.businessRepo.findOne({ where: { owner_id: userId } });
 
@@ -852,6 +858,33 @@ export class AnalyticsService implements OnModuleInit {
       ).length;
     }
 
+    const successfulReferrals = await this.referralRepo.count({
+      where: { referrer_id: userId }
+    });
+
+    // Fallback to platform stats if no district is set for the user, 
+    // so the UI still renders the stats section
+    const filter = user?.profile?.district_id ? { district: user.profile.district_id } : undefined;
+    
+    let districtStats: any = null;
+    const overview = await this.getOverviewAnalytics(filter);
+    
+    if (overview.success) {
+      // getOverviewAnalytics doesn't return totalBusinesses, so we query it
+      const businessesQb = this.businessRepo.createQueryBuilder('business')
+        .leftJoin('business.owner', 'owner')
+        .leftJoin('owner.profile', 'profile');
+      if (filter?.district) {
+        businessesQb.where('profile.district_id = :district', { district: filter.district });
+      }
+      const totalBusinesses = await businessesQb.getCount();
+
+      districtStats = {
+        ...overview.data,
+        totalBusinesses
+      };
+    }
+
     return {
       success: true,
       data: {
@@ -860,6 +893,8 @@ export class AnalyticsService implements OnModuleInit {
         redeemedToday,
         redeemedThisWeek,
         activeOffersCount,
+        successfulReferrals,
+        districtStats,
       },
     };
   }

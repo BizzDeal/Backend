@@ -3,8 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Referral } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
-import { CreateReferralSlipDto, ReferralQueryDto, AdminReferralQueryDto } from './schemas/referrals.schema';
+import { CreateReferralSlipDto, ReferralQueryDto, AdminReferralQueryDto, AppreciateReferralDto } from './schemas/referrals.schema';
 import { ReferralType } from '../../common/enums';
+import { ChatService } from '../chat/chat.service';
 
 @Injectable()
 export class ReferralsService {
@@ -13,6 +14,7 @@ export class ReferralsService {
     private referralRepo: Repository<Referral>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    private chatService: ChatService,
   ) {}
 
   async createReferralSlip(referrerId: string, dto: CreateReferralSlipDto) {
@@ -202,6 +204,53 @@ export class ReferralsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async appreciateReferral(userId: string, referralId: string, dto: AppreciateReferralDto) {
+    const referral = await this.referralRepo.findOne({ 
+      where: { id: referralId },
+      relations: { referrer: { profile: true } } 
+    });
+    if (!referral) {
+      throw new NotFoundException('Referral not found.');
+    }
+
+    if (referral.to_member_id !== userId) {
+      throw new BadRequestException('You can only appreciate referrals you received.');
+    }
+
+    if (referral.is_appreciated) {
+      throw new BadRequestException('This referral has already been appreciated.');
+    }
+
+    referral.is_appreciated = true;
+    referral.appreciation_message = dto.appreciation_message || null;
+    referral.cost_of_business = dto.cost_of_business;
+
+    await this.referralRepo.save(referral);
+
+    // Send automated community chat message
+    try {
+      const currentUser = await this.userRepo.findOne({ where: { id: userId }, relations: { profile: true } });
+      if (currentUser && referral.referrer) {
+        const referrerName = referral.referrer.profile?.full_name || 'Member';
+        const costStr = Number(dto.cost_of_business).toLocaleString('en-IN');
+        
+        let chatMessage = `🎉 *Appreciation Alert!* 🎉\n`;
+        chatMessage += `I would like to thank **${referrerName}** for referring **${referral.contact_name}** to me!\n`;
+        chatMessage += `We successfully closed business worth ₹**${costStr}**.`;
+
+        await this.chatService.sendCommunityMessage(chatMessage, currentUser);
+      }
+    } catch (e) {
+      console.error('Failed to send community appreciation message:', e);
+    }
+
+    return {
+      success: true,
+      message: 'Referral appreciated successfully.',
+      data: referral,
     };
   }
 }

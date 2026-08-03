@@ -51,6 +51,7 @@ export const broadcastRoleNotificationSchema = z.object({
 
 export const registerDeviceSchema = z.object({
   fcm_token: z.string().min(1, 'FCM token is required'),
+  device_identifier: z.string().optional().nullable(),
   device_type: z.nativeEnum(DeviceType, {
     message: 'Invalid device type',
   }),

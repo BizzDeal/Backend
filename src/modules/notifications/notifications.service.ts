@@ -359,15 +359,26 @@ export class NotificationsService {
     deviceType: DeviceType,
     deviceName: string | null | undefined,
     user: User,
+    deviceIdentifier: string | null = null,
     deviceModel: string | null = null,
     operatingSystem: string | null = null,
     osVersion: string | null = null,
     manufacturer: string | null = null,
     isVirtual: boolean | null = null,
   ): Promise<UserDevice> {
-    let device = await this.deviceRepository.findOne({
-      where: { user_id: user.id, fcm_token: fcmToken },
-    });
+    let device: UserDevice | null = null;
+
+    if (deviceIdentifier) {
+      device = await this.deviceRepository.findOne({
+        where: { user_id: user.id, device_identifier: deviceIdentifier },
+      });
+    }
+
+    if (!device) {
+      device = await this.deviceRepository.findOne({
+        where: { user_id: user.id, fcm_token: fcmToken },
+      });
+    }
     const isNewOrReactivated = !device || !device.is_active;
     let otherActiveDevicesCount = 0;
     if (isNewOrReactivated) {
@@ -380,6 +391,7 @@ export class NotificationsService {
       device = this.deviceRepository.create({
         user_id: user.id,
         fcm_token: fcmToken,
+        device_identifier: deviceIdentifier,
         device_type: deviceType || DeviceType.ANDROID,
         device_name: deviceName || null,
         device_model: deviceModel,
@@ -391,6 +403,10 @@ export class NotificationsService {
         last_used_at: new Date(),
       });
     } else {
+      device.fcm_token = fcmToken;
+      if (deviceIdentifier) {
+        device.device_identifier = deviceIdentifier;
+      }
       device.is_active = true;
       device.device_type = deviceType || device.device_type;
       if (deviceName !== undefined) {

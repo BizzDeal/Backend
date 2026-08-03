@@ -140,6 +140,13 @@ export class RegisterDeviceDto {
   })
   fcm_token: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Stable device identifier to link updated FCM tokens',
+    example: 'A23...identifier...9Z0',
+  })
+  device_identifier?: string;
+
   @ApiProperty({
     enum: DeviceType,
     description: 'Operating system or platform type of the client device',

@@ -25,6 +25,9 @@ export class UserDevice {
   @Column({ type: 'text' })
   fcm_token: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  device_identifier: string | null;
+
   @Column({
     type: 'enum',
     enum: DeviceType,

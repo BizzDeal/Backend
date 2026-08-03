@@ -334,7 +334,7 @@ export class ChatService implements OnModuleInit {
       order: { created_at: 'DESC' }, // Reverse order for pagination (latest first)
       skip: (page - 1) * limit,
       take: limit,
-      relations: { media_file: true },
+      relations: { media_file: true, sender: { profile: true } },
     }).then(msgs => msgs.reverse()); // Reverse again to return oldest -> newest for the UI
   }
 
@@ -425,7 +425,7 @@ export class ChatService implements OnModuleInit {
     const saved = await this.messageRepository.save(msg);
     const completeMsg = await this.messageRepository.findOne({
       where: { id: saved.id },
-      relations: { media_file: true },
+      relations: { media_file: true, sender: { profile: true } },
     });
 
     await this.conversationRepository.update(conversationId, {
@@ -542,5 +542,19 @@ export class ChatService implements OnModuleInit {
     } catch {
       // Silently catch notification errors to avoid breaking message delivery
     }
+  }
+
+  async sendCommunityMessage(message: string, user: User): Promise<ChatMessage | null> {
+    let group = await this.conversationRepository.findOne({ where: { is_default_group: true } });
+    if (!group) {
+      await this.ensureDefaultGroupExists();
+      group = await this.conversationRepository.findOne({ where: { is_default_group: true } });
+    }
+    
+    if (group) {
+      return this.sendMessage(group.id, message, MessageType.TEXT, null, user);
+    }
+    
+    return null;
   }
 }

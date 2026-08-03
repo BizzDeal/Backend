@@ -34,14 +34,12 @@ import {
   loginSchema,
   registerMemberSchema,
   registerCustomerSchema,
-  registerAdminSchema,
   forgotPinSchema,
   resetPinSchema,
   refreshTokenSchema,
   LoginDto,
   RegisterMemberDto,
   RegisterCustomerDto,
-  RegisterAdminDto,
   ForgotPinDto,
   ResetPinDto,
   RefreshTokenDto,
@@ -141,7 +139,7 @@ export class AuthController {
   @ApiResponse({
     status: 201,
     description:
-      'Member registered successfully. Returns initial session tokens and profile.',
+      'Member registered successfully. Please check your email to verify.',
   })
   @ApiResponse({
     status: 400,
@@ -180,7 +178,7 @@ export class AuthController {
   @ApiResponse({
     status: 201,
     description:
-      'Customer registered successfully. Returns initial session tokens and profile.',
+      'Customer registered successfully. Please login to continue.',
   })
   @ApiResponse({
     status: 400,
@@ -199,34 +197,6 @@ export class AuthController {
     return this.authService.registerCustomer(dto, profile_image);
   }
 
-  @Post('register-admin')
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({
-    summary: 'Register Admin',
-    description:
-      'Registers a new admin account with optional profile_image upload and profile details. Requires a valid 6-digit OTP sent to the email. Admin is immediately active.',
-  })
-  @ApiResponse({
-    status: 201,
-    description:
-      'Admin registered successfully. Returns initial session tokens and profile.',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Validation failed or Firebase token verification failed.',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'Phone number already registered.',
-  })
-  @UseInterceptors(FileInterceptor('profile_image'))
-  async registerAdmin(
-    @Body(new ZodValidationPipe(registerAdminSchema))
-    dto: RegisterAdminDto,
-    @UploadedFile() profile_image?: Express.Multer.File,
-  ) {
-    return this.authService.registerAdmin(dto, profile_image);
-  }
 
   @Post('forgot-pin')
   @HttpCode(HttpStatus.OK)

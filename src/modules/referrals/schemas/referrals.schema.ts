@@ -109,3 +109,23 @@ export class AdminReferralQueryDto extends PaginationQueryDto {
   referral_type?: ReferralType;
 }
 
+export const appreciateReferralSchema = z.object({
+  appreciation_message: z.string().max(1000).optional().nullable(),
+  cost_of_business: z.number().min(0, 'Cost cannot be negative'),
+});
+
+export class AppreciateReferralDto {
+  @ApiPropertyOptional({
+    description: 'A thank you message to the referrer',
+    example: 'Thank you for referring John Doe! We successfully completed business worth 5000.',
+  })
+  appreciation_message?: string;
+
+  @ApiProperty({
+    description: 'The revenue generated or cost of business',
+    example: 5000,
+  })
+  cost_of_business: number;
+}
+
+

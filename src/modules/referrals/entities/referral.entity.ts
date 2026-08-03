@@ -60,6 +60,15 @@ export class Referral {
   @Column({ type: 'int', default: 0, nullable: true })
   rating: number | null;
 
+  @Column({ type: 'boolean', default: false })
+  is_appreciated: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  appreciation_message: string | null;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  cost_of_business: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
