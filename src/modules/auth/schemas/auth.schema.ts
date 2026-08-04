@@ -22,7 +22,7 @@ export class LoginDto {
 
 export const registerMemberSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
-  phone: z.string().optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  phone: z.string().regex(/^\d{10}$/, 'Valid 10-digit phone number is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
   whatsapp: z.string().optional().or(z.literal('')).refine(val => !val || /^[0-9]{10}$/.test(val), { message: 'WhatsApp number must be exactly 10 digits' }).transform(val => val === '' ? null : val),
   email: z.string().email('Invalid email address'),
@@ -186,7 +186,7 @@ export class RegisterMemberDto {
 
 export const registerCustomerSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
-  phone: z.string().optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  phone: z.string().regex(/^\d{10}$/, 'Valid 10-digit phone number is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   pin: z.string().min(4, 'PIN must be at least 4 characters'),
   whatsapp: z.string().min(10, 'Valid WhatsApp number is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   email: z.string().email('Invalid email address'),

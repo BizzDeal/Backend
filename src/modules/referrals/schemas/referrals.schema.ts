@@ -9,7 +9,7 @@ export const createReferralSlipSchema = z.object({
   told_to_call: z.boolean().default(false),
   card_given: z.boolean().default(false),
   contact_name: z.string().min(1, 'Contact name is required').max(255),
-  contact_phone: z.string().min(1, 'Contact phone is required').max(50),
+  contact_phone: z.string().regex(/^\d{10}$/, 'Valid 10-digit contact phone is required'),
   contact_email: z.string().email('Invalid email format').optional().nullable().or(z.literal('')),
   contact_address: z.string().max(500).optional().nullable().or(z.literal('')),
   comments: z.string().optional().nullable().or(z.literal('')),
@@ -26,7 +26,7 @@ export class CreateReferralSlipDto {
   @ApiProperty({
     description: 'Type of referral',
     enum: ReferralType,
-    example: ReferralType.INSIDE,
+    example: ReferralType.INHOUSE,
   })
   referral_type: ReferralType;
 

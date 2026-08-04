@@ -32,7 +32,7 @@ export class Referral {
   @Column({
     type: 'enum',
     enum: ReferralType,
-    default: ReferralType.INSIDE,
+    default: ReferralType.INHOUSE,
   })
   referral_type: ReferralType;
 

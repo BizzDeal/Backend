@@ -62,8 +62,8 @@ export enum WalletReferenceType {
 }
 
 export enum ReferralType {
-  INSIDE = 'INSIDE',
-  OUTSIDE = 'OUTSIDE',
+  INHOUSE = 'INHOUSE',
+  OUTHOUSE = 'OUTHOUSE',
 }
 
 export enum NotificationType {

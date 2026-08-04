@@ -7,7 +7,7 @@ export const issueVoucherSchema = z.object({
   offer_id: z.string().uuid({ message: 'Valid offer_id UUID is required' }),
   customer_phone: z
     .string()
-    .min(10, { message: 'Valid customer phone number is required' })
+    .regex(/^\d{10}$/, { message: 'Valid 10-digit customer phone number is required' })
     .optional(),
 });
 

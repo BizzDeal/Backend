@@ -4,6 +4,7 @@ import {
   Put,
   Patch,
   Delete,
+  Post,
   Body,
   Param,
   Query,
@@ -42,6 +43,10 @@ import {
   FeatureBusinessDto,
   updateBusinessStatusSchema,
   UpdateBusinessStatusDto,
+  createCategorySchema,
+  CreateCategoryDto,
+  updateCategoryDtoSchema,
+  UpdateCategoryDto,
 } from './schemas/businesses.schema';
 
 @ApiTags('Businesses')
@@ -81,6 +86,70 @@ export class BusinessesController {
   })
   async getCategoryById(@Param('id') id: string) {
     return this.businessesService.getCategoryById(id);
+  }
+
+  @Post('categories')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create Business Category (Admin Only)',
+    description: 'Creates a new business category.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Category created successfully.',
+  })
+  async createCategory(
+    @Body(new ZodValidationPipe(createCategorySchema)) dto: CreateCategoryDto,
+    @CurrentUser() user: User,
+    @Ip() ip?: string,
+  ) {
+    return this.businessesService.createCategory(dto, user.id, ip);
+  }
+
+  @Put('categories/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update Business Category (Admin Only)',
+    description: 'Updates an existing business category.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Category updated successfully.',
+  })
+  async updateCategory(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateCategoryDtoSchema)) dto: UpdateCategoryDto,
+    @CurrentUser() user: User,
+    @Ip() ip?: string,
+  ) {
+    return this.businessesService.updateCategory(id, dto, user.id, ip);
+  }
+
+  @Delete('categories/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete Business Category (Admin Only)',
+    description: 'Deletes a business category if it has no active businesses.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Category deleted successfully.',
+  })
+  async deleteCategory(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Ip() ip?: string,
+  ) {
+    return this.businessesService.deleteCategory(id, user.id, ip);
   }
 
   @Get('featured')

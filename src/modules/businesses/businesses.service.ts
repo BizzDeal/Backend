@@ -24,6 +24,8 @@ import {
 import {
   UpdateBusinessDto,
   BusinessQueryDto,
+  CreateCategoryDto,
+  UpdateCategoryDto,
 } from './schemas/businesses.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { SettingsService } from '../settings/settings.service';
@@ -836,6 +838,130 @@ export class BusinessesService {
       success: true,
       message: `Business ${isFeatured ? 'featured' : 'unfeatured'} successfully`,
       data: enriched[0],
+    };
+  }
+
+  private generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+  }
+
+  async createCategory(dto: CreateCategoryDto, adminId: string, ipAddress?: string) {
+    const slug = this.generateSlug(dto.name);
+    
+    const existing = await this.categoryRepository.findOne({ where: { slug } });
+    if (existing) {
+      throw new ConflictException('A category with a similar name already exists');
+    }
+
+    const category = this.categoryRepository.create({
+      ...dto,
+      slug,
+      is_active: dto.is_active !== undefined ? dto.is_active : true,
+    });
+
+    const saved = await this.categoryRepository.save(category);
+
+    await this.auditService.createLog({
+      user_id: adminId,
+      action: 'CATEGORY_CREATED',
+      entity_type: 'BusinessCategory',
+      entity_id: saved.id,
+      new_data: { name: saved.name, slug: saved.slug },
+      ip_address: ipAddress,
+    });
+
+    return {
+      success: true,
+      message: 'Category created successfully',
+      data: saved,
+    };
+  }
+
+  async updateCategory(id: string, dto: UpdateCategoryDto, adminId: string, ipAddress?: string) {
+    if (!this.isUUID(id)) {
+      throw new BadRequestException('Invalid category ID format');
+    }
+
+    const category = await this.categoryRepository.findOne({ where: { id } });
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
+    const updateData: Partial<BusinessCategory> = {};
+    if (dto.name && dto.name !== category.name) {
+      updateData.name = dto.name;
+      updateData.slug = this.generateSlug(dto.name);
+      
+      const existing = await this.categoryRepository.findOne({ 
+        where: { slug: updateData.slug } 
+      });
+      
+      if (existing && existing.id !== id) {
+        throw new ConflictException('A category with a similar name already exists');
+      }
+    }
+    
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.is_active !== undefined) updateData.is_active = dto.is_active;
+
+    if (Object.keys(updateData).length > 0) {
+      await this.categoryRepository.update(id, updateData);
+    }
+
+    const updated = await this.categoryRepository.findOne({ where: { id } });
+
+    await this.auditService.createLog({
+      user_id: adminId,
+      action: 'CATEGORY_UPDATED',
+      entity_type: 'BusinessCategory',
+      entity_id: id,
+      old_data: { name: category.name, is_active: category.is_active },
+      new_data: updateData,
+      ip_address: ipAddress,
+    });
+
+    return {
+      success: true,
+      message: 'Category updated successfully',
+      data: updated,
+    };
+  }
+
+  async deleteCategory(id: string, adminId: string, ipAddress?: string) {
+    if (!this.isUUID(id)) {
+      throw new BadRequestException('Invalid category ID format');
+    }
+
+    const category = await this.categoryRepository.findOne({ where: { id } });
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
+    const businessCount = await this.businessRepository.count({
+      where: { category_id: id }
+    });
+
+    if (businessCount > 0) {
+      throw new ConflictException('Cannot delete category as it is currently associated with active businesses. Please deactivate it instead or reassign businesses first.');
+    }
+
+    await this.categoryRepository.delete(id);
+
+    await this.auditService.createLog({
+      user_id: adminId,
+      action: 'CATEGORY_DELETED',
+      entity_type: 'BusinessCategory',
+      entity_id: id,
+      old_data: { name: category.name },
+      ip_address: ipAddress,
+    });
+
+    return {
+      success: true,
+      message: 'Category deleted successfully',
     };
   }
 }

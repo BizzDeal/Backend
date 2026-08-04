@@ -5,7 +5,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export const createNotificationSchema = z.object({
   user_id: z.string().optional(),
-  phone: z.string().min(5, 'Phone number invalid').optional(),
+  phone: z.string().regex(/^\d{10}$/, 'Valid 10-digit phone number is required').optional(),
   title: z.string().min(1, 'Title cannot be empty').max(255, 'Title too long'),
   message: z.string().min(1, 'Message cannot be empty'),
   type: z
@@ -24,7 +24,7 @@ export const sendBulkNotificationSchema = z.object({
     .optional()
     .default([]),
   phones: z
-    .array(z.string().min(5, 'Phone number invalid'))
+    .array(z.string().regex(/^\d{10}$/, 'Valid 10-digit phone number is required'))
     .optional()
     .default([]),
   title: z.string().min(1, 'Title cannot be empty').max(255, 'Title too long'),

@@ -21,7 +21,7 @@ export const updateProfileSchema = z.object({
     .min(2, 'Full name must be at least 2 characters')
     .optional()
     .or(z.literal('')),
-  phone: z.string().min(10, 'Valid phone number is required').optional().or(z.literal('')),
+  phone: z.string().regex(/^\d{10}$/, 'Valid 10-digit phone number is required').optional().or(z.literal('')),
   whatsapp: z.string().optional().nullable().or(z.literal('')),
   email: z.string().email('Invalid email address').optional().nullable().or(z.literal('')),
   address: z.string().optional().nullable().or(z.literal('')),

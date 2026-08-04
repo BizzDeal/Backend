@@ -354,6 +354,7 @@ export class UsersService {
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('profile.state', 'state')
       .leftJoinAndSelect('profile.district', 'district')
+      .leftJoinAndSelect('profile.primary_business', 'primary_business')
       .where('user.role = :role', { role: UserRole.CUSTOMER })
       .andWhere('user.status != :unverifiedStatus', { unverifiedStatus: UserStatus.UNVERIFIED });
 
@@ -420,6 +421,10 @@ export class UsersService {
         district_id: user.profile?.district_id || null,
         district_name: user.profile?.district?.name || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
+        primary_business_store: user.profile?.primary_business ? {
+          business_name: user.profile.primary_business.name,
+          category_id: user.profile.primary_business.category_id
+        } : null,
       };
     });
 

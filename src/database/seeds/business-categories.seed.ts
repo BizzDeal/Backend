@@ -38,6 +38,41 @@ export const BUSINESS_CATEGORIES = [
     slug: 'retail',
     description: 'Retail Stores, Shopping, and E-commerce',
   },
+  {
+    name: 'Automotive',
+    slug: 'automotive',
+    description: 'Automotive, Auto Repair, and Dealerships',
+  },
+  {
+    name: 'Beauty & Spa',
+    slug: 'beauty-and-spa',
+    description: 'Salons, Spas, and Personal Care',
+  },
+  {
+    name: 'Fitness & Gyms',
+    slug: 'fitness-and-gyms',
+    description: 'Gyms, Yoga, and Fitness Centers',
+  },
+  {
+    name: 'Home Services',
+    slug: 'home-services',
+    description: 'Plumbing, Cleaning, and Repairs',
+  },
+  {
+    name: 'Professional Services',
+    slug: 'professional-services',
+    description: 'Legal, Accounting, and Consulting',
+  },
+  {
+    name: 'Travel & Tourism',
+    slug: 'travel-and-tourism',
+    description: 'Travel Agencies, and Tour Operators',
+  },
+  {
+    name: 'Entertainment',
+    slug: 'entertainment',
+    description: 'Theaters, Amusements, and Events',
+  },
 ];
 
 export async function seedBusinessCategories(

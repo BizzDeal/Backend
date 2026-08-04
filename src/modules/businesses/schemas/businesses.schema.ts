@@ -97,7 +97,7 @@ export const businessQuerySchema = z.object({
     }, z.boolean())
     .optional(),
   full_name: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().regex(/^\d{10}$/, 'Valid 10-digit phone number is required').optional(),
   whatsapp: z.string().optional(),
   email: z.string().optional(),
   address: z.string().optional(),
@@ -243,4 +243,58 @@ export class FeatureBusinessDto {
     example: true,
   })
   is_featured: boolean;
+}
+
+export const createCategorySchema = z.object({
+  name: z.string().min(2),
+  description: z.string().optional().nullable(),
+  is_active: z.boolean().optional(),
+});
+
+export class CreateCategoryDto {
+  @ApiProperty({
+    type: String,
+    description: 'Name of the category',
+    example: 'Technology',
+  })
+  name: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Description of the category',
+  })
+  description?: string | null;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Is category active',
+    default: true,
+  })
+  is_active?: boolean;
+}
+
+export const updateCategoryDtoSchema = z.object({
+  name: z.string().min(2).optional(),
+  description: z.string().optional().nullable(),
+  is_active: z.boolean().optional(),
+});
+
+export class UpdateCategoryDto {
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Name of the category',
+  })
+  name?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Description of the category',
+  })
+  description?: string | null;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Is category active',
+  })
+  is_active?: boolean;
 }

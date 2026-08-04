@@ -63,6 +63,10 @@ export class ReferralsService {
       .leftJoin('to_member.business_profile', 'to_member_business')
       .select([
         'referral',
+        'referral.is_appreciated',
+        'referral.cost_of_business',
+        'referral.appreciation_message',
+        'referral.rating',
         'referrer.id',
         'referrer.phone',
         'referrer.email',
@@ -135,6 +139,10 @@ export class ReferralsService {
       .leftJoin('to_member.business_profile', 'to_member_business')
       .select([
         'referral',
+        'referral.is_appreciated',
+        'referral.cost_of_business',
+        'referral.appreciation_message',
+        'referral.rating',
         'referrer.id',
         'referrer.phone',
         'referrer.email',
@@ -161,8 +169,37 @@ export class ReferralsService {
     }
 
     const totalCount = await this.referralRepo.count();
-    const insideCount = await this.referralRepo.count({ where: { referral_type: ReferralType.INSIDE } });
-    const outsideCount = await this.referralRepo.count({ where: { referral_type: ReferralType.OUTSIDE } });
+    const inhouseCount = await this.referralRepo.count({ where: { referral_type: ReferralType.INHOUSE } });
+    const outhouseCount = await this.referralRepo.count({ where: { referral_type: ReferralType.OUTHOUSE } });
+    const totalAppreciations = await this.referralRepo.count({ where: { is_appreciated: true } });
+    
+    const revenueResult = await this.referralRepo.createQueryBuilder('referral')
+      .select('SUM(referral.cost_of_business)', 'totalRevenue')
+      .where('referral.is_appreciated = :isAppreciated', { isAppreciated: true })
+      .getRawOne();
+    const totalAppreciationRevenue = parseFloat(revenueResult?.totalRevenue || '0');
+
+    // Get Highest Business Deal
+    const highestBusinessRecord = await this.referralRepo.createQueryBuilder('referral')
+      .leftJoinAndSelect('referral.referrer', 'referrer')
+      .leftJoinAndSelect('referrer.profile', 'referrer_profile')
+      .leftJoinAndSelect('referral.to_member', 'to_member')
+      .leftJoinAndSelect('to_member.profile', 'to_member_profile')
+      .where('referral.is_appreciated = :isAppreciated', { isAppreciated: true })
+      .orderBy('CAST(referral.cost_of_business AS DECIMAL)', 'DESC')
+      .addOrderBy('referral.created_at', 'DESC')
+      .getOne();
+
+    let highestBusiness: any = null;
+    if (highestBusinessRecord) {
+      highestBusiness = {
+        contact_name: highestBusinessRecord.contact_name,
+        revenue: highestBusinessRecord.cost_of_business,
+        referrer_name: (highestBusinessRecord.referrer as any)?.profile?.full_name || 'Member',
+        to_member_name: (highestBusinessRecord.to_member as any)?.profile?.full_name || 'Member',
+        date: highestBusinessRecord.created_at,
+      };
+    }
 
     qb.skip(skip).take(limit);
 
@@ -195,8 +232,11 @@ export class ReferralsService {
       data: formattedItems,
       summary: {
         totalCount,
-        insideCount,
-        outsideCount,
+        inhouseCount,
+        outhouseCount,
+        totalAppreciations,
+        totalAppreciationRevenue,
+        highestBusiness,
       },
       meta: {
         total,
