@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
-import { getStorage, Storage } from 'firebase-admin/storage';
+
 import {
   getMessaging,
   Messaging,
@@ -31,9 +31,6 @@ export class FirebaseService implements OnModuleInit {
 
     const clientEmail = this.configService.get<string>('FIREBASE_CLIENT_EMAIL');
     const privateKey = this.configService.get<string>('FIREBASE_PRIVATE_KEY');
-    const storageBucket =
-      this.configService.get<string>('FIREBASE_STORAGE_BUCKET') ||
-      'bizzdeal.firebasestorage.app';
 
     const apps = getApps();
     if (apps.length > 0 && apps[0]) {
@@ -50,23 +47,16 @@ export class FirebaseService implements OnModuleInit {
           privateKey: formattedPrivateKey,
         }),
         projectId,
-        storageBucket,
       });
     } else {
       this.firebaseApp = initializeApp({
         projectId,
-        storageBucket,
       });
     }
 
     this.logger.log(
       `Firebase Admin SDK initialized successfully for project: ${projectId}`,
     );
-    if (process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
-      this.logger.log(
-        `Firebase Storage running against local emulator at: ${process.env.FIREBASE_STORAGE_EMULATOR_HOST}`,
-      );
-    }
   }
 
   /**
@@ -101,13 +91,7 @@ export class FirebaseService implements OnModuleInit {
     return getAuth(this.firebaseApp);
   }
 
-  getStorage(): Storage {
-    return getStorage(this.firebaseApp);
-  }
 
-  getBucket() {
-    return getStorage(this.firebaseApp).bucket();
-  }
 
   getMessaging(): Messaging {
     return getMessaging(this.firebaseApp);

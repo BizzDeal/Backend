@@ -5,6 +5,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Redirect,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -39,5 +40,24 @@ export class MediaController {
   })
   async getFileById(@Param('id') id: string) {
     return this.mediaService.getFileById(id);
+  }
+
+  @Get('file/:id')
+  @Redirect()
+  @ApiOperation({
+    summary: 'Redirect to Media File',
+    description: 'Generates a pre-signed S3 URL for the media file and redirects the client to it.',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to the S3 URL.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Media file not found.',
+  })
+  async getFileRedirect(@Param('id') id: string) {
+    const url = await this.mediaService.getPresignedUrl(id);
+    return { url, statusCode: 302 };
   }
 }
