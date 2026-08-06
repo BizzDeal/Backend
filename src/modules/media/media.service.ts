@@ -30,7 +30,7 @@ export class MediaService {
         secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY') || '',
       },
       // Railway/Cloudflare/etc compatible options
-      forcePathStyle: true,
+      forcePathStyle: false,
     });
   }
 
