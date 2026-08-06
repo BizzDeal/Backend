@@ -5,13 +5,13 @@ export default registerAs('database', () => {
   process.env.TZ = process.env.TZ || 'Asia/Kolkata';
   process.env.PGTZ = process.env.PGTZ || 'Asia/Kolkata';
 
-  const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL;
   const isSupabase = url?.includes('supabase.com');
 
   return {
     type: 'postgres' as const,
     url,
-    synchronize: true, // Auto sync schema with postgres DB as per requirement
+    synchronize: process.env.DB_SYNCHRONIZE === 'true',
     autoLoadEntities: true,
     extra: {
       options: '-c timezone=Asia/Kolkata',
