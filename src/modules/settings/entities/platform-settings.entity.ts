@@ -19,6 +19,9 @@ export class PlatformSettings {
   @Column({ type: 'int', default: 20 })
   home_feed_limit: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 1.00 })
+  bizz_coin_value: number;
+
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

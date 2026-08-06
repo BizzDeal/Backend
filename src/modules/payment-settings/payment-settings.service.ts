@@ -1,14 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaymentSetting } from './entities/payment-setting.entity';
 import { UpdatePaymentSettingsDto } from './schemas/payment-settings.schema';
+import { AppEventsGateway } from '../events/events.gateway';
 
 @Injectable()
 export class PaymentSettingsService {
+  private readonly logger = new Logger(PaymentSettingsService.name);
+
   constructor(
     @InjectRepository(PaymentSetting)
     private readonly paymentSettingRepository: Repository<PaymentSetting>,
+    private readonly appEventsGateway: AppEventsGateway,
   ) {}
 
   async getSettings(): Promise<PaymentSetting> {
@@ -38,6 +42,14 @@ export class PaymentSettingsService {
     } else {
       record = this.paymentSettingRepository.create(dto);
     }
-    return this.paymentSettingRepository.save(record);
+    const saved = await this.paymentSettingRepository.save(record);
+
+    try {
+      this.appEventsGateway.emitToAll('PAYMENT_SETTINGS_UPDATED', saved);
+    } catch (err) {
+      this.logger.warn(`Failed to broadcast PAYMENT_SETTINGS_UPDATED event: ${err}`);
+    }
+
+    return saved;
   }
 }

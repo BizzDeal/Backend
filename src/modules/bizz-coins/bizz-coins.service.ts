@@ -13,7 +13,9 @@ import {
   BizzCoinTransactionType,
 } from './entities/bizz-coin-transaction.entity';
 import { User } from '../users/entities/user.entity';
+import { Profile } from '../users/entities/profile.entity';
 import { BusinessProfile } from '../businesses/entities/business-profile.entity';
+import { CustomerBusiness } from '../businesses/entities/customer-business.entity';
 import { Offer } from '../offers/entities/offer.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
 import { IssueBizzCoinsDto, RedeemBizzCoinsDto } from './schemas/bizz-coins.schema';
@@ -26,6 +28,7 @@ import {
 } from '../../common/enums';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AppEventsGateway } from '../events/events.gateway';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class BizzCoinsService {
@@ -38,14 +41,19 @@ export class BizzCoinsService {
     private readonly transactionRepository: Repository<BizzCoinTransaction>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Profile)
+    private readonly profileRepository: Repository<Profile>,
     @InjectRepository(BusinessProfile)
     private readonly businessRepository: Repository<BusinessProfile>,
+    @InjectRepository(CustomerBusiness)
+    private readonly customerBusinessRepository: Repository<CustomerBusiness>,
     @InjectRepository(Offer)
     private readonly offerRepository: Repository<Offer>,
     @InjectRepository(MediaFile)
     private readonly mediaRepository: Repository<MediaFile>,
     private readonly notificationsService: NotificationsService,
     private readonly appEventsGateway: AppEventsGateway,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async getOrCreateWallet(userId: string): Promise<BizzCoinWallet> {
@@ -64,16 +72,18 @@ export class BizzCoinsService {
 
   async checkMemberActiveBizzCoinOffer(issuer: User): Promise<{
     has_active_offer: boolean;
+    is_featured: boolean;
+    can_redeem: boolean;
     business_id: string | null;
   }> {
     if (issuer.role === UserRole.ADMIN) {
-      return { has_active_offer: true, business_id: null };
+      return { has_active_offer: true, is_featured: true, can_redeem: true, business_id: null };
     }
     const business = await this.businessRepository.findOne({
       where: { owner_id: issuer.id },
     });
     if (!business) {
-      return { has_active_offer: false, business_id: null };
+      return { has_active_offer: false, is_featured: false, can_redeem: false, business_id: null };
     }
     const now = new Date();
     const activeOffer = await this.offerRepository.findOne({
@@ -85,7 +95,14 @@ export class BizzCoinsService {
         end_date: MoreThanOrEqual(now),
       },
     });
-    return { has_active_offer: !!activeOffer, business_id: business.id };
+    const isFeatured = !!business.is_featured;
+    const hasActiveOffer = !!activeOffer;
+    return {
+      has_active_offer: hasActiveOffer,
+      is_featured: isFeatured,
+      can_redeem: isFeatured || hasActiveOffer,
+      business_id: business.id,
+    };
   }
 
   async issueCoins(dto: IssueBizzCoinsDto, issuer: User) {
@@ -204,9 +221,9 @@ export class BizzCoinsService {
         },
       });
 
-      if (!activeOffer) {
+      if (!activeOffer && !business.is_featured) {
         throw new BadRequestException(
-          'You must have an active Bizz Coins offer to redeem Bizz Coins for customers.',
+          'You must have a featured business or an active Bizz Coins offer to redeem Bizz Coins for customers.',
         );
       }
     }
@@ -240,12 +257,24 @@ export class BizzCoinsService {
       );
     }
 
+    const platformSettings = await this.settingsService.getSettings();
+    const bizzCoinValue = Number(platformSettings?.bizz_coin_value) || 1.0;
+    const discountAmount = coinsToRedeem * bizzCoinValue;
+    const billAmount = Number(dto.bill_amount) || 0;
+
+    if (discountAmount > billAmount) {
+      const maxAllowedCoins = Math.floor(billAmount / bizzCoinValue);
+      throw new BadRequestException(
+        `Coin discount amount (₹${discountAmount}) cannot exceed the total bill amount (₹${billAmount}). Maximum allowed coins for this bill: ${maxAllowedCoins}.`,
+      );
+    }
+
     const newBalance = currentBalance - coinsToRedeem;
     customerWallet.balance = newBalance;
-    await this.walletRepository.save(customerWallet);
+    const finalAmountToPay = Math.max(0, Number(dto.bill_amount) - discountAmount);
 
     const businessName = business?.name || 'BizzDeal Partner';
-    const description = `Redeemed ${coinsToRedeem} Bizz Coins for a bill of ₹${dto.bill_amount} at ${businessName}`;
+    const description = `Redeemed ${coinsToRedeem} Bizz Coins (₹${discountAmount}) for a bill of ₹${dto.bill_amount} at ${businessName}`;
 
     const tx = this.transactionRepository.create({
       bizz_coin_wallet_id: customerWallet.id,
@@ -255,7 +284,41 @@ export class BizzCoinsService {
       amount: coinsToRedeem,
       description,
     });
-    const savedTx = await this.transactionRepository.save(tx);
+
+    const now = new Date();
+    const savedTx = await this.walletRepository.manager.transaction(async (manager) => {
+      await manager.save(BizzCoinWallet, customerWallet);
+      const savedTransaction = await manager.save(BizzCoinTransaction, tx);
+
+      if (business?.id) {
+        // Track primary store for customer if not already set
+        const profile = await manager.findOne(Profile, { where: { user_id: targetCustomer.id } });
+        if (profile && !profile.primary_business_id) {
+          profile.primary_business_id = business.id;
+          await manager.save(Profile, profile);
+        }
+
+        // Track/update customer visits to this store
+        let customerBusiness = await manager.findOne(CustomerBusiness, {
+          where: { customer_id: targetCustomer.id, business_id: business.id },
+        });
+
+        if (!customerBusiness) {
+          customerBusiness = manager.create(CustomerBusiness, {
+            customer_id: targetCustomer.id,
+            business_id: business.id,
+            total_visits: 1,
+            last_visited_at: now,
+          });
+        } else {
+          customerBusiness.total_visits = Number(customerBusiness.total_visits) + 1;
+          customerBusiness.last_visited_at = now;
+        }
+        await manager.save(CustomerBusiness, customerBusiness);
+      }
+
+      return savedTransaction;
+    });
 
     // Notify customer real-time via WebSockets & Push
     try {
@@ -276,9 +339,12 @@ export class BizzCoinsService {
 
     return {
       success: true,
-      message: `${coinsToRedeem} Bizz Coins redeemed successfully for ${targetCustomer.profile?.full_name || 'Customer'}.`,
+      message: `${coinsToRedeem} Bizz Coins (₹${discountAmount} value) redeemed successfully for ${targetCustomer.profile?.full_name || 'Customer'}.`,
       transaction: savedTx,
       new_balance: newBalance,
+      bizz_coin_value: bizzCoinValue,
+      discount_amount: discountAmount,
+      final_amount_to_pay: finalAmountToPay,
       customer: {
         id: targetCustomer.id,
         name: targetCustomer.profile?.full_name || 'Customer',

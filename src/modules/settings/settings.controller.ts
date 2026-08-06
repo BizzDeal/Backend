@@ -25,11 +25,11 @@ export class SettingsController {
 
   @Get('platform')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.MEMBER, UserRole.CUSTOMER)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get Platform Settings (Admin Only)',
+    summary: 'Get Platform Settings',
     description: 'Retrieves current global platform settings like feed limits and deal thresholds.',
   })
   @ApiResponse({

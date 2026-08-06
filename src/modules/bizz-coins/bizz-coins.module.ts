@@ -4,13 +4,16 @@ import { JwtModule } from '@nestjs/jwt';
 import { BizzCoinWallet } from './entities/bizz-coin-wallet.entity';
 import { BizzCoinTransaction } from './entities/bizz-coin-transaction.entity';
 import { User } from '../users/entities/user.entity';
+import { Profile } from '../users/entities/profile.entity';
 import { BusinessProfile } from '../businesses/entities/business-profile.entity';
+import { CustomerBusiness } from '../businesses/entities/customer-business.entity';
 import { Offer } from '../offers/entities/offer.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
 import { BizzCoinsService } from './bizz-coins.service';
 import { BizzCoinsController } from './bizz-coins.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EventsModule } from '../events/events.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -18,7 +21,9 @@ import { EventsModule } from '../events/events.module';
       BizzCoinWallet,
       BizzCoinTransaction,
       User,
+      Profile,
       BusinessProfile,
+      CustomerBusiness,
       Offer,
       MediaFile,
     ]),
@@ -27,6 +32,7 @@ import { EventsModule } from '../events/events.module';
     }),
     NotificationsModule,
     EventsModule,
+    SettingsModule,
   ],
   controllers: [BizzCoinsController],
   providers: [BizzCoinsService],

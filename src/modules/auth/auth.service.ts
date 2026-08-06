@@ -370,8 +370,13 @@ export class AuthService {
 
     const pinHash = await bcrypt.hash(dto.pin, 10);
 
+    let fullName = dto.full_name?.trim();
+    if (!fullName && dto.email && dto.email.includes('@')) {
+      fullName = dto.email.split('@')[0];
+    }
+
     const newUser = await this.usersService.create({
-      full_name: dto.full_name || null,
+      full_name: fullName || null,
       phone: dto.phone,
       whatsapp: dto.whatsapp || null,
       email: dto.email,

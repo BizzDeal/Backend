@@ -188,10 +188,15 @@ export class UsersService {
     });
     const savedUser = await this.usersRepository.save(user);
     
+    let fullName = userData.full_name?.trim();
+    if (!fullName && userData.email && userData.email.includes('@')) {
+      fullName = userData.email.split('@')[0];
+    }
+
     // Create profile
     const profile = this.profileRepository.create({
       user_id: savedUser.id,
-      full_name: userData.full_name,
+      full_name: fullName || null,
       whatsapp: userData.whatsapp,
       address: userData.address,
       state_id: userData.state_id,
@@ -470,7 +475,7 @@ export class UsersService {
         { name: 'phone', has: hasPhone, mandatory: true },
         { name: 'email', has: hasEmail, mandatory: true },
         { name: 'state_id', has: hasState, mandatory: true },
-        { name: 'district_id', has: hasDistrict, mandatory: false },
+        { name: 'district_id', has: hasDistrict, mandatory: true },
         { name: 'address', has: hasAddress, mandatory: false },
         { name: 'profile_picture', has: hasProfilePic, mandatory: false },
         { name: 'whatsapp', has: hasWhatsapp, mandatory: false }
@@ -510,15 +515,15 @@ export class UsersService {
         { name: 'phone', has: hasPhone, mandatory: true },
         { name: 'email', has: hasEmail, mandatory: true },
         { name: 'state_id', has: hasState, mandatory: true },
+        { name: 'district_id', has: hasDistrict, mandatory: true },
         { name: 'business_name', has: hasBusinessName, mandatory: true },
         { name: 'category_id', has: hasCategory, mandatory: true },
         { name: 'business_state_id', has: hasBusinessState, mandatory: true },
+        { name: 'business_district_id', has: hasBusinessDistrict, mandatory: true },
         { name: 'business_description', has: hasBusinessDesc, mandatory: true },
         { name: 'whatsapp', has: hasWhatsapp, mandatory: false },
-        { name: 'district_id', has: hasDistrict, mandatory: false },
         { name: 'address', has: hasAddress, mandatory: false },
         { name: 'profile_picture', has: hasProfilePic, mandatory: false },
-        { name: 'business_district_id', has: hasBusinessDistrict, mandatory: false },
         { name: 'business_address', has: hasBusinessAddress, mandatory: false },
         { name: 'business_logo', has: hasLogo, mandatory: false },
         { name: 'website', has: hasWebsite, mandatory: false },
@@ -644,6 +649,8 @@ export class UsersService {
         user.role === UserRole.MEMBER ? business?.state_id || null : undefined,
       business_district_id:
         user.role === UserRole.MEMBER ? business?.district_id || null : undefined,
+      is_featured:
+        user.role === UserRole.MEMBER ? (business?.is_featured ?? false) : undefined,
       primary_business_name:
         user.role === UserRole.CUSTOMER ? primary_business_name : undefined,
       primary_business_id:
@@ -698,8 +705,11 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    if (dto.phone && dto.phone !== user.phone) {
-      const existingUser = await this.findOneByPhone(dto.phone);
+    const cleanPhone = (dto.phone && typeof dto.phone === 'string' && dto.phone.trim() !== '') ? dto.phone.trim() : null;
+    const cleanEmail = (dto.email && typeof dto.email === 'string' && dto.email.trim() !== '') ? dto.email.trim() : null;
+
+    if (cleanPhone && cleanPhone !== user.phone) {
+      const existingUser = await this.findOneByPhone(cleanPhone);
       if (existingUser && existingUser.id !== userId) {
         throw new ConflictException(
           'Phone number is already registered to another account',
@@ -707,11 +717,20 @@ export class UsersService {
       }
     }
 
+    if (cleanEmail && cleanEmail !== user.email) {
+      const existingEmailUser = await this.findOneByEmail(cleanEmail);
+      if (existingEmailUser && existingEmailUser.id !== userId) {
+        throw new ConflictException(
+          'Email address is already registered to another account',
+        );
+      }
+    }
+
     const updateUserData: Partial<User> = {};
     const updateProfileData: Partial<Profile> = {};
     
-    if (dto.phone !== undefined) updateUserData.phone = dto.phone;
-    if (dto.email !== undefined) updateUserData.email = dto.email;
+    if (dto.phone !== undefined) updateUserData.phone = cleanPhone;
+    if (cleanEmail) updateUserData.email = cleanEmail;
 
     if (dto.full_name !== undefined) updateProfileData.full_name = dto.full_name;
     if (dto.whatsapp !== undefined) updateProfileData.whatsapp = dto.whatsapp;

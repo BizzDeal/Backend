@@ -66,4 +66,15 @@ export class AppEventsGateway implements OnGatewayConnection, OnGatewayDisconnec
       timestamp: new Date().toISOString()
     });
   }
+
+  /**
+   * Emits a generic app event to all connected clients across the application
+   */
+  emitToAll(type: string, payload: any) {
+    this.server.emit('app_event', {
+      type,
+      payload,
+      timestamp: new Date().toISOString()
+    });
+  }
 }

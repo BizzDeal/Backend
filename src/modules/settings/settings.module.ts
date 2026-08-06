@@ -5,6 +5,7 @@ import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
 import { PlatformSettings } from './entities/platform-settings.entity';
 import { User } from '../users/entities/user.entity';
+import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { User } from '../users/entities/user.entity';
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
     }),
+    EventsModule,
   ],
   controllers: [SettingsController],
   providers: [SettingsService],

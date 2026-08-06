@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PlatformSettings } from './entities/platform-settings.entity';
 import { UpdateSettingsDto } from './schemas/settings.schema';
+import { AppEventsGateway } from '../events/events.gateway';
 
 @Injectable()
 export class SettingsService implements OnModuleInit {
@@ -17,6 +18,7 @@ export class SettingsService implements OnModuleInit {
     @InjectRepository(PlatformSettings)
     private readonly settingsRepository: Repository<PlatformSettings>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly appEventsGateway: AppEventsGateway,
   ) {}
 
   async onModuleInit() {
@@ -32,6 +34,7 @@ export class SettingsService implements OnModuleInit {
         mega_deals_percent_threshold: 30,
         mega_deals_fixed_threshold: 500,
         home_feed_limit: 20,
+        bizz_coin_value: 1.00,
       });
       await this.settingsRepository.save(settings);
     }
@@ -55,6 +58,7 @@ export class SettingsService implements OnModuleInit {
       mega_deals_percent_threshold: 30,
       mega_deals_fixed_threshold: 500,
       home_feed_limit: 20,
+      bizz_coin_value: 1.00,
     });
     const saved = await this.settingsRepository.save(defaultSettings);
     this.cachedSettings = saved;
@@ -73,11 +77,20 @@ export class SettingsService implements OnModuleInit {
     if (dto.home_feed_limit !== undefined) {
       settings.home_feed_limit = dto.home_feed_limit;
     }
+    if (dto.bizz_coin_value !== undefined) {
+      settings.bizz_coin_value = dto.bizz_coin_value;
+    }
 
     const saved = await this.settingsRepository.save(settings);
     this.cachedSettings = saved;
 
     this.logger.log('Platform settings updated successfully.');
+
+    try {
+      this.appEventsGateway.emitToAll('PLATFORM_SETTINGS_UPDATED', saved);
+    } catch (err) {
+      this.logger.warn(`Failed to broadcast PLATFORM_SETTINGS_UPDATED event: ${err}`);
+    }
 
     return {
       success: true,

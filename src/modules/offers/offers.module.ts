@@ -9,6 +9,8 @@ import { OffersService } from './offers.service';
 import { OffersController } from './offers.controller';
 
 import { SettingsModule } from '../settings/settings.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { SettingsModule } from '../settings/settings.module';
     }),
     MediaModule,
     SettingsModule,
+    NotificationsModule,
+    EventsModule,
   ],
   controllers: [OffersController],
   providers: [OffersService],

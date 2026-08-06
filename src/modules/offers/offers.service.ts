@@ -22,9 +22,12 @@ import {
   OfferStatus,
   BusinessStatus,
   MediaPurpose,
+  NotificationType,
 } from '../../common/enums';
 
 import { SettingsService } from '../settings/settings.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AppEventsGateway } from '../events/events.gateway';
 import { PaginatedResponseDto } from '../../common/dto/pagination.dto';
 
 @Injectable()
@@ -38,6 +41,8 @@ export class OffersService {
     private readonly businessRepository: Repository<BusinessProfile>,
     private readonly mediaService: MediaService,
     private readonly settingsService: SettingsService,
+    private readonly notificationsService: NotificationsService,
+    private readonly appEventsGateway: AppEventsGateway,
   ) {}
 
   async create(
@@ -90,11 +95,25 @@ export class OffersService {
         existingBizzCoinsOffer.description = dto.description;
         existingBizzCoinsOffer.start_date = start;
         existingBizzCoinsOffer.end_date = end;
-        existingBizzCoinsOffer.status = OfferStatus.APPROVED;
+        existingBizzCoinsOffer.status = isAdmin ? OfferStatus.APPROVED : OfferStatus.PENDING;
+        if (isAdmin) {
+          existingBizzCoinsOffer.approved_by_id = user.id;
+          existingBizzCoinsOffer.approved_at = new Date();
+        } else {
+          existingBizzCoinsOffer.approved_by_id = null;
+          existingBizzCoinsOffer.approved_at = null;
+        }
         if (imageId) {
           existingBizzCoinsOffer.image_id = imageId;
         }
         const updated = await this.offerRepository.save(existingBizzCoinsOffer);
+        if (isAdmin) {
+          const b = await this.businessRepository.findOne({ where: { id: dto.business_id } });
+          if (b) {
+            b.is_featured = true;
+            await this.businessRepository.save(b);
+          }
+        }
         return this.transformOfferAsync(updated);
       }
     }
@@ -109,12 +128,21 @@ export class OffersService {
       start_date: start,
       end_date: end,
       image_id: imageId,
-      status: (isAdmin || isBizzCoins) ? OfferStatus.APPROVED : OfferStatus.PENDING,
+      status: isAdmin ? OfferStatus.APPROVED : OfferStatus.PENDING,
       approved_by_id: isAdmin ? user.id : null,
       approved_at: isAdmin ? new Date() : null,
     });
 
     const savedOffer = await this.offerRepository.save(offer);
+
+    if (isAdmin && isBizzCoins) {
+      const b = await this.businessRepository.findOne({ where: { id: dto.business_id } });
+      if (b) {
+        b.is_featured = true;
+        await this.businessRepository.save(b);
+      }
+    }
+
     return this.transformOfferAsync(savedOffer);
   }
 
@@ -359,15 +387,24 @@ export class OffersService {
     if (dto.end_date !== undefined) offer.end_date = new Date(dto.end_date);
 
     if (isAdmin && dto.status) {
+      const oldStatus = offer.status;
       offer.status = dto.status;
       if (dto.status === OfferStatus.APPROVED) {
         offer.approved_by_id = user.id;
         offer.approved_at = new Date();
+        if (offer.offer_type === OfferType.BIZZ_COINS && offer.business_id) {
+          const b = await this.businessRepository.findOne({ where: { id: offer.business_id } });
+          if (b) {
+            b.is_featured = true;
+            await this.businessRepository.save(b);
+          }
+        }
+      }
+      if (oldStatus !== dto.status && (dto.status === OfferStatus.APPROVED || dto.status === OfferStatus.REJECTED)) {
+        await this.notifyMemberOfferStatus(offer, dto.status === OfferStatus.APPROVED ? 'APPROVED' : 'REJECTED');
       }
     } else if (!isAdmin && dto.status === OfferStatus.INACTIVE) {
       offer.status = OfferStatus.INACTIVE;
-    } else if (!isAdmin && offer.offer_type === OfferType.BIZZ_COINS) {
-      offer.status = OfferStatus.APPROVED;
     } else if (!isAdmin) {
       this.logger.log(
         `Offer ${offer.id} modified by member ${user.id}. Setting status to PENDING for re-approval.`,
@@ -483,6 +520,19 @@ export class OffersService {
     offer.approved_at = new Date();
 
     const savedOffer = await this.offerRepository.save(offer);
+
+    if (offer.offer_type === OfferType.BIZZ_COINS && offer.business_id) {
+      const business = await this.businessRepository.findOne({
+        where: { id: offer.business_id },
+      });
+      if (business) {
+        business.is_featured = true;
+        await this.businessRepository.save(business);
+      }
+    }
+
+    await this.notifyMemberOfferStatus(offer, 'APPROVED');
+
     delete (savedOffer as any).business;
     delete (savedOffer as any).image;
     delete (savedOffer as any).approved_by;
@@ -510,9 +560,58 @@ export class OffersService {
     }
 
     const savedOffer = await this.offerRepository.save(offer);
+
+    await this.notifyMemberOfferStatus(offer, 'REJECTED', reason);
+
     delete (savedOffer as any).business;
     delete (savedOffer as any).image;
     delete (savedOffer as any).approved_by;
     return savedOffer;
+  }
+
+  private async notifyMemberOfferStatus(offer: Offer, status: 'APPROVED' | 'REJECTED', reason?: string): Promise<void> {
+    try {
+      const business = await this.businessRepository.findOne({
+        where: { id: offer.business_id },
+      });
+      if (!business || !business.owner_id) return;
+
+      const isBizzCoins = offer.offer_type === OfferType.BIZZ_COINS;
+      const offerTypeName = isBizzCoins ? 'Bizz Coin Offer' : 'Offer';
+
+      const title = status === 'APPROVED' 
+        ? `🎉 ${offerTypeName} Approved!`
+        : `❌ ${offerTypeName} Request Update`;
+
+      const message = status === 'APPROVED'
+        ? `Your ${offerTypeName.toLowerCase()} "${offer.title}" has been approved by Admin! ${isBizzCoins ? 'Your business is now a Featured Business.' : ''}`
+        : `Your ${offerTypeName.toLowerCase()} "${offer.title}" was rejected by Admin.${reason ? ' Reason: ' + reason : ''}`;
+
+      await this.notificationsService.create({
+        user_id: business.owner_id,
+        title,
+        message,
+        type: NotificationType.OFFER,
+        data: {
+          offer_id: offer.id,
+          offer_type: offer.offer_type,
+          status,
+          business_id: offer.business_id,
+          reason,
+        },
+      });
+
+      this.appEventsGateway.emitToUser(business.owner_id, 'OFFER_STATUS_UPDATED', {
+        offer_id: offer.id,
+        offer_type: offer.offer_type,
+        title: offer.title,
+        status,
+        business_id: offer.business_id,
+        is_featured: isBizzCoins && status === 'APPROVED',
+        reason,
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to dispatch offer status notification/event: ${err}`);
+    }
   }
 }
