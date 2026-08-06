@@ -6,7 +6,6 @@ export default registerAs('database', () => {
   process.env.PGTZ = process.env.PGTZ || 'Asia/Kolkata';
 
   const url = process.env.DATABASE_URL;
-  const isSupabase = url?.includes('supabase.com');
 
   return {
     type: 'postgres' as const,
@@ -17,7 +16,7 @@ export default registerAs('database', () => {
       options: '-c timezone=Asia/Kolkata',
     },
     ssl:
-      process.env.NODE_ENV === 'production' || isSupabase
+      process.env.NODE_ENV === 'production'
         ? { rejectUnauthorized: false }
         : false,
   };

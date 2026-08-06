@@ -5,7 +5,6 @@ import { join } from 'path';
 dotenv.config();
 
 const url = process.env.DATABASE_URL;
-const isSupabase = url?.includes('supabase.com');
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -18,7 +17,7 @@ export const AppDataSource = new DataSource({
     options: '-c timezone=Asia/Kolkata',
   },
   ssl:
-    process.env.NODE_ENV === 'production' || isSupabase
+    process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }
       : false,
 });
