@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  NotFoundException,
   UseInterceptors,
   UploadedFiles,
   UseGuards,
@@ -300,6 +301,30 @@ export class UsersController {
   })
   async getProfileGet(@CurrentUser() user: User) {
     return this.usersService.getProfile(user.id);
+  }
+
+  @Get('by-phone/:phone')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get User By Phone Number',
+    description: 'Looks up registered user profile details by 10-digit phone number.',
+  })
+  async getUserByPhone(@Param('phone') phone: string) {
+    const user = await this.usersService.findOneByPhone(phone);
+    if (!user) {
+      throw new NotFoundException('No user found with this phone number');
+    }
+    const profileRes: any = await this.usersService.getProfile(user.id);
+    const pData = profileRes?.data || {};
+    return {
+      id: user.id,
+      phone: user.phone,
+      email: user.email,
+      role: user.role,
+      name: pData.full_name || user.profile?.full_name || 'Customer',
+      profile_pic_url: pData.profile_pic_url || null,
+    };
   }
 
   @Get(':id')

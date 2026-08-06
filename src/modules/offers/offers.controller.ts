@@ -279,6 +279,23 @@ export class OffersController {
     return this.offersService.findAll(query, user);
   }
 
+  @Get('bizz-coins/my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get My Bizz Coins Offer',
+    description:
+      'Retrieves the authenticated member business owner saved Bizz Coins offer plan.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bizz Coins offer plan returned successfully or null.',
+  })
+  async getMyBizzCoinsOffer(@CurrentUser() user: User) {
+    return this.offersService.findMyBizzCoinsOffer(user);
+  }
+
   @Get('my')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

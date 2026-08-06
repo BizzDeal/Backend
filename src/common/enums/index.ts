@@ -28,6 +28,7 @@ export enum BusinessStatus {
 export enum OfferType {
   DISCOUNT = 'DISCOUNT',
   CASHBACK = 'CASHBACK',
+  BIZZ_COINS = 'BIZZ_COINS',
 }
 
 export enum DiscountType {
@@ -100,6 +101,11 @@ export enum MessageType {
 export enum ConversationType {
   DIRECT = 'DIRECT',
   GROUP = 'GROUP',
+}
+
+export enum MeetingType {
+  REGULAR = 'REGULAR',
+  SPOTLIGHT = 'SPOTLIGHT',
 }
 
 export enum MeetingStatus {

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MeetingStatus, AttendeeStatus } from '../../../common/enums';
+import { MeetingStatus, AttendeeStatus, MeetingType } from '../../../common/enums';
 
 export class CreateMeetingDto {
   @ApiProperty({
@@ -44,6 +44,13 @@ export class CreateMeetingDto {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   business_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Type of the meeting (REGULAR or SPOTLIGHT)',
+    enum: MeetingType,
+    example: MeetingType.SPOTLIGHT,
+  })
+  meeting_type?: MeetingType;
 }
 
 export class UpdateMeetingDto {
@@ -133,6 +140,13 @@ export class MeetingQueryDto {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   business_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter meetings by meeting type',
+    enum: MeetingType,
+    example: MeetingType.SPOTLIGHT,
+  })
+  meeting_type?: MeetingType;
 
   @ApiPropertyOptional({
     description: 'Filter meetings scheduled on or after this date (ISO format)',

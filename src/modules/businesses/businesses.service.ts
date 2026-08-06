@@ -20,7 +20,10 @@ import {
   BusinessStatus,
   MediaPurpose,
   NotificationType,
+  OfferType,
+  OfferStatus,
 } from '../../common/enums';
+import { Offer } from '../offers/entities/offer.entity';
 import {
   UpdateBusinessDto,
   BusinessQueryDto,
@@ -44,6 +47,8 @@ export class BusinessesService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(MediaFile)
     private readonly mediaRepository: Repository<MediaFile>,
+    @InjectRepository(Offer)
+    private readonly offerRepository: Repository<Offer>,
     private readonly mediaService: MediaService,
     private readonly auditService: AuditService,
     private readonly analyticsService: AnalyticsService,
@@ -118,6 +123,26 @@ export class BusinessesService {
       mediaFiles.forEach((m) => mediaMap.set(m.id, m.file_url));
     }
 
+    const businessIds = businesses.map((b) => b.id);
+    const bizzCoinOffersMap = new Map<string, boolean>();
+
+    if (businessIds.length > 0) {
+      const now = new Date();
+      const activeBizzCoinOffers = await this.offerRepository.find({
+        where: {
+          business_id: In(businessIds),
+          offer_type: OfferType.BIZZ_COINS,
+          status: OfferStatus.APPROVED,
+        },
+      });
+
+      activeBizzCoinOffers.forEach((offer) => {
+        if (new Date(offer.start_date) <= now && new Date(offer.end_date) >= now) {
+          bizzCoinOffersMap.set(offer.business_id, true);
+        }
+      });
+    }
+
     return businesses.map((b) => {
       const { ...biz } = b;
       const categoryName = b.category ? b.category.name : 'General';
@@ -133,6 +158,8 @@ export class BusinessesService {
         .slice(0, 2)
         .join('')
         .toUpperCase();
+
+      const hasBizzCoinOffer = bizzCoinOffersMap.get(b.id) || false;
 
       delete (biz as any).category;
       delete (biz as any).owner;
@@ -150,6 +177,8 @@ export class BusinessesService {
         state_name,
         district_name,
         initials,
+        hasBizzCoinOffer,
+        has_bizz_coin_offer: hasBizzCoinOffer,
         logo_url: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
         logoUrl: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
       };

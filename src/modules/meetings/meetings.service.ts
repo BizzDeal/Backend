@@ -12,6 +12,7 @@ import { User } from '../users/entities/user.entity';
 import {
   UserRole,
   MeetingStatus,
+  MeetingType,
   AttendeeStatus,
   NotificationType,
   MediaPurpose,
@@ -52,11 +53,33 @@ export class MeetingsService {
     this.checkNotCustomer(user);
 
     const qb = this.meetingRepository.createQueryBuilder('meeting');
+    qb.leftJoin('meeting.business', 'business');
+    qb.leftJoin('business.owner', 'owner');
+    qb.leftJoin('owner.profile', 'profile');
 
-    // Visibility is now global for members. They can see all meetings.
+    if (user.role === UserRole.MEMBER) {
+      const fullUser = await this.userRepository.findOne({
+        where: { id: user.id },
+        relations: { business_profile: true },
+      });
+      const myDistrictId = fullUser?.business_profile?.district_id;
+      
+      if (myDistrictId) {
+        qb.andWhere('(meeting.meeting_type = :regular OR (meeting.meeting_type = :spotlight AND business.district_id = :districtId))', {
+          regular: MeetingType.REGULAR,
+          spotlight: MeetingType.SPOTLIGHT,
+          districtId: myDistrictId
+        });
+      } else {
+        qb.andWhere('meeting.meeting_type = :regular', { regular: MeetingType.REGULAR });
+      }
+    }
 
     if (query.status) {
       qb.andWhere('meeting.status = :status', { status: query.status });
+    }
+    if (query.meeting_type) {
+      qb.andWhere('meeting.meeting_type = :mType', { mType: query.meeting_type });
     }
     if (query.business_id) {
       qb.andWhere('meeting.business_id = :businessId', {
@@ -74,22 +97,16 @@ export class MeetingsService {
       });
     }
 
-    if (query.state || query.district) {
-      qb.leftJoin('meeting.business', 'business');
-      qb.leftJoin('business.owner', 'owner');
-      qb.leftJoin('owner.profile', 'profile');
-      
-      if (query.state) {
-        qb.andWhere('(business.state_id = :state OR profile.state_id = :state)', {
-          state: query.state,
-        });
-      }
-      
-      if (query.district) {
-        qb.andWhere('(business.district_id = :district OR profile.district_id = :district)', {
-          district: query.district,
-        });
-      }
+    if (query.state) {
+      qb.andWhere('(business.state_id = :state OR profile.state_id = :state)', {
+        state: query.state,
+      });
+    }
+    
+    if (query.district) {
+      qb.andWhere('(business.district_id = :district OR profile.district_id = :district)', {
+        district: query.district,
+      });
     }
 
     qb.orderBy('meeting.meeting_date', 'DESC');
@@ -117,14 +134,33 @@ export class MeetingsService {
       location?: string;
       meeting_link?: string;
       business_id?: string;
+      meeting_type?: MeetingType;
     },
     user: User,
   ): Promise<Meeting> {
-    this.checkAdminRole(user);
+    this.checkNotCustomer(user);
+
+    let meetingType = data.meeting_type || MeetingType.REGULAR;
+    let businessId = data.business_id || null;
+
+    if (user.role === UserRole.MEMBER) {
+      meetingType = MeetingType.SPOTLIGHT;
+      const fullUser = await this.userRepository.findOne({
+        where: { id: user.id },
+        relations: { business_profile: true },
+      });
+      if (!fullUser?.business_profile) {
+        throw new BadRequestException('You must have a business profile to create a spotlight meeting');
+      }
+      businessId = fullUser.business_profile.id;
+    } else {
+      this.checkAdminRole(user);
+    }
 
     const meeting = this.meetingRepository.create({
       created_by_id: user.id,
-      business_id: data.business_id || null,
+      business_id: businessId,
+      meeting_type: meetingType,
       title: data.title,
       description: data.description || null,
       meeting_date: new Date(data.meeting_date),
@@ -133,6 +169,34 @@ export class MeetingsService {
       status: MeetingStatus.SCHEDULED,
     });
     const saved = await this.meetingRepository.save(meeting);
+
+    if (meetingType === MeetingType.SPOTLIGHT && businessId) {
+      const fullUser = await this.userRepository.findOne({
+        where: { id: user.id },
+        relations: { business_profile: true },
+      });
+      const districtId = fullUser?.business_profile?.district_id;
+      if (districtId) {
+        const peers = await this.userRepository.find({
+          where: {
+            role: UserRole.MEMBER,
+            business_profile: { district_id: districtId },
+          },
+        });
+
+        for (const peer of peers) {
+          if (peer.id !== user.id) {
+            await this.notificationsService.create({
+              user_id: peer.id,
+              title: 'New Spotlight Meeting',
+              message: `A new spotlight meeting "${saved.title}" was created in your district.`,
+              type: NotificationType.MEETING,
+              data: { meeting_id: saved.id },
+            });
+          }
+        }
+      }
+    }
 
     await this.attendeeRepository.save(
       this.attendeeRepository.create({
@@ -157,8 +221,18 @@ export class MeetingsService {
     },
     user: User,
   ): Promise<Meeting> {
-    this.checkAdminRole(user);
+    this.checkNotCustomer(user);
     const meeting = await this.findOne(id, user);
+
+    if (user.role === UserRole.ADMIN) {
+      if (meeting.meeting_type === MeetingType.SPOTLIGHT) {
+        throw new ForbiddenException('Admins cannot modify spotlight meetings');
+      }
+    } else if (user.role === UserRole.MEMBER) {
+      if (meeting.created_by_id !== user.id) {
+        throw new ForbiddenException('You can only edit your own meetings');
+      }
+    }
 
     const oldStatus = meeting.status;
 
@@ -240,8 +314,18 @@ export class MeetingsService {
   }
 
   async remove(id: string, user: User): Promise<{ message: string }> {
-    this.checkAdminRole(user);
+    this.checkNotCustomer(user);
     const meeting = await this.findOne(id, user);
+
+    if (user.role === UserRole.ADMIN) {
+      if (meeting.meeting_type === MeetingType.SPOTLIGHT) {
+        throw new ForbiddenException('Admins cannot delete spotlight meetings');
+      }
+    } else if (user.role === UserRole.MEMBER) {
+      if (meeting.created_by_id !== user.id) {
+        throw new ForbiddenException('You can only delete your own meetings');
+      }
+    }
 
     await this.meetingRepository.remove(meeting);
     return { message: 'Meeting deleted successfully' };
@@ -419,8 +503,12 @@ export class MeetingsService {
   }
 
   async getMeetingAttendeeReport(meetingId: string, user: User) {
-    this.checkAdminRole(user);
+    this.checkNotCustomer(user);
     const meeting = await this.findOne(meetingId, user);
+
+    if (user.role === UserRole.MEMBER && meeting.created_by_id !== user.id) {
+      throw new ForbiddenException('Only the host can view the attendee report');
+    }
 
     const whereCondition: any = { role: UserRole.MEMBER };
     // Assuming members are global or business filtering is done differently. 
@@ -428,12 +516,15 @@ export class MeetingsService {
 
     const members = await this.userRepository.find({
       where: whereCondition,
-      relations: { profile: true },
+      relations: { profile: true, business_profile: true },
       select: {
         id: true,
         phone: true,
         profile: {
           full_name: true,
+        },
+        business_profile: {
+          name: true,
         },
       },
     });
@@ -465,6 +556,7 @@ export class MeetingsService {
         full_name: member.profile?.full_name || null,
         phone: member.phone,
         profile_pic: profilePicMap.get(member.id) || null,
+        business_name: member.business_profile?.name || null,
         status: record ? record.status : 'PENDING',
       };
     });

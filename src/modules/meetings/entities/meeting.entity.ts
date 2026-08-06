@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { MeetingStatus } from '../../../common/enums';
+import { MeetingStatus, MeetingType } from '../../../common/enums';
 import { User } from '../../users/entities/user.entity';
 import { BusinessProfile } from '../../businesses/entities/business-profile.entity';
 
@@ -15,6 +15,13 @@ import { BusinessProfile } from '../../businesses/entities/business-profile.enti
 export class Meeting {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({
+    type: 'enum',
+    enum: MeetingType,
+    default: MeetingType.REGULAR,
+  })
+  meeting_type: MeetingType;
 
   @Column({ type: 'uuid' })
   created_by_id: string;

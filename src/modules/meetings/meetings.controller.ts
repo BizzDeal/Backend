@@ -50,12 +50,12 @@ export class MeetingsController {
   constructor(private readonly meetingsService: MeetingsService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.MEMBER)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create Meeting (Admin Only)',
+    summary: 'Create Meeting',
     description:
-      'Creates a new meeting record. Only Admins can create meetings.',
+      'Creates a new meeting record. Admins create REGULAR meetings. Members create SPOTLIGHT meetings.',
   })
   @ApiResponse({ status: 201, description: 'Meeting created successfully.' })
   @ApiResponse({
@@ -110,12 +110,12 @@ export class MeetingsController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.MEMBER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Update Meeting (Admin Only)',
+    summary: 'Update Meeting',
     description:
-      'Updates meeting details or status. Only Admins can update meetings. Cancelling a meeting triggers notifications to attendees.',
+      'Updates meeting details or status. Admins can update REGULAR meetings, Members can update their own SPOTLIGHT meetings.',
   })
   @ApiResponse({ status: 200, description: 'Meeting updated successfully.' })
   @ApiResponse({ status: 403, description: 'Forbidden: Admin only.' })
@@ -129,11 +129,11 @@ export class MeetingsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.MEMBER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Delete Meeting (Admin Only)',
-    description: 'Deletes a meeting record and cascade deletes attendees.',
+    summary: 'Delete Meeting',
+    description: 'Deletes a meeting record. Admins can delete REGULAR meetings. Members can delete their own SPOTLIGHT meetings.',
   })
   @ApiResponse({ status: 200, description: 'Meeting deleted successfully.' })
   @ApiResponse({ status: 403, description: 'Forbidden: Admin only.' })
@@ -306,11 +306,11 @@ export class MeetingsController {
   }
 
   @Get(':id/attendee-report')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.MEMBER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get Attendee Report (Admin Only)',
-    description: 'Retrieves a list of all relevant members for a meeting along with their RSVP status (including PENDING).',
+    summary: 'Get Attendee Report',
+    description: 'Retrieves a list of all relevant members for a meeting along with their RSVP status. Hosts (Members) and Admins can view this.',
   })
   @ApiResponse({ status: 200, description: 'Report returned successfully.' })
   async getAttendeeReport(

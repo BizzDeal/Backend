@@ -14,6 +14,7 @@ import { BusinessesModule } from './modules/businesses/businesses.module';
 import { OffersModule } from './modules/offers/offers.module';
 import { VouchersModule } from './modules/vouchers/vouchers.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { BizzCoinsModule } from './modules/bizz-coins/bizz-coins.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -65,6 +66,7 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
     OffersModule,
     VouchersModule,
     WalletModule,
+    BizzCoinsModule,
     ReferralsModule,
     NotificationsModule,
     AuditModule,

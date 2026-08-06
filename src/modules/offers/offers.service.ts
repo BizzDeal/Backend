@@ -18,6 +18,7 @@ import {
 } from './schemas/offers.schema';
 import {
   UserRole,
+  OfferType,
   OfferStatus,
   BusinessStatus,
   MediaPurpose,
@@ -77,6 +78,26 @@ export class OffersService {
 
     const start = new Date(dto.start_date);
     const end = new Date(dto.end_date);
+    const isBizzCoins = dto.offer_type === OfferType.BIZZ_COINS;
+
+    if (isBizzCoins) {
+      const existingBizzCoinsOffer = await this.offerRepository.findOne({
+        where: { business_id: dto.business_id, offer_type: OfferType.BIZZ_COINS },
+      });
+
+      if (existingBizzCoinsOffer) {
+        existingBizzCoinsOffer.title = dto.title;
+        existingBizzCoinsOffer.description = dto.description;
+        existingBizzCoinsOffer.start_date = start;
+        existingBizzCoinsOffer.end_date = end;
+        existingBizzCoinsOffer.status = OfferStatus.APPROVED;
+        if (imageId) {
+          existingBizzCoinsOffer.image_id = imageId;
+        }
+        const updated = await this.offerRepository.save(existingBizzCoinsOffer);
+        return this.transformOfferAsync(updated);
+      }
+    }
 
     const offer = this.offerRepository.create({
       business_id: dto.business_id,
@@ -88,7 +109,7 @@ export class OffersService {
       start_date: start,
       end_date: end,
       image_id: imageId,
-      status: isAdmin ? OfferStatus.APPROVED : OfferStatus.PENDING,
+      status: (isAdmin || isBizzCoins) ? OfferStatus.APPROVED : OfferStatus.PENDING,
       approved_by_id: isAdmin ? user.id : null,
       approved_at: isAdmin ? new Date() : null,
     });
@@ -307,7 +328,7 @@ export class OffersService {
       );
     }
 
-    if (!isAdmin && dto.status) {
+    if (!isAdmin && dto.status && dto.status !== OfferStatus.INACTIVE) {
       throw new ForbiddenException(
         'Only admins can change offer status directly',
       );
@@ -343,6 +364,10 @@ export class OffersService {
         offer.approved_by_id = user.id;
         offer.approved_at = new Date();
       }
+    } else if (!isAdmin && dto.status === OfferStatus.INACTIVE) {
+      offer.status = OfferStatus.INACTIVE;
+    } else if (!isAdmin && offer.offer_type === OfferType.BIZZ_COINS) {
+      offer.status = OfferStatus.APPROVED;
     } else if (!isAdmin) {
       this.logger.log(
         `Offer ${offer.id} modified by member ${user.id}. Setting status to PENDING for re-approval.`,
@@ -354,6 +379,31 @@ export class OffersService {
 
     const savedOffer = await this.offerRepository.save(offer);
     return this.transformOfferAsync(savedOffer);
+  }
+
+  async findMyBizzCoinsOffer(user: User): Promise<any | null> {
+    const business = await this.businessRepository.findOne({
+      where: { owner_id: user.id },
+    });
+
+    if (!business) {
+      return null;
+    }
+
+    const offer = await this.offerRepository.findOne({
+      where: {
+        business_id: business.id,
+        offer_type: OfferType.BIZZ_COINS,
+      },
+      relations: { image: true, business: true },
+      order: { updated_at: 'DESC' },
+    });
+
+    if (!offer) {
+      return null;
+    }
+
+    return this.transformOfferAsync(offer);
   }
 
   private async transformOfferAsync(offer: Offer): Promise<any> {

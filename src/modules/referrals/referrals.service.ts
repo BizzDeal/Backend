@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Referral } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
-import { CreateReferralSlipDto, ReferralQueryDto, AdminReferralQueryDto, AppreciateReferralDto } from './schemas/referrals.schema';
+import { CreateReferralSlipDto, ReferralQueryDto, AdminReferralQueryDto, AppreciateReferralDto, AdminDailyStatsQueryDto } from './schemas/referrals.schema';
 import { ReferralType } from '../../common/enums';
 import { ChatService } from '../chat/chat.service';
 
@@ -127,7 +127,7 @@ export class ReferralsService {
   }
 
   async getAdminReferralSlips(query: AdminReferralQueryDto) {
-    const { search, referral_type, page = 1, limit = 10 } = query;
+    const { search, referral_type, start_date, end_date, dates, state_id, district_id, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
     const qb = this.referralRepo.createQueryBuilder('referral')
@@ -166,6 +166,33 @@ export class ReferralsService {
         '(LOWER(referral.contact_name) LIKE :searchTerm OR LOWER(referral.contact_phone) LIKE :searchTerm OR LOWER(referrer_profile.full_name) LIKE :searchTerm OR LOWER(to_member_profile.full_name) LIKE :searchTerm)',
         { searchTerm },
       );
+    }
+
+    if (start_date) {
+      const startDateObj = new Date(start_date);
+      startDateObj.setHours(0, 0, 0, 0);
+      qb.andWhere('referral.created_at >= :start_date', { start_date: startDateObj });
+    }
+
+    if (end_date) {
+      const endDateObj = new Date(end_date);
+      endDateObj.setHours(23, 59, 59, 999);
+      qb.andWhere('referral.created_at <= :end_date', { end_date: endDateObj });
+    }
+
+    if (dates) {
+      const dateList = dates.split(',').map(d => d.trim()).filter(d => d);
+      if (dateList.length > 0) {
+        qb.andWhere('DATE(referral.created_at) IN (:...dateList)', { dateList });
+      }
+    }
+
+    if (state_id) {
+      qb.andWhere('(referrer_profile.state_id = :state_id OR to_member_profile.state_id = :state_id)', { state_id });
+    }
+
+    if (district_id) {
+      qb.andWhere('(referrer_profile.district_id = :district_id OR to_member_profile.district_id = :district_id)', { district_id });
     }
 
     const totalCount = await this.referralRepo.count();
@@ -291,6 +318,42 @@ export class ReferralsService {
       success: true,
       message: 'Referral appreciated successfully.',
       data: referral,
+    };
+  }
+
+  async getAdminDailyStats(query: AdminDailyStatsQueryDto) {
+    const { month, year } = query;
+    // month is 1-12
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const qb = this.referralRepo.createQueryBuilder('referral')
+      .select('DATE(referral.created_at)', 'date')
+      .addSelect('COUNT(referral.id)', 'count')
+      .where('referral.created_at >= :startDate', { startDate })
+      .andWhere('referral.created_at <= :endDate', { endDate })
+      .groupBy('DATE(referral.created_at)');
+    
+    const results = await qb.getRawMany();
+
+    const formattedData = results.map(row => {
+      let dateString = row.date;
+      // SQLite/MySQL DATE() returns YYYY-MM-DD
+      // Depending on the DB driver, it could be a Date object or string.
+      if (row.date instanceof Date) {
+        dateString = row.date.toISOString().split('T')[0];
+      } else if (typeof row.date === 'string') {
+        dateString = row.date.split('T')[0];
+      }
+      return {
+        date: dateString,
+        count: Number(row.count)
+      };
+    });
+
+    return {
+      success: true,
+      data: formattedData
     };
   }
 }

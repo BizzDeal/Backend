@@ -94,6 +94,11 @@ export class ReferralQueryDto extends PaginationQueryDto {
 export const adminReferralQuerySchema = z.object({
   search: z.string().optional(),
   referral_type: z.nativeEnum(ReferralType).optional(),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
+  dates: z.string().optional(),
+  state_id: z.string().uuid().optional(),
+  district_id: z.string().uuid().optional(),
 }).merge(paginationQuerySchema);
 
 export class AdminReferralQueryDto extends PaginationQueryDto {
@@ -107,6 +112,31 @@ export class AdminReferralQueryDto extends PaginationQueryDto {
     enum: ReferralType,
   })
   referral_type?: ReferralType;
+
+  @ApiPropertyOptional({
+    description: 'Filter by start date (YYYY-MM-DD)',
+  })
+  start_date?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by end date (YYYY-MM-DD)',
+  })
+  end_date?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by multiple specific dates (comma-separated YYYY-MM-DD)',
+  })
+  dates?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by state ID',
+  })
+  state_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by district ID',
+  })
+  district_id?: string;
 }
 
 export const appreciateReferralSchema = z.object({
@@ -126,6 +156,25 @@ export class AppreciateReferralDto {
     example: 5000,
   })
   cost_of_business: number;
+}
+
+export const adminDailyStatsQuerySchema = z.object({
+  month: z.coerce.number().min(1).max(12),
+  year: z.coerce.number().min(2000).max(2100),
+});
+
+export class AdminDailyStatsQueryDto {
+  @ApiProperty({
+    description: 'Month for which to fetch daily stats (1-12)',
+    example: 8,
+  })
+  month: number;
+
+  @ApiProperty({
+    description: 'Year for which to fetch daily stats',
+    example: 2026,
+  })
+  year: number;
 }
 
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MeetingStatus, AttendeeStatus } from '../../../common/enums';
+import { MeetingStatus, AttendeeStatus, MeetingType } from '../../../common/enums';
 
 export const createMeetingSchema = z.object({
   title: z.string().min(1, { message: 'Title is required' }),
@@ -13,6 +13,7 @@ export const createMeetingSchema = z.object({
     .string()
     .uuid({ message: 'business_id must be a valid UUID' })
     .optional(),
+  meeting_type: z.nativeEnum(MeetingType).optional(),
 });
 
 export const updateMeetingSchema = z.object({
@@ -52,6 +53,7 @@ export const meetingQuerySchema = z.object({
     .string()
     .uuid({ message: 'business_id must be a valid UUID' })
     .optional(),
+  meeting_type: z.nativeEnum(MeetingType).optional(),
   from_date: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), {

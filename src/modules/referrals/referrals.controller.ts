@@ -33,6 +33,8 @@ import {
   AdminReferralQueryDto,
   appreciateReferralSchema,
   AppreciateReferralDto,
+  adminDailyStatsQuerySchema,
+  AdminDailyStatsQueryDto,
 } from './schemas/referrals.schema';
 
 @ApiTags('Referrals')
@@ -81,6 +83,29 @@ export class ReferralsController {
       });
     }
     return this.referralsService.getAdminReferralSlips(query);
+  }
+
+  @Get('admin/daily-stats')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get Daily Referral Stats for Admin',
+    description: 'Retrieves daily referral counts for a given month and year.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Daily referral stats returned successfully.',
+  })
+  async getAdminDailyStats(@Query() queryParams: any) {
+    let query: AdminDailyStatsQueryDto = { month: new Date().getMonth() + 1, year: new Date().getFullYear() };
+    try {
+      query = adminDailyStatsQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.referralsService.getAdminDailyStats(query);
   }
 
   @Get()

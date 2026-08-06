@@ -6,6 +6,7 @@ import { BusinessCategory } from './entities/business-category.entity';
 import { CustomerBusiness } from './entities/customer-business.entity';
 import { User } from '../users/entities/user.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
+import { Offer } from '../offers/entities/offer.entity';
 import { BusinessesService } from './businesses.service';
 import { BusinessesController } from './businesses.controller';
 import { MediaModule } from '../media/media.module';
@@ -16,7 +17,7 @@ import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BusinessProfile, BusinessCategory, CustomerBusiness, User, MediaFile]),
+    TypeOrmModule.forFeature([BusinessProfile, BusinessCategory, CustomerBusiness, User, MediaFile, Offer]),
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
     }),
