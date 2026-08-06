@@ -5,6 +5,8 @@ import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { SWAGGER_AUTH_SCRIPT } from './common/utils/swagger-auth.script';
+import helmet from 'helmet';
+import compression from 'compression';
 
 // Ensure India Time Zone (Asia/Kolkata, UTC+05:30) for Node process and PostgreSQL driver
 process.env.TZ = process.env.TZ || 'Asia/Kolkata';
@@ -12,6 +14,10 @@ process.env.PGTZ = process.env.PGTZ || 'Asia/Kolkata';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Apply security headers and compression
+  app.use(helmet());
+  app.use(compression());
   const configService = app.get(ConfigService);
 
   // Enable CORS for frontend applications and test clients

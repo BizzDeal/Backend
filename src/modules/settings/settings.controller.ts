@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Body,
   UseGuards,
   HttpCode,
@@ -60,5 +61,22 @@ export class SettingsController {
     @Body(new ZodValidationPipe(updateSettingsSchema)) dto: UpdateSettingsDto,
   ) {
     return this.settingsService.updateSettings(dto);
+  }
+
+  @Post('cache/clear')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Clear System Cache (Admin Only)',
+    description: 'Manually clear the global cache, forcing fresh database queries for static data.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'System cache cleared successfully.',
+  })
+  async clearCache() {
+    return this.settingsService.clearSystemCache();
   }
 }

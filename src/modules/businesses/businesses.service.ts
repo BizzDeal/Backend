@@ -5,7 +5,10 @@ import {
   ConflictException,
   ForbiddenException,
   Logger,
+  Inject,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, SelectQueryBuilder } from 'typeorm';
 import { BusinessProfile } from './entities/business-profile.entity';
@@ -55,6 +58,7 @@ export class BusinessesService {
     private readonly settingsService: SettingsService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   private isUUID(str: string): boolean {
@@ -902,6 +906,8 @@ export class BusinessesService {
       ip_address: ipAddress,
     });
 
+    await this.cacheManager.clear();
+
     return {
       success: true,
       message: 'Category created successfully',
@@ -952,6 +958,8 @@ export class BusinessesService {
       ip_address: ipAddress,
     });
 
+    await this.cacheManager.clear();
+
     return {
       success: true,
       message: 'Category updated successfully',
@@ -988,9 +996,12 @@ export class BusinessesService {
       ip_address: ipAddress,
     });
 
+    await this.cacheManager.clear();
+
     return {
       success: true,
       message: 'Category deleted successfully',
     };
   }
+
 }

@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
+  Index,
 } from 'typeorm';
 import { UserRole, UserStatus } from '../../../common/enums';
 import { Profile } from './profile.entity';
@@ -26,6 +27,7 @@ export class User {
   @Column({ type: 'varchar', length: 255, select: false })
   pin_hash?: string;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: UserRole,
@@ -33,6 +35,7 @@ export class User {
   })
   role: UserRole;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: UserStatus,

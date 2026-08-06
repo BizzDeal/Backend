@@ -1,10 +1,12 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { LocationService } from '../services/location.service';
 import { LocationQueryDto } from '../dto/location-query.dto';
 
 @ApiTags('Locations')
 @Controller('locations')
+@UseInterceptors(CacheInterceptor)
 export class LocationController {
   constructor(private readonly locationService: LocationService) {}
 

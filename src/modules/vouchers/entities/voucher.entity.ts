@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { VoucherStatus } from '../../../common/enums';
 import { Offer } from '../../offers/entities/offer.entity';
@@ -17,9 +18,11 @@ export class Voucher {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 100, unique: true })
   voucher_code: string;
 
+  @Index()
   @Column({ type: 'uuid' })
   offer_id: string;
 
@@ -27,6 +30,7 @@ export class Voucher {
   @JoinColumn({ name: 'offer_id' })
   offer: Offer;
 
+  @Index()
   @Column({ type: 'uuid' })
   customer_id: string;
 
@@ -34,6 +38,7 @@ export class Voucher {
   @JoinColumn({ name: 'customer_id' })
   customer: User;
 
+  @Index()
   @Column({ type: 'uuid' })
   business_id: string;
 
@@ -41,6 +46,7 @@ export class Voucher {
   @JoinColumn({ name: 'business_id' })
   business: BusinessProfile;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: VoucherStatus,

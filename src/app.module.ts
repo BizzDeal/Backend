@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
@@ -54,6 +55,10 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
           limit: configService.get<number>('THROTTLE_UPLOAD_LIMIT') || 10,
         },
       ],
+    }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 3600000,
     }),
     DatabaseModule,
     FirebaseModule,

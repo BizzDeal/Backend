@@ -1,4 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PlatformSettings } from './entities/platform-settings.entity';
@@ -14,6 +16,7 @@ export class SettingsService implements OnModuleInit {
   constructor(
     @InjectRepository(PlatformSettings)
     private readonly settingsRepository: Repository<PlatformSettings>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async onModuleInit() {
@@ -80,6 +83,15 @@ export class SettingsService implements OnModuleInit {
       success: true,
       message: 'Platform settings updated successfully',
       data: saved,
+    };
+  }
+
+  async clearSystemCache(): Promise<{ success: boolean; message: string }> {
+    await this.cacheManager.clear();
+    this.logger.log('Global system cache cleared by admin.');
+    return {
+      success: true,
+      message: 'System cache cleared successfully.',
     };
   }
 }

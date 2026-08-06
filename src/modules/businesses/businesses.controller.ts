@@ -17,6 +17,7 @@ import {
   UploadedFile,
   BadRequestException,
 } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -55,6 +56,7 @@ export class BusinessesController {
   constructor(private readonly businessesService: BusinessesService) {}
 
   @Get('categories')
+  @UseInterceptors(CacheInterceptor)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Business Categories',

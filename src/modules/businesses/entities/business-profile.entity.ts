@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
+  Index,
 } from 'typeorm';
 import { BusinessStatus } from '../../../common/enums';
 import { User } from '../../users/entities/user.entity';
@@ -20,6 +21,7 @@ export class BusinessProfile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ type: 'uuid' })
   owner_id: string;
 
@@ -27,6 +29,7 @@ export class BusinessProfile {
   @JoinColumn({ name: 'owner_id' })
   owner: User;
 
+  @Index()
   @Column({ type: 'uuid' })
   category_id: string;
 
@@ -70,6 +73,7 @@ export class BusinessProfile {
   @JoinColumn({ name: 'logo_id' })
   logo: MediaFile | null;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: BusinessStatus,
