@@ -364,9 +364,9 @@ export class BusinessesService {
         },
       );
     }
-    // Exclude businesses owned by unverified members
-    qb.andWhere('(owner.id IS NULL OR owner.status != :unverifiedOwnerStatus)', {
-      unverifiedOwnerStatus: UserStatus.UNVERIFIED,
+    // Exclude businesses owned by non-active members
+    qb.andWhere('(owner.id IS NULL OR owner.status = :activeOwnerStatus)', {
+      activeOwnerStatus: UserStatus.ACTIVE,
     });
 
     if (query.exclude_owner_id) {
@@ -452,8 +452,8 @@ export class BusinessesService {
       isFeatured: true,
     });
 
-    qb.andWhere('(owner.id IS NULL OR owner.status != :unverifiedOwnerStatus)', {
-      unverifiedOwnerStatus: UserStatus.UNVERIFIED,
+    qb.andWhere('(owner.id IS NULL OR owner.status = :activeOwnerStatus)', {
+      activeOwnerStatus: UserStatus.ACTIVE,
     });
 
     this.applySearchFilters(qb, query);
@@ -514,8 +514,8 @@ export class BusinessesService {
       );
     }
 
-    qb.andWhere('(owner.id IS NULL OR owner.status != :unverifiedOwnerStatus)', {
-      unverifiedOwnerStatus: UserStatus.UNVERIFIED,
+    qb.andWhere('(owner.id IS NULL OR owner.status = :activeOwnerStatus)', {
+      activeOwnerStatus: UserStatus.ACTIVE,
     });
 
     this.applySearchFilters(qb, query);

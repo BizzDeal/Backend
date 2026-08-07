@@ -27,6 +27,8 @@
     "db:setup": "npm run migration:run && npm run db:seed",
     "seed:categories": "ts-node -r tsconfig-paths/register src/database/seeds/run-business-categories.ts",
     "seed:admin": "ts-node -r tsconfig-paths/register src/database/seeds/run-admin-seed.ts",
+    "db:seed-dummy": "ts-node -r tsconfig-paths/register dummyData/seed-all.ts",
+    "db:clear-dummy": "ts-node -r tsconfig-paths/register dummyData/clear-dummy-data.ts",
     "emulators:start": "firebase emulators:start --project bizzdeal"
   },
   "dependencies": {
