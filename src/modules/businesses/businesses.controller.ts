@@ -67,8 +67,8 @@ export class BusinessesController {
     status: 200,
     description: 'List of business categories successfully retrieved.',
   })
-  async getCategories() {
-    return this.businessesService.getCategories();
+  async getCategories(@Query() query: any) {
+    return this.businessesService.getCategories(query);
   }
 
   @Get('categories/:id')

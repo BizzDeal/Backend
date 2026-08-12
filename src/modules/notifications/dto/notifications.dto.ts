@@ -205,6 +205,13 @@ export class NotificationQueryDto extends PaginationQueryDto {
     description: 'Search keyword matching title or message',
   })
   search?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Filter notifications by specific audience',
+    example: 'ALL_MEMBERS',
+  })
+  audience?: string;
 }
 
 export class UpdateDeviceStatusDto {

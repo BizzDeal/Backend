@@ -67,21 +67,54 @@ export class BusinessesService {
     return uuidRegex.test(str);
   }
 
-  async getCategories(): Promise<{
+  async getCategories(query?: { page?: number; limit?: number; search?: string }): Promise<{
     success: boolean;
-    count: number;
+    count?: number;
     data: BusinessCategory[];
+    meta?: any;
   }> {
-    const categories = await this.categoryRepository.find({
-      where: { is_active: true },
-      order: { name: 'ASC' },
-    });
+    if (query?.page && query?.limit) {
+      const qb = this.categoryRepository.createQueryBuilder('category');
+      qb.where('category.is_active = :isActive', { isActive: true });
 
-    return {
-      success: true,
-      count: categories.length,
-      data: categories,
-    };
+      if (query.search) {
+        qb.andWhere(
+          '(category.name ILIKE :kw OR category.description ILIKE :kw)',
+          { kw: `%${query.search}%` },
+        );
+      }
+
+      qb.orderBy('category.name', 'ASC');
+
+      const page = Number(query.page) || 1;
+      const limit = Number(query.limit) || 5;
+      qb.skip((page - 1) * limit);
+      qb.take(limit);
+
+      const [categories, totalItems] = await qb.getManyAndCount();
+
+      return {
+        success: true,
+        data: categories,
+        meta: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems,
+          totalPages: Math.ceil(totalItems / limit),
+        },
+      };
+    } else {
+      const categories = await this.categoryRepository.find({
+        where: { is_active: true },
+        order: { name: 'ASC' },
+      });
+
+      return {
+        success: true,
+        count: categories.length,
+        data: categories,
+      };
+    }
   }
 
   async validateCategoryExists(

@@ -44,6 +44,9 @@ export class NotificationsService {
     if (query?.type !== undefined) {
       qb.andWhere('notif.type = :type', { type: query.type });
     }
+    if (query?.audience && query.audience !== 'ALL') {
+      qb.andWhere("notif.data->>'audience' = :audience", { audience: query.audience });
+    }
     if (query?.search) {
       qb.andWhere(
         '(notif.title ILIKE :kw OR notif.message ILIKE :kw)',

@@ -75,6 +75,7 @@ export const notificationQuerySchema = z.object({
     }),
   type: z.nativeEnum(NotificationType).optional(),
   search: z.string().optional(),
+  audience: z.string().optional(),
 }).merge(paginationQuerySchema);
 
 export const updateDeviceStatusSchema = z.object({
