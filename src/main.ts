@@ -42,7 +42,7 @@ async function bootstrap() {
   });
 
   // Configure views
-  app.setBaseViewsDir(join(process.cwd(), 'views'));
+  app.setBaseViewsDir(join(__dirname, '..', 'views'));
   app.setViewEngine('ejs');
 
   // Set the global context path so all API routes are prefixed dynamically

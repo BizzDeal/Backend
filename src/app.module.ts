@@ -63,7 +63,7 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
       ttl: 3600000,
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'public'),
+      rootPath: join(__dirname, '..', 'public'),
     }),
     DatabaseModule,
     FirebaseModule,
