@@ -1,0 +1,1 @@
+var O=(function(N){return N.CalendarEvent="CALENDAR_EVENT",N.ContactInfo="CONTACT_INFO",N.DriversLicense="DRIVERS_LICENSE",N.Email="EMAIL",N.Geo="GEO",N.Isbn="ISBN",N.Phone="PHONE",N.Product="PRODUCT",N.Sms="SMS",N.Text="TEXT",N.Url="URL",N.Wifi="WIFI",N.Unknown="UNKNOWN",N})(O||{});var E=(function(N){return N.Front="FRONT",N.Back="BACK",N})(E||{});export{O as a,E as b};

@@ -19,6 +19,17 @@ async function bootstrap() {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'", 'https:', 'data:', 'blob:'],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https:'],
+          scriptSrcAttr: ["'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
+          imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+          fontSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'", 'https:', 'wss:'],
+        },
+      },
     }),
   );
   app.use(compression());
@@ -30,9 +41,8 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Configure views and static assets
-  app.useStaticAssets(join(__dirname, '..', 'public'));
-  app.setBaseViewsDir(join(__dirname, '..', 'views'));
+  // Configure views
+  app.setBaseViewsDir(join(process.cwd(), 'views'));
   app.setViewEngine('ejs');
 
   // Set the global context path so all API routes are prefixed dynamically

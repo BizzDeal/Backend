@@ -1,0 +1,1 @@
+function l(e,i=10){if(!e)return{valid:!0};let t=i*1024*1024;return e.size>t?{valid:!1,error:`File size (${(e.size/1048576).toFixed(1)} MB) exceeds the maximum allowed limit of ${i} MB. Please choose a smaller file.`}:{valid:!0}}export{l as a};
