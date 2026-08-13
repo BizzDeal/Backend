@@ -17,4 +17,11 @@ export class AppController {
   getApiInfo() {
     return this.appService.getApiInfo();
   }
+
+  @Get('health')
+  @ApiOperation({ summary: 'Simple health check for deployment platforms' })
+  @ApiResponse({ status: 200, description: 'Returns OK' })
+  getHealth() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
 }
