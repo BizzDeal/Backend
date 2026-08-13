@@ -85,6 +85,62 @@ export async function seedDummyInteractionsAndAnalytics(
     logger.log('Seeded Spotlight Meeting and Attendees.');
   }
 
+  // Completed Regular Meeting
+  let pastMeeting = await meetingRepo.findOne({ where: { title: 'Quarterly Review Sync' } });
+  if (!pastMeeting) {
+    pastMeeting = await meetingRepo.save(
+      meetingRepo.create({
+        meeting_type: MeetingType.REGULAR,
+        created_by_id: users.admin.id,
+        business_id: businesses.business1.id,
+        title: 'Quarterly Review Sync',
+        description: 'Review of last quarter performance.',
+        meeting_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        location: 'Virtual',
+        meeting_link: 'https://meet.google.com/xyz-abcd-efg',
+        status: MeetingStatus.COMPLETED,
+      }),
+    );
+
+    await attendeeRepo.save([
+      attendeeRepo.create({
+        meeting_id: pastMeeting.id,
+        user_id: users.owner1.id,
+        status: AttendeeStatus.ATTENDED,
+      }),
+      attendeeRepo.create({
+        meeting_id: pastMeeting.id,
+        user_id: users.agent2.id,
+        status: AttendeeStatus.MISSED,
+      }),
+    ]);
+  }
+
+  // Cancelled Meeting
+  let cancelledMeeting = await meetingRepo.findOne({ where: { title: 'Onboarding Follow-up' } });
+  if (!cancelledMeeting) {
+    cancelledMeeting = await meetingRepo.save(
+      meetingRepo.create({
+        meeting_type: MeetingType.REGULAR,
+        created_by_id: users.admin.id,
+        business_id: businesses.business2.id,
+        title: 'Onboarding Follow-up',
+        description: 'Follow-up on merchant onboarding process.',
+        meeting_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+        location: 'Phone Call',
+        status: MeetingStatus.CANCELLED,
+      }),
+    );
+
+    await attendeeRepo.save([
+      attendeeRepo.create({
+        meeting_id: cancelledMeeting.id,
+        user_id: users.owner2.id,
+        status: AttendeeStatus.REJECTED,
+      }),
+    ]);
+  }
+
   // 3. Chat Conversations & Messages
   let conv = await chatConvRepo.findOne({ where: { type: ConversationType.DIRECT, name: 'Support & Inquiry' } });
   if (!conv) {
@@ -119,6 +175,43 @@ export async function seedDummyInteractionsAndAnalytics(
       }),
     ]);
     logger.log('Seeded Direct Chat Conversation and Messages.');
+  }
+
+  // Group Chat
+  let groupConv = await chatConvRepo.findOne({ where: { type: ConversationType.GROUP, name: 'Visakha Merchants Hub' } });
+  if (!groupConv) {
+    groupConv = await chatConvRepo.save(
+      chatConvRepo.create({
+        type: ConversationType.GROUP,
+        name: 'Visakha Merchants Hub',
+        is_default_group: true,
+        last_message_at: new Date(),
+      }),
+    );
+
+    await chatPartRepo.save([
+      chatPartRepo.create({ conversation_id: groupConv.id, user_id: users.admin.id }),
+      chatPartRepo.create({ conversation_id: groupConv.id, user_id: users.owner1.id }),
+      chatPartRepo.create({ conversation_id: groupConv.id, user_id: users.owner2.id }),
+    ]);
+
+    await chatMsgRepo.save([
+      chatMsgRepo.create({
+        conversation_id: groupConv.id,
+        sender_id: users.admin.id,
+        message_type: MessageType.TEXT,
+        message: 'Welcome all to the Visakha Merchants Hub group!',
+        created_at: new Date(Date.now() - 7200000),
+      }),
+      chatMsgRepo.create({
+        conversation_id: groupConv.id,
+        sender_id: users.owner2.id,
+        message_type: MessageType.TEXT,
+        message: 'Thank you Admin, glad to be here.',
+        created_at: new Date(Date.now() - 3600000),
+      }),
+    ]);
+    logger.log('Seeded Group Chat Conversation and Messages.');
   }
 
   // 4. System Notifications

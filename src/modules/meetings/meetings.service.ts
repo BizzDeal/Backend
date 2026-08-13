@@ -49,7 +49,7 @@ export class MeetingsService {
     }
   }
 
-  async findAll(query: MeetingQueryDto, user: User): Promise<Meeting[]> {
+  async findAll(query: MeetingQueryDto, user: User) {
     this.checkNotCustomer(user);
 
     const qb = this.meetingRepository.createQueryBuilder('meeting');
@@ -110,7 +110,32 @@ export class MeetingsService {
     }
 
     qb.orderBy('meeting.meeting_date', 'DESC');
-    return qb.getMany();
+
+    const page = query.page || 1;
+    let limit = query.limit;
+
+    if (limit) {
+      qb.skip((page - 1) * limit);
+      qb.take(limit);
+    }
+
+    const [meetings, totalItems] = await qb.getManyAndCount();
+
+    if (!limit) {
+      return meetings; // Return array to support legacy calls if any
+    }
+
+    return {
+      success: true,
+      message: 'Meetings fetched successfully',
+      data: meetings,
+      meta: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
   }
 
   async findOne(id: string, user: User): Promise<Meeting> {

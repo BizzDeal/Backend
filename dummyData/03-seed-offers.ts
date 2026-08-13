@@ -12,6 +12,8 @@ export interface SeededOffersResult {
   offer4: Offer;
   offerExpired: Offer;
   offerPending: Offer;
+  offerRejected: Offer;
+  offerInactive: Offer;
   allOffers: Offer[];
 }
 
@@ -192,6 +194,46 @@ export async function seedDummyOffers(
       );
     }
     resultMap['offerPending'] = pendOffer;
+
+    const rejTitle = `${biz1.name} - Disallowed Promotion (Rejected)`;
+    let rejOffer = await offerRepo.findOne({ where: { title: rejTitle, business_id: biz1.id } });
+    if (!rejOffer) {
+      rejOffer = await offerRepo.save(
+        offerRepo.create({
+          business_id: biz1.id,
+          title: rejTitle,
+          description: 'A promotion that violated our terms of service.',
+          offer_type: OfferType.DISCOUNT,
+          discount_type: DiscountType.FIXED_AMOUNT,
+          discount_value: 50.00,
+          start_date: thirtyDaysAgo,
+          end_date: sixtyDaysLater,
+          status: OfferStatus.REJECTED,
+          approved_by_id: users.admin ? users.admin.id : null,
+        }),
+      );
+    }
+    resultMap['offerRejected'] = rejOffer;
+
+    const inactiveTitle = `${biz1.name} - Paused Promotion (Inactive)`;
+    let inactiveOffer = await offerRepo.findOne({ where: { title: inactiveTitle, business_id: biz1.id } });
+    if (!inactiveOffer) {
+      inactiveOffer = await offerRepo.save(
+        offerRepo.create({
+          business_id: biz1.id,
+          title: inactiveTitle,
+          description: 'A promotion that is currently paused by the business owner.',
+          offer_type: OfferType.CASHBACK,
+          discount_type: DiscountType.PERCENTAGE,
+          discount_value: 10.00,
+          start_date: thirtyDaysAgo,
+          end_date: sixtyDaysLater,
+          status: OfferStatus.INACTIVE,
+          approved_by_id: users.admin ? users.admin.id : null,
+        }),
+      );
+    }
+    resultMap['offerInactive'] = inactiveOffer;
   }
 
   logger.log(`Successfully seeded ${allSeededOffers.length} offers across ${allBizList.length} businesses (Multiple DISCOUNT, CASHBACK & BIZZ_COINS per business).`);

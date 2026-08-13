@@ -68,4 +68,6 @@ export const meetingQuerySchema = z.object({
     .optional(),
   state: z.string().optional(),
   district: z.string().optional(),
+  page: z.coerce.number().min(1).optional(),
+  limit: z.coerce.number().min(1).optional(),
 });

@@ -111,6 +111,7 @@ export const businessQuerySchema = z.object({
   exclude_owner_id: z.string().optional(),
   state: z.string().optional(),
   district: z.string().optional(),
+  status: z.nativeEnum(BusinessStatus).optional(),
 }).merge(paginationQuerySchema);
 
 export class BusinessQueryDto extends PaginationQueryDto {
@@ -222,6 +223,12 @@ export class BusinessQueryDto extends PaginationQueryDto {
     description: 'Comma-separated district UUIDs for filtering',
   })
   district?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter businesses by status',
+    enum: BusinessStatus,
+  })
+  status?: BusinessStatus;
 }
 
 export const featureBusinessSchema = z.object({

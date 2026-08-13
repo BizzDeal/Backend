@@ -396,6 +396,10 @@ export class BusinessesService {
           currentUserId: currentUser.id,
         },
       );
+    } else if (currentUser.role === UserRole.ADMIN) {
+      if (query.status) {
+        qb.andWhere('business.status = :status', { status: query.status });
+      }
     }
     // Exclude businesses owned by non-active members
     qb.andWhere('(owner.id IS NULL OR owner.status = :activeOwnerStatus)', {

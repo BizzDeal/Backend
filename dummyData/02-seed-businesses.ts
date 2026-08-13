@@ -255,6 +255,7 @@ export async function seedDummyBusinesses(
       ownerIndex++;
 
       let status = BusinessStatus.ACTIVE;
+      if (catBizIdx === 7) status = BusinessStatus.SUSPENDED;
       if (catBizIdx === 8) status = BusinessStatus.PENDING;
       if (catBizIdx === 9) status = BusinessStatus.REJECTED;
 

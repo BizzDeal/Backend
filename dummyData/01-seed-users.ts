@@ -117,12 +117,16 @@ export async function seedDummyUsers(dataSource: DataSource): Promise<SeededUser
   // Generate 140 Owner Configurations
   const ownerConfigs: UserConfigItem[] = [];
   for (let i = 1; i <= 140; i++) {
-    const ownerStatus = i === 3 ? UserStatus.PENDING : (i === 4 ? UserStatus.REJECTED : UserStatus.ACTIVE);
+    let ownerStatus = UserStatus.ACTIVE;
+    if (i === 3) ownerStatus = UserStatus.PENDING;
+    else if (i === 4) ownerStatus = UserStatus.REJECTED;
+    else if (i === 5) ownerStatus = UserStatus.SUSPENDED;
+    
     ownerConfigs.push({
       key: `owner${i}`,
       email: `owner${i}@bizzdeal.com`,
       phone: `98765${(10000 + i).toString().padStart(5, '0')}`,
-      role: UserRole.CUSTOMER,
+      role: UserRole.MEMBER,
       status: ownerStatus,
       fullName: `Owner ${i} (Merchant User)`,
       address: `D.No ${i}-${(i % 10) + 1}-12, Commercial St, Andhra Pradesh`,

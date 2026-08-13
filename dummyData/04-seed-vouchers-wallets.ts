@@ -72,6 +72,14 @@ export async function seedDummyVouchersAndWallets(
             description: 'Voucher discount savings cashback',
             reference_type: WalletReferenceType.VOUCHER,
           }),
+          walletTxRepo.create({
+            wallet_id: wallet.id,
+            user_id: w.user.id,
+            type: WalletTransactionType.DEBIT,
+            amount: 50.00,
+            description: 'Purchased premium voucher',
+            reference_type: WalletReferenceType.VOUCHER,
+          }),
         ]);
       }
     }
@@ -109,6 +117,14 @@ export async function seedDummyVouchersAndWallets(
             type: BizzCoinTransactionType.CREDIT,
             amount: cw.balance,
             description: 'Welcome Bonus & Offer Cashback Reward',
+          }),
+          coinTxRepo.create({
+            bizz_coin_wallet_id: coinWallet.id,
+            user_id: cw.user.id,
+            business_id: businesses.business1.id,
+            type: BizzCoinTransactionType.DEBIT,
+            amount: 100,
+            description: 'Redeemed BizzCoins for discount',
           }),
         ]);
       }
@@ -153,7 +169,45 @@ export async function seedDummyVouchersAndWallets(
       redeemedAt: null,
       redeemedById: null,
     },
+    {
+      code: 'BZ-RED-2002',
+      offerId: offers.offer2.id,
+      customerId: users.customer1.id,
+      businessId: businesses.business1.id,
+      status: VoucherStatus.REDEEMED,
+      redeemedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      redeemedById: users.owner1.id,
+    },
+    {
+      code: 'BZ-ACT-1003',
+      offerId: offers.offer4.id,
+      customerId: users.customer2.id,
+      businessId: businesses.business2.id,
+      status: VoucherStatus.ISSUED,
+      redeemedAt: null,
+      redeemedById: null,
+    },
   ];
+
+  // Dynamically add 1 issued voucher per business to ensure sufficient volume
+  let vCounter = 20;
+  if (businesses.allBusinesses && offers.allOffers) {
+    for (const biz of businesses.allBusinesses) {
+      const bizOffer = offers.allOffers.find((o) => o.business_id === biz.id && o.status === 'APPROVED');
+      if (bizOffer) {
+        voucherConfigs.push({
+          code: `BZ-ACT-20${vCounter.toString().padStart(3, '0')}`,
+          offerId: bizOffer.id,
+          customerId: users.customer1.id,
+          businessId: biz.id,
+          status: VoucherStatus.ISSUED,
+          redeemedAt: null,
+          redeemedById: null,
+        });
+        vCounter++;
+      }
+    }
+  }
 
   for (const vc of voucherConfigs) {
     let voucher = await voucherRepo.findOne({ where: { voucher_code: vc.code } });

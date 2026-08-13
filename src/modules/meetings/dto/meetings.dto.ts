@@ -174,4 +174,18 @@ export class MeetingQueryDto {
     description: 'Comma-separated district UUIDs for filtering',
   })
   district?: string;
+
+  @ApiPropertyOptional({
+    description: 'Page number for pagination',
+    type: Number,
+    example: 1,
+  })
+  page?: number;
+
+  @ApiPropertyOptional({
+    description: 'Number of items per page',
+    type: Number,
+    example: 20,
+  })
+  limit?: number;
 }
