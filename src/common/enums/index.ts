@@ -6,6 +6,7 @@ export enum UserRole {
 
 export enum UserStatus {
   UNVERIFIED = 'UNVERIFIED',
+  PENDING_PAYMENT = 'PENDING_PAYMENT',
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
   REJECTED = 'REJECTED',
@@ -19,6 +20,7 @@ export enum DeviceType {
 }
 
 export enum BusinessStatus {
+  PENDING_PAYMENT = 'PENDING_PAYMENT',
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
   REJECTED = 'REJECTED',

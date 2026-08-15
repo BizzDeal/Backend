@@ -661,6 +661,10 @@ export class BusinessesService {
     return this.businessRepository.findOne({ where: { owner_id: ownerId } });
   }
 
+  async updateBusinessStatusInternal(businessId: string, status: BusinessStatus): Promise<void> {
+    await this.businessRepository.update(businessId, { status });
+  }
+
   async update(
     id: string,
     userId: string,

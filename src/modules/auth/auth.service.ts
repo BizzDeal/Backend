@@ -272,7 +272,7 @@ export class AuthService {
         state_id: dto.business_state_id,
         district_id: dto.business_district_id,
         logo_id: logoId,
-        status: BusinessStatus.PENDING,
+        status: BusinessStatus.PENDING_PAYMENT,
       });
 
       if (files?.profile_pic?.[0]) {
@@ -318,9 +318,9 @@ export class AuthService {
         throw new BadRequestException('Email is already verified or account is not in unverified state');
       }
 
-      await this.usersService.update(user.id, { status: UserStatus.PENDING });
+      await this.usersService.update(user.id, { status: UserStatus.PENDING_PAYMENT });
       
-      return { success: true, message: 'Email verified successfully. Your account is now pending admin approval.' };
+      return { success: true, message: 'Email verified successfully. Please login to complete your registration payment.' };
     } catch (error) {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;

@@ -355,4 +355,13 @@ export class WalletService {
 
     return wallet;
   }
+
+  async checkExistingTransaction(referenceType: WalletReferenceType, referenceId: string): Promise<WalletTransaction | null> {
+    return this.transactionRepository.findOne({
+      where: {
+        reference_type: referenceType,
+        reference_id: referenceId,
+      }
+    });
+  }
 }

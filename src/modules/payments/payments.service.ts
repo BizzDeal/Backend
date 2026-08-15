@@ -16,6 +16,8 @@ import { PaymentStatus, PaymentPurpose, WalletReferenceType, UserRole } from '..
 import { User } from '../users/entities/user.entity';
 import { WalletService } from '../wallet/wallet.service';
 import { UsersService } from '../users/users.service';
+import { BusinessesService } from '../businesses/businesses.service';
+import { UserStatus, BusinessStatus } from '../../common/enums';
 
 @Injectable()
 export class PaymentsService {
@@ -28,6 +30,7 @@ export class PaymentsService {
     private readonly configService: ConfigService,
     private readonly walletService: WalletService,
     private readonly usersService: UsersService,
+    private readonly businessesService: BusinessesService,
   ) {
     const key_id = this.configService.get<string>('RAZORPAY_KEY_ID');
     const key_secret = this.configService.get<string>('RAZORPAY_KEY_SECRET');
@@ -120,29 +123,7 @@ export class PaymentsService {
 
     await this.paymentRepo.save(paymentTx);
 
-    // Handle post-payment business logic
-    try {
-      if (paymentTx.purpose === PaymentPurpose.WALLET_TOPUP) {
-        // Find if user is admin (only admins can officially use the credit endpoint directly, 
-        // but since this is internal service-to-service logic, we just pass the internal structure).
-        // Wait, WalletService.creditWallet requires a DTO.
-        // Let's call it via the service directly.
-        await this.walletService.creditWallet({
-          user_id: paymentTx.user_id,
-          amount: paymentTx.amount,
-          description: 'Wallet top-up via Razorpay',
-          reference_type: WalletReferenceType.PAYMENT_GATEWAY,
-          reference_id: paymentTx.id,
-        });
-      } else if (paymentTx.purpose === PaymentPurpose.REGISTRATION_FEE) {
-         // Optionally update the user's payment_status or trigger admin approval flow if needed.
-         this.logger.log(`Registration fee verified for user ${paymentTx.user_id}`);
-      }
-    } catch (error) {
-      this.logger.error(`Error processing post-payment logic for ${paymentTx.id}`, error);
-      // We don't throw here because the payment itself was successful.
-      // But in a production app, we'd need a dead-letter queue or retry mechanism.
-    }
+    await this.handlePostPaymentSuccess(paymentTx);
 
     return {
       success: true,
@@ -181,9 +162,8 @@ export class PaymentsService {
         paymentTx.razorpay_payment_id = body.payload.payment.entity.id;
         await this.paymentRepo.save(paymentTx);
 
-        // Ideally, trigger the same business logic here if it wasn't triggered by frontend verification.
-        // We will skip full implementation of async retry for the MVP to prevent double-crediting if frontend also verified.
-        // Real-world scenario: Check if already credited before crediting again.
+        await this.handlePostPaymentSuccess(paymentTx);
+
         this.logger.log(`Webhook marked order ${orderId} as SUCCESS`);
       }
     } else if (event === 'payment.failed') {
@@ -201,5 +181,35 @@ export class PaymentsService {
     }
 
     return { received: true };
+  }
+
+  private async handlePostPaymentSuccess(paymentTx: PaymentTransaction): Promise<void> {
+    try {
+      if (paymentTx.purpose === PaymentPurpose.WALLET_TOPUP) {
+        // Check if already credited
+        const existingTx = await this.walletService.checkExistingTransaction(WalletReferenceType.PAYMENT_GATEWAY, paymentTx.id);
+        if (!existingTx) {
+          await this.walletService.creditWallet({
+            user_id: paymentTx.user_id,
+            amount: paymentTx.amount,
+            description: 'Wallet top-up via Razorpay',
+            reference_type: WalletReferenceType.PAYMENT_GATEWAY,
+            reference_id: paymentTx.id,
+          });
+        }
+      } else if (paymentTx.purpose === PaymentPurpose.REGISTRATION_FEE) {
+         const u = await this.usersService.findOneById(paymentTx.user_id);
+          if (u && u.status === UserStatus.PENDING_PAYMENT) {
+            await this.usersService.update(u.id, { status: UserStatus.PENDING });
+            const business = await this.businessesService.findOneByOwnerId(u.id);
+            if (business && business.status === BusinessStatus.PENDING_PAYMENT) {
+              await this.businessesService.updateBusinessStatusInternal(business.id, BusinessStatus.PENDING);
+            }
+          }
+         this.logger.log(`Registration fee verified for user ${paymentTx.user_id}, status updated to PENDING.`);
+      }
+    } catch (error) {
+      this.logger.error(`Error processing post-payment logic for ${paymentTx.id}`, error);
+    }
   }
 }
