@@ -181,20 +181,12 @@ export class AuthService {
     dto: RegisterMemberDto,
     files?: {
       profile_pic?: Express.Multer.File[];
-      payment_receipt?: Express.Multer.File[];
       business_logo?: Express.Multer.File[];
     },
   ): Promise<{
     success: boolean;
     message: string;
   }> {
-    // Payment receipt file upload is now optional
-    // if (!files?.payment_receipt?.[0]) {
-    //   throw new BadRequestException(
-    //     'Payment receipt file is mandatory for member registration',
-    //   );
-    // }
-
 
     // Check if email is already registered
     const existingUser = await this.usersService.findOneByEmail(dto.email);
@@ -291,13 +283,6 @@ export class AuthService {
         );
       }
 
-      if (files?.payment_receipt?.[0]) {
-        await this.mediaService.saveFile(
-          files.payment_receipt[0],
-          newUser.id,
-          MediaPurpose.PAYMENT_RECEIPT,
-        );
-      }
 
       const verificationToken = await this.jwtService.signAsync(
         { sub: newUser.id, purpose: 'email_verification' },

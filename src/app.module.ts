@@ -30,6 +30,7 @@ import { PaymentSettingsModule } from './modules/payment-settings/payment-settin
 import { SettingsModule } from './modules/settings/settings.module';
 import { MailModule } from './modules/mail/mail.module';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
     EventsModule,
     PaymentSettingsModule,
     SettingsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [

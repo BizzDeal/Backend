@@ -60,6 +60,7 @@ export enum WalletReferenceType {
   VOUCHER = 'VOUCHER',
   REFERRAL = 'REFERRAL',
   MANUAL = 'MANUAL',
+  PAYMENT_GATEWAY = 'PAYMENT_GATEWAY',
 }
 
 export enum ReferralType {
@@ -85,7 +86,6 @@ export enum MediaType {
 
 export enum MediaPurpose {
   PROFILE_PIC = 'PROFILE_PIC',
-  PAYMENT_RECEIPT = 'PAYMENT_RECEIPT',
   BUSINESS_LOGO = 'BUSINESS_LOGO',
   OFFER_IMAGE = 'OFFER_IMAGE',
   GENERAL = 'GENERAL',
@@ -120,4 +120,15 @@ export enum AttendeeStatus {
   REJECTED = 'REJECTED',
   ATTENDED = 'ATTENDED',
   MISSED = 'MISSED',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED',
+}
+
+export enum PaymentPurpose {
+  REGISTRATION_FEE = 'REGISTRATION_FEE',
+  WALLET_TOPUP = 'WALLET_TOPUP',
 }

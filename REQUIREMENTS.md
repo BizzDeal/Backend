@@ -750,7 +750,7 @@ Follow these rules while generating code:
 11. Use environment variables for configuration.
 12. Do not create unnecessary abstractions.
 13. Do not over-engineer the MVP.
-14. Do not add payment gateway unless explicitly requested.
+14. Integrate Razorpay for member registration fees and wallet top-ups.
 15. Do not add subscription payments in MVP unless explicitly requested.
 16. Keep code readable and maintainable.
 17. Add Swagger decorators where useful.

@@ -172,13 +172,6 @@ export class RegisterMemberDto {
   @ApiPropertyOptional({
     type: 'string',
     format: 'binary',
-    description: 'Optional payment receipt image/document upload',
-  })
-  payment_receipt?: any;
-
-  @ApiPropertyOptional({
-    type: 'string',
-    format: 'binary',
     description: 'Optional business logo image upload',
   })
   business_logo?: any;

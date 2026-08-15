@@ -9,7 +9,7 @@ import { FirebaseService } from './../src/common/firebase/firebase.service';
 import { UserRole, UserStatus, MediaPurpose } from './../src/common/enums';
 import { User } from './../src/modules/users/entities/user.entity';
 import { RefreshToken } from './../src/modules/auth/entities/refresh-token.entity';
-import { Business } from './../src/modules/businesses/entities/business.entity';
+import { BusinessProfile } from './../src/modules/businesses/entities/business-profile.entity';
 import { BusinessCategory } from './../src/modules/businesses/entities/business-category.entity';
 import { MediaFile } from './../src/modules/media/entities/media-file.entity';
 import { State } from './../src/modules/location/entities/state.entity';
@@ -21,7 +21,7 @@ describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
   let userRepository: Repository<User>;
   let refreshTokenRepository: Repository<RefreshToken>;
-  let businessRepository: Repository<Business>;
+  let businessRepository: Repository<BusinessProfile>;
   let categoryRepository: Repository<BusinessCategory>;
   let mediaRepository: Repository<MediaFile>;
   let stateRepository: Repository<State>;
@@ -105,8 +105,8 @@ describe('AuthController (e2e)', () => {
     refreshTokenRepository = moduleFixture.get<Repository<RefreshToken>>(
       getRepositoryToken(RefreshToken),
     );
-    businessRepository = moduleFixture.get<Repository<Business>>(
-      getRepositoryToken(Business),
+    businessRepository = moduleFixture.get<Repository<BusinessProfile>>(
+      getRepositoryToken(BusinessProfile),
     );
     categoryRepository = moduleFixture.get<Repository<BusinessCategory>>(
       getRepositoryToken(BusinessCategory),
@@ -298,8 +298,7 @@ describe('AuthController (e2e)', () => {
         )
         .field('website', 'https://testenterprise.com')
         .field('gst_number', '36AAAAA0000A1Z5')
-        .field('firebaseToken', 'valid-firebase-token-4')
-        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf');
+        .field('firebaseToken', 'valid-firebase-token-4');
 
       expect(res.status).toBe(201);
 
@@ -327,11 +326,10 @@ describe('AuthController (e2e)', () => {
         .field('website', 'https://dupenterprise.com')
         .field('gst_number', '36AAAAA0000A1Z6')
         .field('firebaseToken', 'valid-firebase-token-4')
-        .attach('payment_receipt', Buffer.from('fake receipt'), 'receipt.pdf')
         .expect(409);
     });
 
-    it('should register a member successfully with profile_pic and payment_receipt file uploads', async () => {
+    it('should register a member successfully with profile_pic file uploads', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/register-member')
         .field('full_name', 'File Upload Entrepreneur')
@@ -349,7 +347,6 @@ describe('AuthController (e2e)', () => {
         .field('gst_number', '36AAAAA0000A1Z7')
         .field('firebaseToken', 'valid-firebase-token-6')
         .attach('profile_pic', Buffer.from('fake image data'), 'profile.png')
-        .attach('payment_receipt', Buffer.from('fake pdf data'), 'receipt.pdf')
         .expect(201);
 
       expect(res.body.accessToken).toBeDefined();
@@ -358,10 +355,9 @@ describe('AuthController (e2e)', () => {
       const mediaList = await mediaRepository.find({
         where: { uploaded_by_id: res.body.user.id },
       });
-      expect(mediaList.length).toBe(2);
+      expect(mediaList.length).toBe(1);
       const purposes = mediaList.map((m) => m.purpose);
       expect(purposes).toContain(MediaPurpose.PROFILE_PIC);
-      expect(purposes).toContain(MediaPurpose.PAYMENT_RECEIPT);
     });
 
     it('should register a member successfully without optional fields (whatsapp, website, gst_number)', async () => {
@@ -378,14 +374,13 @@ describe('AuthController (e2e)', () => {
         .field('category_id', testCategoryId)
         .field('business_description', 'Providing IT optional services')
         .field('firebaseToken', 'valid-firebase-token-8')
-        .attach('payment_receipt', Buffer.from('fake pdf data'), 'receipt.pdf')
         .expect(201);
 
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.user.phone).toBe('9999000008');
     });
 
-    it('should register a member successfully without payment_receipt file upload', async () => {
+    it('should register a member successfully without any optional file upload', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/register-member')
         .field('full_name', 'No Receipt Entrepreneur')

@@ -293,7 +293,7 @@ export class UsersService {
     const mediaFiles = await this.mediaRepository.find({
       where: {
         uploaded_by_id: In(memberIds),
-        purpose: In([MediaPurpose.PROFILE_PIC, MediaPurpose.PAYMENT_RECEIPT]),
+        purpose: MediaPurpose.PROFILE_PIC,
       },
     });
 
@@ -302,13 +302,10 @@ export class UsersService {
     });
 
     const profilePicMap = new Map<string, string>();
-    const receiptMap = new Map<string, string>();
     mediaFiles.forEach((m) => {
       if (m.uploaded_by_id) {
         if (m.purpose === MediaPurpose.PROFILE_PIC) {
           profilePicMap.set(m.uploaded_by_id, m.file_url);
-        } else if (m.purpose === MediaPurpose.PAYMENT_RECEIPT) {
-          receiptMap.set(m.uploaded_by_id, m.file_url);
         }
       }
     });
@@ -331,7 +328,6 @@ export class UsersService {
         district_id: user.profile?.district_id || null,
         district_name: user.profile?.district?.name || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
-        payment_receipt_url: receiptMap.get(user.id) || null,
         business_id: b?.id || null,
         businessProfile: b ? {
           business_name: b.name,
@@ -562,21 +558,17 @@ export class UsersService {
         uploaded_by_id: user.id,
         purpose: In([
           MediaPurpose.PROFILE_PIC,
-          MediaPurpose.PAYMENT_RECEIPT,
           MediaPurpose.BUSINESS_LOGO,
         ]),
       },
     });
 
     let profile_pic_url: string | null = null;
-    let payment_receipt_url: string | null = null;
     let business_logo_url: string | null = null;
 
     mediaFiles.forEach((m) => {
       if (m.purpose === MediaPurpose.PROFILE_PIC) {
         profile_pic_url = m.file_url;
-      } else if (m.purpose === MediaPurpose.PAYMENT_RECEIPT) {
-        payment_receipt_url = m.file_url;
       } else if (m.purpose === MediaPurpose.BUSINESS_LOGO) {
         business_logo_url = m.file_url;
       }
@@ -627,8 +619,6 @@ export class UsersService {
       district_id: user.profile?.district_id || null,
       district_name: user.profile?.district?.name || null,
       profile_pic_url,
-      payment_receipt_url:
-        user.role === UserRole.MEMBER ? payment_receipt_url : undefined,
       business_id:
         user.role === UserRole.MEMBER ? business?.id || null : undefined,
       category_id:

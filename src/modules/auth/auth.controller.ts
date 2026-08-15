@@ -134,7 +134,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register Member / Entrepreneur',
     description:
-      'Registers a new member account with optional profile_pic, business_logo, and payment_receipt file uploads. An email verification link is sent to the user. Status is set to UNVERIFIED until the link is clicked, after which it becomes PENDING for admin approval.',
+      'Registers a new member account with optional profile_pic and business_logo file uploads. An email verification link is sent to the user. Status is set to UNVERIFIED until the link is clicked, after which it becomes PENDING for admin approval.',
   })
   @ApiResponse({
     status: 201,
@@ -152,7 +152,6 @@ export class AuthController {
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'profile_pic', maxCount: 1 },
-      { name: 'payment_receipt', maxCount: 1 },
       { name: 'business_logo', maxCount: 1 },
     ]),
   )
@@ -161,7 +160,6 @@ export class AuthController {
     @UploadedFiles()
     files?: {
       profile_pic?: Express.Multer.File[];
-      payment_receipt?: Express.Multer.File[];
       business_logo?: Express.Multer.File[];
     },
   ) {
