@@ -49,6 +49,9 @@ export const chatQuerySchema = z.object({
   search: z.string().optional(),
 }).merge(paginationQuerySchema);
 
+import { ApiPropertyOptional } from '@nestjs/swagger';
+
 export class ChatQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ description: 'Search term to filter conversations' })
   search?: string;
 }

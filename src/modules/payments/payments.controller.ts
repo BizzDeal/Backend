@@ -72,6 +72,10 @@ export class PaymentsController {
     summary: 'Razorpay Webhook Handler',
     description: 'Listens for Razorpay webhook events to asynchronously update payment statuses.',
   })
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook processed successfully.',
+  })
   async handleWebhook(
     @Req() req: any,
     @Headers('x-razorpay-signature') signature: string,

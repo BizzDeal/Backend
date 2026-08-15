@@ -95,6 +95,14 @@ export class BizzCoinsController {
     type: String,
     description: '10-digit customer phone number',
   })
+  @ApiResponse({
+    status: 200,
+    description: 'Customer found and details returned.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Customer not found.',
+  })
   async getCustomerByPhone(
     @Param('phone') phone: string,
     @CurrentUser() user: User,
@@ -111,6 +119,10 @@ export class BizzCoinsController {
     description:
       'Checks if the authenticated member business currently has an approved and active Bizz Coins offer.',
   })
+  @ApiResponse({
+    status: 200,
+    description: 'Active offer status returned successfully.',
+  })
   async checkActiveOfferStatus(@CurrentUser() user: User) {
     return this.bizzCoinsService.checkMemberActiveBizzCoinOffer(user);
   }
@@ -121,6 +133,10 @@ export class BizzCoinsController {
   @ApiOperation({
     summary: 'Get Own Bizz Coin Wallet',
     description: 'Retrieves the authenticated user Bizz Coin balance and transaction history.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Wallet details retrieved successfully.',
   })
   async getMyWallet(@CurrentUser() user: User) {
     return this.bizzCoinsService.getMyCoinsWallet(user.id);

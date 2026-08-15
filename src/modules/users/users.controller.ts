@@ -310,6 +310,14 @@ export class UsersController {
     summary: 'Get User By Phone Number',
     description: 'Looks up registered user profile details by 10-digit phone number.',
   })
+  @ApiResponse({
+    status: 200,
+    description: 'User details found by phone number.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No user found with this phone number.',
+  })
   async getUserByPhone(@Param('phone') phone: string) {
     const user = await this.usersService.findOneByPhone(phone);
     if (!user) {
