@@ -223,3 +223,7 @@ After completing changes, always provide:
 - Why it changed
 - Any commands to run
 - Any environment variables added
+
+## Git Push Strategy
+
+- **Remote & Branch**: The backend remote repository is named `bizzdeal` and its deployment branch is `server`. When asked to push to the backend remote, always use `git push bizzdeal <branch>:server` (e.g., `git push bizzdeal master:server`).
