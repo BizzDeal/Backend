@@ -51,7 +51,7 @@ export class MailService {
     const domain = this.configService.get<string>('DOMAIN') || 'http://localhost';
     const port = this.configService.get<number>('PORT') || 3000;
     const contextPath = this.configService.get<string>('CONTEXT_PATH') || '/bizzdeal/api';
-    
+
     const isProd = domain.startsWith('https');
     return isProd ? `${domain}${contextPath}` : `${domain}:${port}${contextPath}`;
   }
@@ -76,7 +76,7 @@ export class MailService {
     const baseUrl = this.getBaseUrl();
     return `
       <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
-        <img src="https://api.bizzdeal.in/assets/icon-only.jpg" alt="BizzDeal Icon" style="max-height: 30px; margin-bottom: 10px; border-radius: 4px;">
+        <img src="https://api.bizzdeal.in/assets/icon-only.png" alt="BizzDeal Icon" style="max-height: 30px; margin-bottom: 10px; border-radius: 4px;">
         <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} BizzDeal. All rights reserved.</p>
       </div>
     `;
