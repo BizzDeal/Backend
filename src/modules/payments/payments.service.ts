@@ -114,6 +114,7 @@ export class PaymentsService {
     if (generatedSignature !== razorpaySignature) {
       paymentTx.status = PaymentStatus.FAILED;
       await this.paymentRepo.save(paymentTx);
+      this.logger.error(`Signature mismatch. Generated: ${generatedSignature}, Expected: ${razorpaySignature}`);
       throw new BadRequestException('Invalid payment signature.');
     }
 
