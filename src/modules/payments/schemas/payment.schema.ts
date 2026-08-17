@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { PaymentPurpose } from '../../../common/enums';
 
 export const createOrderSchema = z.object({
-  amount: z.number().positive('Amount must be a positive number'),
+  amount: z.coerce.number().positive('Amount must be a positive number'),
   purpose: z.nativeEnum(PaymentPurpose),
 });
 
