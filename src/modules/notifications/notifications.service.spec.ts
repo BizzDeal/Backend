@@ -307,65 +307,7 @@ describe('NotificationsService', () => {
       expect(result).toEqual([mockDevice]);
     });
 
-    it('should send security alert to all devices when registering a 2nd device (otherActiveDevicesCount >= 1)', async () => {
-      deviceRepo.findOne.mockResolvedValue(null);
-      deviceRepo.count.mockResolvedValue(1);
-      deviceRepo.create.mockReturnValue(mockDevice);
-      deviceRepo.save.mockResolvedValue(mockDevice);
-      notificationRepo.create.mockReturnValue(mockNotification);
-      notificationRepo.save.mockResolvedValue(mockNotification);
-      deviceRepo.find.mockResolvedValue([mockDevice]);
-      firebaseService.sendPushNotification.mockResolvedValue({
-        successCount: 1,
-        failureCount: 0,
-        staleTokens: [],
-      });
 
-      await service.registerDevice(
-        'fcm_token_sample_123',
-        DeviceType.ANDROID,
-        'Test Phone',
-        mockUser,
-      );
-
-      expect(notificationRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user_id: mockUser.id,
-          title: 'Security Alert: New Device Registered',
-        }),
-      );
-    });
-
-    it('should not send security alert when registering the 1st device (otherActiveDevicesCount === 0)', async () => {
-      deviceRepo.findOne.mockResolvedValue(null);
-      deviceRepo.count.mockResolvedValue(0);
-      deviceRepo.create.mockReturnValue(mockDevice);
-      deviceRepo.save.mockResolvedValue(mockDevice);
-
-      await service.registerDevice(
-        'fcm_token_sample_123',
-        DeviceType.ANDROID,
-        'Test Phone',
-        mockUser,
-      );
-
-      expect(notificationRepo.create).not.toHaveBeenCalled();
-    });
-
-    it('should not send security alert when re-registering an already active device even if multiple devices exist', async () => {
-      deviceRepo.findOne.mockResolvedValue({ ...mockDevice, is_active: true });
-      deviceRepo.count.mockResolvedValue(5);
-      deviceRepo.save.mockResolvedValue(mockDevice);
-
-      await service.registerDevice(
-        'fcm_token_sample_123',
-        DeviceType.ANDROID,
-        'Test Phone',
-        mockUser,
-      );
-
-      expect(notificationRepo.create).not.toHaveBeenCalled();
-    });
   });
 
   describe('sendBulkToUsers and broadcastToRole', () => {

@@ -430,24 +430,7 @@ export class NotificationsService {
     }
     const savedDevice = await this.deviceRepository.save(device);
 
-    if (isNewOrReactivated && otherActiveDevicesCount >= 1) {
-      const deviceDisplayName =
-        savedDevice.device_name || savedDevice.device_model || savedDevice.operating_system || savedDevice.device_type || 'Unknown Device';
-      const totalActiveDevices = otherActiveDevicesCount + 1;
-      await this.create({
-        user_id: user.id,
-        title: 'Security Alert: New Device Registered',
-        message: `A new device (${deviceDisplayName}) was registered to your BizzDeal account. You now have ${totalActiveDevices} active devices receiving notifications.`,
-        type: NotificationType.GENERAL,
-        data: {
-          event: 'multiple_devices_registered',
-          device_id: savedDevice.id,
-          device_type: savedDevice.device_type,
-          device_name: savedDevice.device_name || '',
-          total_active_devices: totalActiveDevices,
-        },
-      });
-    }
+
 
     return savedDevice;
   }
