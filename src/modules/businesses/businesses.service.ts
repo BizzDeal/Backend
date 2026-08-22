@@ -717,6 +717,7 @@ export class BusinessesService {
     if (dto.address !== undefined) updateData.address = dto.address;
     if (dto.state_id !== undefined) updateData.state_id = dto.state_id;
     if (dto.district_id !== undefined) updateData.district_id = dto.district_id;
+    if (dto.video_url !== undefined) updateData.video_url = dto.video_url;
 
     if (logoFile) {
       const media = await this.mediaService.replaceUserFile(
@@ -727,9 +728,9 @@ export class BusinessesService {
       updateData.logo_id = media.id;
     }
 
-    if (!isAdmin) {
+    if (!isAdmin && business.status === BusinessStatus.REJECTED) {
       this.logger.log(
-        `Business listing ${business.id} modified by member ${userId}. Setting status to PENDING for admin re-approval.`,
+        `Business listing ${business.id} modified by member ${userId} after being REJECTED. Setting status to PENDING for admin re-approval.`,
       );
       updateData.status = BusinessStatus.PENDING;
     }
@@ -886,6 +887,15 @@ export class BusinessesService {
     }
 
     const oldFeatured = business.is_featured;
+
+    // Enforce single featured store rule:
+    if (isFeatured) {
+      await this.businessRepository.update(
+        { is_featured: true },
+        { is_featured: false }
+      );
+    }
+
     await this.businessRepository.update(businessId, {
       is_featured: isFeatured,
     });

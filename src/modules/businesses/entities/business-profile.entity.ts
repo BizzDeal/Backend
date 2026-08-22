@@ -73,6 +73,9 @@ export class BusinessProfile {
   @JoinColumn({ name: 'logo_id' })
   logo: MediaFile | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  video_url: string | null;
+
   @Index()
   @Column({
     type: 'enum',

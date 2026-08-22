@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { OffersService } from './offers.service';
 import { Offer } from './entities/offer.entity';
-import { Business } from '../businesses/entities/business.entity';
+import { BusinessProfile } from '../businesses/entities/business-profile.entity';
 import { MediaService } from '../media/media.service';
 import {
   OfferStatus,
@@ -23,6 +23,9 @@ import {
   OfferType,
   DiscountType,
 } from '../../common/enums';
+import { SettingsService } from '../settings/settings.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AppEventsGateway } from '../events/events.gateway';
 import { User } from '../users/entities/user.entity';
 
 describe('OffersService', () => {
@@ -74,12 +77,24 @@ describe('OffersService', () => {
           useValue: mockOfferRepo,
         },
         {
-          provide: getRepositoryToken(Business),
+          provide: getRepositoryToken(BusinessProfile),
           useValue: mockBusinessRepo,
         },
         {
           provide: MediaService,
           useValue: mockMediaService,
+        },
+        {
+          provide: SettingsService,
+          useValue: {},
+        },
+        {
+          provide: NotificationsService,
+          useValue: { sendNotification: jest.fn() },
+        },
+        {
+          provide: AppEventsGateway,
+          useValue: { emitToUser: jest.fn() },
         },
       ],
     }).compile();
@@ -157,7 +172,7 @@ describe('OffersService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should allow owning member to update their offer and reset status to PENDING', async () => {
+    it('should allow owning member to update their offer without resetting status to PENDING if APPROVED', async () => {
       mockOfferRepo.findOne.mockResolvedValue({
         id: 'offer-id',
         status: OfferStatus.APPROVED,
@@ -169,7 +184,7 @@ describe('OffersService', () => {
         { title: 'New Title' },
         mockMember,
       );
-      expect(res.status).toBe(OfferStatus.PENDING);
+      expect(res.status).toBe(OfferStatus.APPROVED);
       expect(mockOfferRepo.save).toHaveBeenCalled();
     });
   });

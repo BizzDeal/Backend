@@ -355,7 +355,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'Update Offer Details',
     description:
-      'Updates an offer or replaces its promotional image. Whenever a member updates an offer, its status automatically resets to PENDING for admin re-approval.',
+      'Updates an offer or replaces its promotional image. If a member updates a REJECTED offer, its status automatically resets to PENDING for admin re-approval.',
   })
   @ApiResponse({
     status: 200,

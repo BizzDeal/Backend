@@ -128,6 +128,7 @@ export async function seedDummyOffers(
           status: tpl.status,
           approved_by_id: users.admin ? users.admin.id : null,
           approved_at: users.admin ? new Date() : null,
+          video_url: 'https://www.youtube.com/embed/hOgVAYpHPCc',
         });
         offer = await offerRepo.save(offer);
       } else {
@@ -138,6 +139,7 @@ export async function seedDummyOffers(
         offer.start_date = tpl.startDate;
         offer.end_date = tpl.endDate;
         offer.status = tpl.status;
+        offer.video_url = 'https://www.youtube.com/embed/hOgVAYpHPCc';
         offer.approved_by_id = users.admin ? users.admin.id : null;
         offer = await offerRepo.save(offer);
       }

@@ -282,6 +282,23 @@ export class NotificationsController {
     return { message: 'Device deleted successfully' };
   }
 
+  @Delete('devices/token/:token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete Registered Device by Token',
+    description:
+      'Removes a specific registered user device by FCM Token from the database.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Device token deleted successfully.',
+  })
+  @ApiResponse({ status: 404, description: 'Device token not found.' })
+  async deleteDeviceByToken(@Param('token') token: string, @CurrentUser() user: User) {
+    await this.notificationsService.deleteDeviceByToken(token, user);
+    return { message: 'Device token deleted successfully' };
+  }
+
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)

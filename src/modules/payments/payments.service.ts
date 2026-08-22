@@ -45,9 +45,15 @@ export class PaymentsService {
     }
   }
 
-  async createOrder(user: User, amount: number, purpose: PaymentPurpose): Promise<{ order_id: string; amount: number }> {
+  async createOrder(
+    user: User,
+    amount: number,
+    purpose: PaymentPurpose,
+  ): Promise<{ order_id: string; amount: number; key_id: string }> {
     if (!this.razorpayInstance) {
-      throw new InternalServerErrorException('Payment gateway is not configured properly.');
+      throw new InternalServerErrorException(
+        'Payment gateway is not configured properly.',
+      );
     }
 
     // Razorpay amount is in paise (smallest currency unit), so multiply by 100 for INR
@@ -80,6 +86,7 @@ export class PaymentsService {
       return {
         order_id: order.id,
         amount: amount,
+        key_id: this.configService.get<string>('RAZORPAY_KEY_ID') || '',
       };
     } catch (error) {
       this.logger.error('Error creating Razorpay order', error);

@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, FindOptionsWhere } from 'typeorm';
+import { Repository, In, FindOptionsWhere, Not } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { UserDevice } from './entities/user-device.entity';
 import { User } from '../users/entities/user.entity';
@@ -371,6 +371,12 @@ export class NotificationsService {
   ): Promise<UserDevice> {
     let device: UserDevice | null = null;
 
+    // Enforce "One Token = One Active User" by deleting this token from any other users
+    await this.deviceRepository.delete({
+      fcm_token: fcmToken,
+      user_id: Not(user.id),
+    });
+
     if (deviceIdentifier) {
       device = await this.deviceRepository.findOne({
         where: { user_id: user.id, device_identifier: deviceIdentifier },
@@ -473,6 +479,13 @@ export class NotificationsService {
   async deleteDevice(id: string, user: User): Promise<void> {
     const device = await this.getDeviceById(id, user);
     await this.deviceRepository.remove(device);
+  }
+
+  async deleteDeviceByToken(fcmToken: string, user: User): Promise<void> {
+    await this.deviceRepository.delete({
+      fcm_token: fcmToken,
+      user_id: user.id,
+    });
   }
 }
 

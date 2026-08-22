@@ -59,6 +59,9 @@ export class Offer {
   @JoinColumn({ name: 'image_id' })
   image: MediaFile | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  video_url: string | null;
+
   @Column({
     type: 'enum',
     enum: OfferStatus,

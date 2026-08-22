@@ -12,6 +12,7 @@ export const updateBusinessSchema = z.object({
   address: z.string().optional().nullable(),
   state_id: z.string().uuid().optional().nullable(),
   district_id: z.string().uuid('Valid district UUID is required'),
+  video_url: z.string().url().optional().nullable(),
 });
 
 export class UpdateBusinessDto {
@@ -70,6 +71,12 @@ export class UpdateBusinessDto {
     description: 'Replacement business logo file image',
   })
   business_logo?: any;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Video URL for the business profile',
+  })
+  video_url?: string | null;
 }
 
 export const updateBusinessStatusSchema = z.object({

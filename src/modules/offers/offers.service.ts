@@ -106,10 +106,14 @@ export class OffersService {
         if (imageId) {
           existingBizzCoinsOffer.image_id = imageId;
         }
+        if (dto.video_url !== undefined) {
+          existingBizzCoinsOffer.video_url = dto.video_url;
+        }
         const updated = await this.offerRepository.save(existingBizzCoinsOffer);
         if (isAdmin) {
           const b = await this.businessRepository.findOne({ where: { id: dto.business_id } });
           if (b) {
+            await this.businessRepository.update({ is_featured: true }, { is_featured: false });
             b.is_featured = true;
             await this.businessRepository.save(b);
           }
@@ -131,6 +135,7 @@ export class OffersService {
       status: isAdmin ? OfferStatus.APPROVED : OfferStatus.PENDING,
       approved_by_id: isAdmin ? user.id : null,
       approved_at: isAdmin ? new Date() : null,
+      video_url: dto.video_url ?? null,
     });
 
     const savedOffer = await this.offerRepository.save(offer);
@@ -138,6 +143,7 @@ export class OffersService {
     if (isAdmin && isBizzCoins) {
       const b = await this.businessRepository.findOne({ where: { id: dto.business_id } });
       if (b) {
+        await this.businessRepository.update({ is_featured: true }, { is_featured: false });
         b.is_featured = true;
         await this.businessRepository.save(b);
       }
@@ -385,6 +391,7 @@ export class OffersService {
     if (dto.start_date !== undefined)
       offer.start_date = new Date(dto.start_date);
     if (dto.end_date !== undefined) offer.end_date = new Date(dto.end_date);
+    if (dto.video_url !== undefined) offer.video_url = dto.video_url;
 
     if (isAdmin && dto.status) {
       const oldStatus = offer.status;
@@ -405,9 +412,9 @@ export class OffersService {
       }
     } else if (!isAdmin && dto.status === OfferStatus.INACTIVE) {
       offer.status = OfferStatus.INACTIVE;
-    } else if (!isAdmin) {
+    } else if (!isAdmin && offer.status === OfferStatus.REJECTED) {
       this.logger.log(
-        `Offer ${offer.id} modified by member ${user.id}. Setting status to PENDING for re-approval.`,
+        `Offer ${offer.id} modified by member ${user.id} after being REJECTED. Setting status to PENDING for re-approval.`,
       );
       offer.status = OfferStatus.PENDING;
       offer.approved_by_id = null;
@@ -526,6 +533,7 @@ export class OffersService {
         where: { id: offer.business_id },
       });
       if (business) {
+        await this.businessRepository.update({ is_featured: true }, { is_featured: false });
         business.is_featured = true;
         await this.businessRepository.save(business);
       }

@@ -32,7 +32,8 @@ export class PaymentsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create Razorpay Order',
-    description: 'Generates a new Razorpay Order ID for the specified amount and purpose.',
+    description:
+      'Generates a new Razorpay Order ID and returns the active public Key ID for the specified amount and purpose.',
   })
   @ApiResponse({ status: 201, description: 'Order created successfully' })
   @ApiResponse({ status: 500, description: 'Error creating Razorpay order' })

@@ -275,6 +275,7 @@ export async function seedDummyBusinesses(
           district_id: visakhaDistrict ? visakhaDistrict.id : null,
           status,
           is_featured: isFeatured,
+          video_url: 'https://www.youtube.com/embed/hOgVAYpHPCc',
         });
         biz = await bizRepo.save(biz);
       } else {
@@ -284,6 +285,7 @@ export async function seedDummyBusinesses(
         biz.address = bData.address;
         biz.status = status;
         biz.is_featured = isFeatured;
+        biz.video_url = 'https://www.youtube.com/embed/hOgVAYpHPCc';
         if (apState) biz.state_id = apState.id;
         if (visakhaDistrict) biz.district_id = visakhaDistrict.id;
         biz = await bizRepo.save(biz);

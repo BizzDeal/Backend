@@ -365,7 +365,7 @@ export class BusinessesController {
   @ApiOperation({
     summary: 'Update Business Listing',
     description:
-      'Updates an existing business listing. Both the listing owner (Member) and Admins can update a listing. Whenever a member updates their listing, its status automatically resets to PENDING for admin re-approval. Admins do not require re-approval.',
+      'Updates an existing business listing. Both the listing owner (Member) and Admins can update a listing. If a member updates a REJECTED listing, its status automatically resets to PENDING for admin re-approval.',
   })
   @ApiResponse({
     status: 200,
