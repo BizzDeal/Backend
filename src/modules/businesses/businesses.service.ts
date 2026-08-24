@@ -717,6 +717,7 @@ export class BusinessesService {
     if (dto.address !== undefined) updateData.address = dto.address;
     if (dto.state_id !== undefined) updateData.state_id = dto.state_id;
     if (dto.district_id !== undefined) updateData.district_id = dto.district_id;
+    if (dto.pincode !== undefined) updateData.pincode = dto.pincode;
     if (dto.video_url !== undefined) updateData.video_url = dto.video_url;
 
     if (logoFile) {

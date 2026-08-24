@@ -244,6 +244,7 @@ export class AuthService {
       address: dto.address,
       state_id: dto.state_id,
       district_id: dto.district_id,
+      pincode: dto.pincode,
       pin_hash: pinHash,
       role: UserRole.MEMBER,
       status: UserStatus.UNVERIFIED, // Members are unverified by default until email is confirmed
@@ -271,6 +272,7 @@ export class AuthService {
         address: dto.business_address,
         state_id: dto.business_state_id,
         district_id: dto.business_district_id,
+        pincode: dto.business_pincode,
         logo_id: logoId,
         status: BusinessStatus.PENDING_PAYMENT,
       });

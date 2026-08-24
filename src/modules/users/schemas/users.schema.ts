@@ -27,6 +27,7 @@ export const updateProfileSchema = z.object({
   address: z.string().optional().nullable().or(z.literal('')),
   state_id: z.string().uuid().optional().nullable().or(z.literal('')),
   district_id: z.string().uuid('Valid district UUID is required'),
+  pincode: z.string().regex(/^[1-9][0-9]{5}$/, 'Valid 6-digit pincode is required'),
   category_id: z.string().uuid().optional().or(z.literal('')),
   business_name: z.string().min(2).optional().or(z.literal('')),
   business_description: z.string().min(5).optional().or(z.literal('')),
@@ -35,6 +36,7 @@ export const updateProfileSchema = z.object({
   business_address: z.string().optional().nullable().or(z.literal('')),
   business_state_id: z.string().uuid().optional().nullable().or(z.literal('')),
   business_district_id: z.string().uuid('Valid district UUID is required').optional().nullable().or(z.literal('')),
+  business_pincode: z.string().regex(/^[1-9][0-9]{5}$/, 'Valid 6-digit pincode is required').optional().nullable().or(z.literal('')),
 });
 
 export class UpdateProfileDto {
@@ -86,6 +88,13 @@ export class UpdateProfileDto {
     example: 'b2222222-3333-4444-5555-666666666666',
   })
   district_id: string;
+
+  @ApiProperty({
+    type: String,
+    description: '6-digit PIN code of the user',
+    example: '500001',
+  })
+  pincode: string;
 
   @ApiPropertyOptional({
     type: String,
@@ -142,6 +151,13 @@ export class UpdateProfileDto {
     example: 'b2222222-3333-4444-5555-666666666666',
   })
   business_district_id?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: '6-digit PIN code of the business (for members)',
+    example: '500001',
+  })
+  business_pincode?: string;
 
   @ApiPropertyOptional({
     type: 'string',

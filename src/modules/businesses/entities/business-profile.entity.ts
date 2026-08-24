@@ -66,6 +66,9 @@ export class BusinessProfile {
   @JoinColumn({ name: 'district_id' })
   district: District | null;
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  pincode: string | null;
+
   @Column({ type: 'uuid', nullable: true })
   logo_id: string | null;
 

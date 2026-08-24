@@ -41,6 +41,7 @@ interface CreateUserData {
   address?: string | null;
   state_id?: string | null;
   district_id?: string | null;
+  pincode?: string | null;
 }
 
 @Injectable()
@@ -201,6 +202,7 @@ export class UsersService {
       address: userData.address,
       state_id: userData.state_id,
       district_id: userData.district_id,
+      pincode: userData.pincode || null,
     });
     const savedProfile = await this.profileRepository.save(profile);
     
@@ -459,6 +461,7 @@ export class UsersService {
     
     // Optional Fields
     const hasDistrict = !!user.profile?.district_id;
+    const hasPincode = !!user.profile?.pincode && /^[1-9][0-9]{5}$/.test(user.profile.pincode);
     const hasAddress = !!user.profile?.address && user.profile.address !== 'Not Provided';
     const hasProfilePic = !!profilePicUrl;
     const hasWhatsapp = !!user.profile?.whatsapp && user.profile.whatsapp.trim().length >= 10;
@@ -472,6 +475,7 @@ export class UsersService {
         { name: 'email', has: hasEmail, mandatory: true },
         { name: 'state_id', has: hasState, mandatory: true },
         { name: 'district_id', has: hasDistrict, mandatory: true },
+        { name: 'pincode', has: hasPincode, mandatory: true },
         { name: 'address', has: hasAddress, mandatory: false },
         { name: 'profile_picture', has: hasProfilePic, mandatory: false },
         { name: 'whatsapp', has: hasWhatsapp, mandatory: false }
@@ -501,6 +505,7 @@ export class UsersService {
       
       // Optional Business Fields
       const hasBusinessDistrict = !!business?.district_id;
+      const hasBusinessPincode = !!business?.pincode && /^[1-9][0-9]{5}$/.test(business.pincode);
       const hasBusinessAddress = !!business?.address;
       const hasLogo = !!businessLogoUrl;
       const hasWebsite = !!business?.website;
@@ -512,10 +517,12 @@ export class UsersService {
         { name: 'email', has: hasEmail, mandatory: true },
         { name: 'state_id', has: hasState, mandatory: true },
         { name: 'district_id', has: hasDistrict, mandatory: true },
+        { name: 'pincode', has: hasPincode, mandatory: true },
         { name: 'business_name', has: hasBusinessName, mandatory: true },
         { name: 'category_id', has: hasCategory, mandatory: true },
         { name: 'business_state_id', has: hasBusinessState, mandatory: true },
         { name: 'business_district_id', has: hasBusinessDistrict, mandatory: true },
+        { name: 'business_pincode', has: hasBusinessPincode, mandatory: true },
         { name: 'business_description', has: hasBusinessDesc, mandatory: true },
         { name: 'whatsapp', has: hasWhatsapp, mandatory: false },
         { name: 'address', has: hasAddress, mandatory: false },
@@ -618,6 +625,7 @@ export class UsersService {
       state_name: user.profile?.state?.name || null,
       district_id: user.profile?.district_id || null,
       district_name: user.profile?.district?.name || null,
+      pincode: user.profile?.pincode || null,
       profile_pic_url,
       business_id:
         user.role === UserRole.MEMBER ? business?.id || null : undefined,
@@ -639,6 +647,8 @@ export class UsersService {
         user.role === UserRole.MEMBER ? business?.state_id || null : undefined,
       business_district_id:
         user.role === UserRole.MEMBER ? business?.district_id || null : undefined,
+      business_pincode:
+        user.role === UserRole.MEMBER ? business?.pincode || null : undefined,
       is_featured:
         user.role === UserRole.MEMBER ? (business?.is_featured ?? false) : undefined,
       primary_business_name:
@@ -725,6 +735,7 @@ export class UsersService {
     if (dto.full_name !== undefined) updateProfileData.full_name = dto.full_name;
     if (dto.whatsapp !== undefined) updateProfileData.whatsapp = dto.whatsapp;
     if (dto.address !== undefined) updateProfileData.address = dto.address;
+    if (dto.pincode !== undefined) updateProfileData.pincode = dto.pincode;
 
     if (dto.state_id !== undefined) {
       if (dto.state_id && dto.state_id !== '') {
@@ -828,6 +839,10 @@ export class UsersService {
           } else {
             businessUpdate.district_id = null;
           }
+        }
+
+        if (dto.business_pincode !== undefined) {
+          businessUpdate.pincode = dto.business_pincode;
         }
 
         if (files?.business_logo?.[0]) {

@@ -48,6 +48,9 @@ export class Profile {
   @JoinColumn({ name: 'district_id' })
   district: District | null;
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  pincode: string | null;
+
   @Column({ type: 'uuid', nullable: true })
   primary_business_id: string | null;
 

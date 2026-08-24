@@ -279,7 +279,7 @@ describe('AuthController (e2e)', () => {
   });
 
   describe('POST /auth/register-member', () => {
-    it('should register a member successfully with status PENDING when given valid firebaseToken', async () => {
+    it('should register a member successfully with valid required fields and category ID', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/register-member')
         .field('full_name', 'Test Entrepreneur')
@@ -290,6 +290,7 @@ describe('AuthController (e2e)', () => {
         .field('address', '123 Entrepreneur Way, Hyderabad')
         .field('state_id', testStateId)
         .field('district_id', testDistrictId)
+        .field('pincode', '500001')
         .field('business_name', 'Test Business Enterprise')
         .field('category_id', testCategoryId)
         .field(
@@ -298,6 +299,9 @@ describe('AuthController (e2e)', () => {
         )
         .field('website', 'https://testenterprise.com')
         .field('gst_number', '36AAAAA0000A1Z5')
+        .field('business_state_id', testStateId)
+        .field('business_district_id', testDistrictId)
+        .field('business_pincode', '500001')
         .field('firebaseToken', 'valid-firebase-token-4');
 
       expect(res.status).toBe(201);
@@ -320,11 +324,15 @@ describe('AuthController (e2e)', () => {
         .field('address', '456 Entrepreneur Way, Hyderabad')
         .field('state_id', testStateId)
         .field('district_id', testDistrictId)
+        .field('pincode', '500001')
         .field('business_name', 'Dup Business Enterprise')
         .field('category_id', testCategoryId)
         .field('business_description', 'Providing duplicate IT services')
         .field('website', 'https://dupenterprise.com')
         .field('gst_number', '36AAAAA0000A1Z6')
+        .field('business_state_id', testStateId)
+        .field('business_district_id', testDistrictId)
+        .field('business_pincode', '500001')
         .field('firebaseToken', 'valid-firebase-token-4')
         .expect(409);
     });
@@ -340,11 +348,15 @@ describe('AuthController (e2e)', () => {
         .field('address', '789 Upload Way, Hyderabad')
         .field('state_id', testStateId)
         .field('district_id', testDistrictId)
+        .field('pincode', '500001')
         .field('business_name', 'Upload Business Enterprise')
         .field('category_id', testCategoryId)
         .field('business_description', 'Providing IT upload services')
         .field('website', 'https://uploadenterprise.com')
         .field('gst_number', '36AAAAA0000A1Z7')
+        .field('business_state_id', testStateId)
+        .field('business_district_id', testDistrictId)
+        .field('business_pincode', '500001')
         .field('firebaseToken', 'valid-firebase-token-6')
         .attach('profile_pic', Buffer.from('fake image data'), 'profile.png')
         .expect(201);
@@ -370,9 +382,13 @@ describe('AuthController (e2e)', () => {
         .field('address', '789 Optional Way, Hyderabad')
         .field('state_id', testStateId)
         .field('district_id', testDistrictId)
+        .field('pincode', '500001')
         .field('business_name', 'Optional Business Enterprise')
         .field('category_id', testCategoryId)
         .field('business_description', 'Providing IT optional services')
+        .field('business_state_id', testStateId)
+        .field('business_district_id', testDistrictId)
+        .field('business_pincode', '500001')
         .field('firebaseToken', 'valid-firebase-token-8')
         .expect(201);
 
@@ -390,9 +406,13 @@ describe('AuthController (e2e)', () => {
         .field('address', '789 No Receipt Way, Hyderabad')
         .field('state_id', testStateId)
         .field('district_id', testDistrictId)
+        .field('pincode', '500001')
         .field('business_name', 'No Receipt Business Enterprise')
         .field('category_id', testCategoryId)
         .field('business_description', 'Providing IT no receipt services')
+        .field('business_state_id', testStateId)
+        .field('business_district_id', testDistrictId)
+        .field('business_pincode', '500001')
         .expect(201);
 
       expect(res.body.accessToken).toBeDefined();

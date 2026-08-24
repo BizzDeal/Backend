@@ -29,6 +29,7 @@ export const registerMemberSchema = z.object({
   address: z.string().min(5, 'Address must be at least 5 characters if provided').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   state_id: z.string().uuid('Valid state UUID is required'),
   district_id: z.string().uuid('Valid district UUID is required'),
+  pincode: z.string().regex(/^[1-9][0-9]{5}$/, 'Valid 6-digit pincode is required'),
   business_name: z.string().min(2, 'Business name is required'),
   category_id: z.string().uuid('Valid business category UUID is required'),
   business_description: z.string().min(5, 'Business description is required'),
@@ -37,6 +38,7 @@ export const registerMemberSchema = z.object({
   business_address: z.string().min(5, 'Business address must be at least 5 characters').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   business_state_id: z.string().uuid('Valid state UUID is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   business_district_id: z.string().uuid('Valid district UUID is required'),
+  business_pincode: z.string().regex(/^[1-9][0-9]{5}$/, 'Valid 6-digit pincode is required'),
   reference_code: z.string().optional().or(z.literal('')).transform(val => val === '' ? null : val),
 });
 
@@ -99,6 +101,13 @@ export class RegisterMemberDto {
 
   @ApiProperty({
     type: String,
+    description: '6-digit PIN code of the member',
+    example: '500001',
+  })
+  pincode: string;
+
+  @ApiProperty({
+    type: String,
     description: 'Name of the business being registered',
     example: 'Tech Solutions India Pvt Ltd',
   })
@@ -152,6 +161,13 @@ export class RegisterMemberDto {
     example: 'b2222222-3333-4444-5555-666666666666',
   })
   business_district_id: string;
+
+  @ApiProperty({
+    type: String,
+    description: '6-digit PIN code of the business',
+    example: '500001',
+  })
+  business_pincode: string;
 
 
 
