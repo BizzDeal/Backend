@@ -992,6 +992,7 @@ export class BusinessesService {
     }
     
     if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.icon !== undefined) updateData.icon = dto.icon;
     if (dto.is_active !== undefined) updateData.is_active = dto.is_active;
 
     if (Object.keys(updateData).length > 0) {

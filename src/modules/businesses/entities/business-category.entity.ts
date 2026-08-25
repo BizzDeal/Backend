@@ -20,6 +20,9 @@ export class BusinessCategory {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  icon: string | null;
+
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 

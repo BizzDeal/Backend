@@ -270,6 +270,7 @@ export class FeatureBusinessDto {
 export const createCategorySchema = z.object({
   name: z.string().min(2),
   description: z.string().optional().nullable(),
+  icon: z.string().optional().nullable(),
   is_active: z.boolean().optional(),
 });
 
@@ -288,6 +289,13 @@ export class CreateCategoryDto {
   description?: string | null;
 
   @ApiPropertyOptional({
+    type: String,
+    description: 'Icon (emoji or icon identifier) of the category',
+    example: '💻',
+  })
+  icon?: string | null;
+
+  @ApiPropertyOptional({
     type: Boolean,
     description: 'Is category active',
     default: true,
@@ -298,6 +306,7 @@ export class CreateCategoryDto {
 export const updateCategoryDtoSchema = z.object({
   name: z.string().min(2).optional(),
   description: z.string().optional().nullable(),
+  icon: z.string().optional().nullable(),
   is_active: z.boolean().optional(),
 });
 
@@ -313,6 +322,13 @@ export class UpdateCategoryDto {
     description: 'Description of the category',
   })
   description?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Icon (emoji or icon identifier) of the category',
+    example: '💻',
+  })
+  icon?: string | null;
 
   @ApiPropertyOptional({
     type: Boolean,
