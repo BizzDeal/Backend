@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AppModule } from './../src/app.module';
 import { UserRole, UserStatus, BusinessStatus } from './../src/common/enums';
 import { User } from './../src/modules/users/entities/user.entity';
-import { Business } from './../src/modules/businesses/entities/business.entity';
+import { BusinessProfile } from './../src/modules/businesses/entities/business-profile.entity';
 import { BusinessCategory } from './../src/modules/businesses/entities/business-category.entity';
 import { MediaFile } from './../src/modules/media/entities/media-file.entity';
 import { FirebaseService } from './../src/common/firebase/firebase.service';
@@ -16,7 +16,7 @@ import { FirebaseService } from './../src/common/firebase/firebase.service';
 describe('BusinessesController (e2e)', () => {
   let app: INestApplication<App>;
   let userRepository: Repository<User>;
-  let businessRepository: Repository<Business>;
+  let businessRepository: Repository<BusinessProfile>;
   let categoryRepository: Repository<BusinessCategory>;
   let mediaRepository: Repository<MediaFile>;
   let jwtService: JwtService;
@@ -71,8 +71,8 @@ describe('BusinessesController (e2e)', () => {
     userRepository = moduleFixture.get<Repository<User>>(
       getRepositoryToken(User),
     );
-    businessRepository = moduleFixture.get<Repository<Business>>(
-      getRepositoryToken(Business),
+    businessRepository = moduleFixture.get<Repository<BusinessProfile>>(
+      getRepositoryToken(BusinessProfile),
     );
     categoryRepository = moduleFixture.get<Repository<BusinessCategory>>(
       getRepositoryToken(BusinessCategory),
@@ -105,6 +105,7 @@ describe('BusinessesController (e2e)', () => {
       userRepository.create({
         full_name: 'Active Entrepreneur',
         phone: '9777000001',
+        email: 'active@bizzdeal.com',
         pin_hash: 'hash',
         role: UserRole.MEMBER,
         status: UserStatus.ACTIVE,
@@ -125,6 +126,7 @@ describe('BusinessesController (e2e)', () => {
       userRepository.create({
         full_name: 'Pending Entrepreneur',
         phone: '9777000002',
+        email: 'pending@bizzdeal.com',
         pin_hash: 'hash',
         role: UserRole.MEMBER,
         status: UserStatus.PENDING,
@@ -144,6 +146,7 @@ describe('BusinessesController (e2e)', () => {
       userRepository.create({
         full_name: 'Platform Admin',
         phone: '9777000003',
+        email: 'admin@bizzdeal.com',
         pin_hash: 'hash',
         role: UserRole.ADMIN,
         status: UserStatus.ACTIVE,
@@ -159,6 +162,7 @@ describe('BusinessesController (e2e)', () => {
       userRepository.create({
         full_name: 'Other Entrepreneur',
         phone: '9777000004',
+        email: 'other@bizzdeal.com',
         pin_hash: 'hash',
         role: UserRole.MEMBER,
         status: UserStatus.ACTIVE,
@@ -280,6 +284,99 @@ describe('BusinessesController (e2e)', () => {
 
       expect(res.body.data.status).toBe(BusinessStatus.ACTIVE);
       expect(res.body.data.is_featured).toBe(true);
+    });
+
+    it('should enforce only one featured store per category', async () => {
+      let category2 = await categoryRepository.findOne({
+        where: { slug: 'e2e-business-cat-2' },
+      });
+      if (!category2) {
+        category2 = await categoryRepository.save(
+          categoryRepository.create({
+            name: 'E2E Category 2',
+            slug: 'e2e-business-cat-2',
+            description: 'Second Category',
+            is_active: true,
+          }),
+        );
+      }
+
+      const tempUser1 = await userRepository.save(
+        userRepository.create({
+          full_name: 'Temp Member 1',
+          phone: '9777000011',
+          email: 'temp1@bizzdeal.com',
+          pin_hash: 'hash',
+          role: UserRole.MEMBER,
+          status: UserStatus.ACTIVE,
+        }),
+      );
+
+      const tempUser2 = await userRepository.save(
+        userRepository.create({
+          full_name: 'Temp Member 2',
+          phone: '9777000012',
+          email: 'temp2@bizzdeal.com',
+          pin_hash: 'hash',
+          role: UserRole.MEMBER,
+          status: UserStatus.ACTIVE,
+        }),
+      );
+
+      const bizCat2 = await businessRepository.save(
+        businessRepository.create({
+          owner_id: tempUser1.id,
+          category_id: category2.id,
+          name: 'Cat 2 Business',
+          status: BusinessStatus.ACTIVE,
+          is_featured: false,
+        }),
+      );
+
+      const bizCat1Second = await businessRepository.save(
+        businessRepository.create({
+          owner_id: tempUser2.id,
+          category_id: categoryId,
+          name: 'Cat 1 Second Business',
+          status: BusinessStatus.ACTIVE,
+          is_featured: false,
+        }),
+      );
+
+      // Feature biz in Category 2 -> should be featured, while createdBusinessId (in Category 1) remains featured
+      await request(app.getHttpServer())
+        .put('/businesses/feature')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ businessId: bizCat2.id, is_featured: true })
+        .expect(200);
+
+      const b1 = await businessRepository.findOne({ where: { id: createdBusinessId } });
+      const b2 = await businessRepository.findOne({ where: { id: bizCat2.id } });
+      expect(b1?.is_featured).toBe(true);
+      expect(b2?.is_featured).toBe(true);
+
+      // Feature bizCat1Second in Category 1 -> should unfeature createdBusinessId (in Category 1), while bizCat2 remains featured
+      await request(app.getHttpServer())
+        .put('/businesses/feature')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ businessId: bizCat1Second.id, is_featured: true })
+        .expect(200);
+
+      const b1After = await businessRepository.findOne({ where: { id: createdBusinessId } });
+      const b3After = await businessRepository.findOne({ where: { id: bizCat1Second.id } });
+      const b2After = await businessRepository.findOne({ where: { id: bizCat2.id } });
+
+      expect(b1After?.is_featured).toBe(false);
+      expect(b3After?.is_featured).toBe(true);
+      expect(b2After?.is_featured).toBe(true);
+
+      // Restore createdBusinessId as featured for subsequent tests
+      await businessRepository.update(createdBusinessId, { is_featured: true });
+
+      // Clean up extra created businesses and users
+      await businessRepository.delete([bizCat2.id, bizCat1Second.id]);
+      await userRepository.delete([tempUser1.id, tempUser2.id]);
+      await categoryRepository.delete(category2.id);
     });
   });
 

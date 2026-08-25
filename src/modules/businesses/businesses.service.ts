@@ -736,6 +736,17 @@ export class BusinessesService {
       updateData.status = BusinessStatus.PENDING;
     }
 
+    if (
+      dto.category_id !== undefined &&
+      dto.category_id !== business.category_id &&
+      business.is_featured
+    ) {
+      await this.businessRepository.update(
+        { category_id: dto.category_id, is_featured: true },
+        { is_featured: false },
+      );
+    }
+
     if (Object.keys(updateData).length > 0) {
       await this.businessRepository.update(id, updateData);
     }
@@ -895,11 +906,11 @@ export class BusinessesService {
 
     const oldFeatured = business.is_featured;
 
-    // Enforce single featured store rule:
-    if (isFeatured) {
+    // Enforce per-category single featured store rule:
+    if (isFeatured && business.category_id) {
       await this.businessRepository.update(
-        { is_featured: true },
-        { is_featured: false }
+        { category_id: business.category_id, is_featured: true },
+        { is_featured: false },
       );
     }
 

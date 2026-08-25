@@ -11,7 +11,7 @@ export const updateBusinessSchema = z.object({
   gst_number: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   state_id: z.string().uuid().optional().nullable(),
-  district_id: z.string().uuid('Valid district UUID is required'),
+  district_id: z.string().uuid('Valid district UUID is required').optional().nullable(),
   pincode: z.string().regex(/^[1-9][0-9]{5}$/, 'Valid 6-digit pincode is required').optional().nullable(),
   video_url: z.string().url().optional().nullable(),
 });

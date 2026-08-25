@@ -51,9 +51,9 @@ async function bootstrap() {
     logger.log('SUCCESSFULLY INSERTED ALL EXPANDED DUMMY TEST DATA INTO DB!');
     logger.log('=====================================================');
     logger.log('DATASET SUMMARY:');
-    logger.log('- Categories: 14 official business categories');
-    logger.log('- Businesses: 140 businesses (10 per category)');
-    logger.log('- Offers:     840+ offers (Multiple DISCOUNT, CASHBACK & BIZZ_COINS per business)');
+    logger.log('- Categories: 40+ official business categories');
+    logger.log('- Businesses: 120+ businesses (across all categories with 1 featured store per category)');
+    logger.log('- Offers:     700+ offers (Multiple DISCOUNT, CASHBACK & BIZZ_COINS per business)');
     logger.log('- Users:      147 total users (1 Admin, 2 Agents, 140 Business Owners, 4 Customers)');
     logger.log('-----------------------------------------------------');
     logger.log('LOGIN CREDENTIALS SUMMARY (PASSWORD FOR ALL IS "1234"):');

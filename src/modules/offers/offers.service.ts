@@ -113,7 +113,9 @@ export class OffersService {
         if (isAdmin) {
           const b = await this.businessRepository.findOne({ where: { id: dto.business_id } });
           if (b) {
-            await this.businessRepository.update({ is_featured: true }, { is_featured: false });
+            if (b.category_id) {
+              await this.businessRepository.update({ category_id: b.category_id, is_featured: true }, { is_featured: false });
+            }
             b.is_featured = true;
             await this.businessRepository.save(b);
           }
@@ -143,7 +145,9 @@ export class OffersService {
     if (isAdmin && isBizzCoins) {
       const b = await this.businessRepository.findOne({ where: { id: dto.business_id } });
       if (b) {
-        await this.businessRepository.update({ is_featured: true }, { is_featured: false });
+        if (b.category_id) {
+          await this.businessRepository.update({ category_id: b.category_id, is_featured: true }, { is_featured: false });
+        }
         b.is_featured = true;
         await this.businessRepository.save(b);
       }
@@ -532,7 +536,12 @@ export class OffersService {
         where: { id: offer.business_id },
       });
       if (business) {
-        await this.businessRepository.update({ is_featured: true }, { is_featured: false });
+        if (business.category_id) {
+          await this.businessRepository.update(
+            { category_id: business.category_id, is_featured: true },
+            { is_featured: false },
+          );
+        }
         business.is_featured = true;
         await this.businessRepository.save(business);
       }
