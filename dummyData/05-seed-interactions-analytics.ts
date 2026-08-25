@@ -177,30 +177,49 @@ export async function seedDummyInteractionsAndAnalytics(
     logger.log('Seeded Direct Chat Conversation and Messages.');
   }
 
-  // Group Chat
-  let groupConv = await chatConvRepo.findOne({ where: { type: ConversationType.GROUP, name: 'Visakha Merchants Hub' } });
+  // Group Chat - Single Default Community: BizzDeal Community
+  const legacyGroups = await chatConvRepo.find({ where: { name: 'Visakha Merchants Hub' } });
+  for (const legacy of legacyGroups) {
+    await chatConvRepo.remove(legacy);
+  }
+
+  let groupConv = await chatConvRepo.findOne({ where: { is_default_group: true } });
   if (!groupConv) {
     groupConv = await chatConvRepo.save(
       chatConvRepo.create({
         type: ConversationType.GROUP,
-        name: 'Visakha Merchants Hub',
+        name: 'BizzDeal Community',
         is_default_group: true,
         last_message_at: new Date(),
       }),
     );
+  } else {
+    groupConv.name = 'BizzDeal Community';
+    await chatConvRepo.save(groupConv);
+  }
 
-    await chatPartRepo.save([
-      chatPartRepo.create({ conversation_id: groupConv.id, user_id: users.admin.id }),
-      chatPartRepo.create({ conversation_id: groupConv.id, user_id: users.owner1.id }),
-      chatPartRepo.create({ conversation_id: groupConv.id, user_id: users.owner2.id }),
-    ]);
+  // Ensure default participants are joined
+  const participantUserIds = [users.admin.id, users.owner1.id, users.owner2.id];
+  for (const uid of participantUserIds) {
+    const existingPart = await chatPartRepo.findOne({
+      where: { conversation_id: groupConv.id, user_id: uid },
+    });
+    if (!existingPart) {
+      await chatPartRepo.save(
+        chatPartRepo.create({ conversation_id: groupConv.id, user_id: uid }),
+      );
+    }
+  }
 
+  // Seed sample community messages if empty
+  const existingMsgCount = await chatMsgRepo.count({ where: { conversation_id: groupConv.id } });
+  if (existingMsgCount === 0) {
     await chatMsgRepo.save([
       chatMsgRepo.create({
         conversation_id: groupConv.id,
         sender_id: users.admin.id,
         message_type: MessageType.TEXT,
-        message: 'Welcome all to the Visakha Merchants Hub group!',
+        message: 'Welcome all to the BizzDeal Community group!',
         created_at: new Date(Date.now() - 7200000),
       }),
       chatMsgRepo.create({
@@ -211,8 +230,8 @@ export async function seedDummyInteractionsAndAnalytics(
         created_at: new Date(Date.now() - 3600000),
       }),
     ]);
-    logger.log('Seeded Group Chat Conversation and Messages.');
   }
+  logger.log('Seeded / Verified BizzDeal Community Group Chat and Messages.');
 
   // 4. System Notifications
   const notifs = [

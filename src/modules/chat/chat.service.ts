@@ -61,6 +61,12 @@ export class ChatService implements OnModuleInit {
   }
 
   private async ensureDefaultGroupExists() {
+    // Remove any legacy duplicate "Visakha Merchants Hub" group
+    const legacyGroups = await this.conversationRepository.find({ where: { name: 'Visakha Merchants Hub' } });
+    for (const legacy of legacyGroups) {
+      await this.conversationRepository.remove(legacy);
+    }
+
     let group = await this.conversationRepository.findOne({ where: { is_default_group: true } });
     if (!group) {
       this.logger.log('Creating default BizzDeal Community group...');
