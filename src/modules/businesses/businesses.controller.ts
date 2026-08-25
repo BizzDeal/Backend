@@ -162,14 +162,26 @@ export class BusinessesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Featured Businesses',
-    description: 'Retrieves a list of active featured businesses.',
+    description: 'Retrieves a list of active featured businesses optionally filtered by category or search.',
   })
   @ApiResponse({
     status: 200,
     description: 'List of featured businesses returned successfully.',
   })
-  async getFeatured(@CurrentUser() user?: User) {
-    return this.businessesService.findFeatured({}, user);
+  async getFeatured(
+    @Query() queryParams: BusinessQueryDto,
+    @CurrentUser() user?: User,
+  ) {
+    let query: BusinessQueryDto = {};
+    try {
+      query = businessQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.businessesService.findFeatured(query, user);
   }
 
   @Get('top')
@@ -178,14 +190,26 @@ export class BusinessesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get Top Businesses',
-    description: 'Retrieves a list of top businesses ranked by number of claiming customers.',
+    description: 'Retrieves a list of top businesses ranked by number of claiming customers optionally filtered by category or search.',
   })
   @ApiResponse({
     status: 200,
     description: 'List of top businesses returned successfully.',
   })
-  async getTop(@CurrentUser() user?: User) {
-    return this.businessesService.findTop({}, user);
+  async getTop(
+    @Query() queryParams: BusinessQueryDto,
+    @CurrentUser() user?: User,
+  ) {
+    let query: BusinessQueryDto = {};
+    try {
+      query = businessQuerySchema.parse(queryParams || {});
+    } catch (err: any) {
+      throw new BadRequestException({
+        message: 'Invalid query parameters',
+        errors: err.errors || err.message,
+      });
+    }
+    return this.businessesService.findTop(query, user);
   }
 
   @Get('search')
