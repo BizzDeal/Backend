@@ -79,6 +79,9 @@ export class Offer {
   @Column({ type: 'timestamptz', nullable: true })
   approved_at: Date | null;
 
+  @Column({ type: 'boolean', default: false })
+  is_featured: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 

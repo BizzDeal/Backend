@@ -240,6 +240,12 @@ export class OffersService {
       }
     }
 
+    if (query.is_featured !== undefined) {
+      qb.andWhere('offer.is_featured = :isFeatured', {
+        isFeatured: query.is_featured,
+      });
+    }
+
     qb.orderBy('offer.created_at', 'DESC');
 
     const page = query.page || 1;
@@ -293,15 +299,7 @@ export class OffersService {
     });
     qb.andWhere('offer.start_date <= :now', { now });
     qb.andWhere('offer.end_date >= :now', { now });
-
-    qb.andWhere(
-      new Brackets((qbInner) => {
-        qbInner
-          .where("(offer.discount_type = 'PERCENTAGE' AND offer.discount_value >= :percentThreshold)", { percentThreshold: settings.mega_deals_percent_threshold })
-          .orWhere("(offer.discount_type = 'FIXED_AMOUNT' AND offer.discount_value >= :fixedThreshold)", { fixedThreshold: settings.mega_deals_fixed_threshold })
-          .orWhere('business.is_featured = :isFeatured', { isFeatured: true });
-      }),
-    );
+    qb.andWhere('offer.is_featured = :isFeatured', { isFeatured: true });
 
     qb.orderBy('offer.created_at', 'DESC');
     qb.take(settings.home_feed_limit);
@@ -392,6 +390,7 @@ export class OffersService {
       offer.start_date = new Date(dto.start_date);
     if (dto.end_date !== undefined) offer.end_date = new Date(dto.end_date);
     if (dto.video_url !== undefined) offer.video_url = dto.video_url;
+    if (isAdmin && dto.is_featured !== undefined) offer.is_featured = dto.is_featured;
 
     if (isAdmin && dto.status) {
       const oldStatus = offer.status;
@@ -575,6 +574,30 @@ export class OffersService {
     delete (savedOffer as any).image;
     delete (savedOffer as any).approved_by;
     return savedOffer;
+  }
+
+  async setFeatured(
+    offerId: string,
+    isFeatured: boolean,
+    adminId: string,
+  ): Promise<any> {
+    const offer = await this.offerRepository.findOne({
+      where: { id: offerId },
+      relations: { business: true, image: true },
+    });
+
+    if (!offer) {
+      throw new NotFoundException('Offer not found');
+    }
+
+    offer.is_featured = isFeatured;
+    const savedOffer = await this.offerRepository.save(offer);
+
+    return {
+      success: true,
+      message: `Offer ${isFeatured ? 'featured as top deal' : 'unfeatured'} successfully`,
+      data: await this.transformOfferAsync(savedOffer),
+    };
   }
 
   private async notifyMemberOfferStatus(offer: Offer, status: 'APPROVED' | 'REJECTED', reason?: string): Promise<void> {

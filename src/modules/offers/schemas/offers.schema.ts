@@ -139,6 +139,7 @@ export const updateOfferSchema = z
       }, z.date())
       .optional(),
     status: z.nativeEnum(OfferStatus).optional(),
+    is_featured: z.boolean().optional(),
     video_url: z.string().url().optional().nullable(),
   })
   .refine(
@@ -205,6 +206,12 @@ export class UpdateOfferDto {
   status?: OfferStatus;
 
   @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Whether the offer is marked as featured / top deal',
+  })
+  is_featured?: boolean;
+
+  @ApiPropertyOptional({
     type: 'string',
     format: 'binary',
     description: 'Replacement promotional image file',
@@ -223,6 +230,13 @@ export const offerQuerySchema = z.object({
   category_id: z.string().optional(),
   offer_type: z.nativeEnum(OfferType).optional(),
   status: z.nativeEnum(OfferStatus).optional(),
+  is_featured: z
+    .preprocess((val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return val;
+    }, z.boolean())
+    .optional(),
   search: z.string().optional(),
   q: z.string().optional(),
   my_offers: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
@@ -254,6 +268,12 @@ export class OfferQueryDto extends PaginationQueryDto {
     description: 'Filter by offer status (Admin/Owner only)',
   })
   status?: OfferStatus;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Filter by featured / top deal status',
+  })
+  is_featured?: boolean;
 
   @ApiPropertyOptional({
     type: String,
@@ -302,4 +322,25 @@ export class OfferActionDto {
     description: 'Reason for rejection if applicable',
   })
   reason?: string;
+}
+
+export const featureOfferSchema = z.object({
+  offer_id: z.string().uuid({ message: 'Valid offer_id UUID is required' }),
+  is_featured: z.boolean(),
+});
+
+export class FeatureOfferDto {
+  @ApiProperty({
+    type: String,
+    description: 'UUID of the offer to feature or unfeature',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  offer_id: string;
+
+  @ApiProperty({
+    type: Boolean,
+    description: 'Whether the offer should be featured as a top/mega deal',
+    example: true,
+  })
+  is_featured: boolean;
 }

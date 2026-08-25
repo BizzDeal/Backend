@@ -438,6 +438,12 @@ export class BusinessesService {
       });
     }
 
+    if (query.is_top !== undefined) {
+      qb.andWhere('business.is_top = :isTop', {
+        isTop: query.is_top,
+      });
+    }
+
     qb.orderBy('business.created_at', 'DESC');
 
     const page = query.page || 1;
@@ -534,7 +540,6 @@ export class BusinessesService {
     qb.leftJoinAndSelect('business.category', 'category');
     qb.leftJoinAndSelect('business.owner', 'owner');
     qb.leftJoinAndSelect('owner.profile', 'profile');
-    qb.leftJoin('vouchers', 'voucher', 'voucher.business_id = business.id');
 
     // Filter by visibility rights
     if (!currentUser || currentUser.role === UserRole.CUSTOMER) {
@@ -553,6 +558,10 @@ export class BusinessesService {
 
     qb.andWhere('(owner.id IS NULL OR owner.status = :activeOwnerStatus)', {
       activeOwnerStatus: UserStatus.ACTIVE,
+    });
+
+    qb.andWhere('business.is_top = :isTop', {
+      isTop: true,
     });
 
     this.applySearchFilters(qb, query);
@@ -574,16 +583,7 @@ export class BusinessesService {
       }
     }
 
-    // Group by business to aggregate voucher count
-    qb.groupBy('business.id');
-    qb.addGroupBy('category.id');
-    qb.addGroupBy('owner.id');
-    qb.addGroupBy('profile.id');
-
-    // Order by number of distinct customers who claimed vouchers, then by created_at
-    qb.addSelect('COUNT(DISTINCT voucher.customer_id)', 'voucherCount');
-    qb.orderBy('voucherCount', 'DESC');
-    qb.addOrderBy('business.created_at', 'DESC');
+    qb.orderBy('business.created_at', 'DESC');
     const settings = await this.settingsService.getSettings();
     qb.take(settings.home_feed_limit);
 
@@ -922,6 +922,54 @@ export class BusinessesService {
     return {
       success: true,
       message: `Business ${isFeatured ? 'featured' : 'unfeatured'} successfully`,
+      data: enriched[0],
+    };
+  }
+
+  async setTop(
+    businessId: string,
+    isTop: boolean,
+    adminId: string,
+    ipAddress?: string,
+  ) {
+    if (!this.isUUID(businessId)) {
+      throw new BadRequestException('Invalid business ID format');
+    }
+
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const oldTop = business.is_top;
+
+    await this.businessRepository.update(businessId, {
+      is_top: isTop,
+    });
+
+    await this.auditService.createLog({
+      user_id: adminId,
+      action: isTop ? 'BUSINESS_TOP_MARKED' : 'BUSINESS_TOP_UNMARKED',
+      entity_type: 'Business',
+      entity_id: businessId,
+      old_data: { is_top: oldTop },
+      new_data: { is_top: isTop },
+      ip_address: ipAddress,
+    });
+
+    const updated = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: { category: true, owner: { profile: true } },
+    });
+    const enriched = await this.enrichBusinessesWithMediaAndCategory(
+      updated ? [updated] : [business],
+    );
+
+    return {
+      success: true,
+      message: `Business ${isTop ? 'marked as top business' : 'unmarked from top business'} successfully`,
       data: enriched[0],
     };
   }

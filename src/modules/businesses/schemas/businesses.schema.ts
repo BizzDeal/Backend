@@ -111,6 +111,13 @@ export const businessQuerySchema = z.object({
       return val;
     }, z.boolean())
     .optional(),
+  is_top: z
+    .preprocess((val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return val;
+    }, z.boolean())
+    .optional(),
   full_name: z.string().optional(),
   phone: z.string().regex(/^\d{10}$/, 'Valid 10-digit phone number is required').optional(),
   whatsapp: z.string().optional(),
@@ -153,6 +160,11 @@ export class BusinessQueryDto extends PaginationQueryDto {
     description: 'Filter by featured status',
   })
   is_featured?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter by top business status',
+  })
+  is_top?: boolean;
 
   @ApiPropertyOptional({
     description: 'Filter by owner full name',
@@ -265,6 +277,27 @@ export class FeatureBusinessDto {
     example: true,
   })
   is_featured: boolean;
+}
+
+export const topBusinessSchema = z.object({
+  businessId: z.string().uuid('Valid business UUID is required'),
+  is_top: z.boolean(),
+});
+
+export class TopBusinessDto {
+  @ApiProperty({
+    type: String,
+    description: 'The UUID of the business to mark as top or unmark',
+    example: 'd3b07384-d113-4c4e-9c81-632b84236a99',
+  })
+  businessId: string;
+
+  @ApiProperty({
+    type: Boolean,
+    description: 'Whether the business should be marked as top business on the platform',
+    example: true,
+  })
+  is_top: boolean;
 }
 
 export const createCategorySchema = z.object({

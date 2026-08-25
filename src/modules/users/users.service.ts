@@ -651,6 +651,8 @@ export class UsersService {
         user.role === UserRole.MEMBER ? business?.pincode || null : undefined,
       is_featured:
         user.role === UserRole.MEMBER ? (business?.is_featured ?? false) : undefined,
+      is_top:
+        user.role === UserRole.MEMBER ? (business?.is_top ?? false) : undefined,
       primary_business_name:
         user.role === UserRole.CUSTOMER ? primary_business_name : undefined,
       primary_business_id:

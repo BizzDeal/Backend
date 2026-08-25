@@ -41,6 +41,8 @@ import {
   OfferQueryDto,
   offerActionSchema,
   OfferActionDto,
+  featureOfferSchema,
+  FeatureOfferDto,
 } from './schemas/offers.schema';
 
 @ApiTags('Offers')
@@ -237,6 +239,43 @@ export class OffersController {
     @Body(new ZodValidationPipe(offerActionSchema)) dto: OfferActionDto,
   ) {
     return this.offersService.reject(dto.offer_id, user.id, dto.reason);
+  }
+
+  @Put('feature')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Feature or Unfeature Offer (Admin Only)',
+    description:
+      'Manually marks or unmarks an offer as a Top / Featured Deal displayed in the Top Deals & Discounts section.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Offer featured status updated successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request: Invalid payload format.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: Requires Admin role.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Offer not found.',
+  })
+  async featureOffer(
+    @CurrentUser() user: User,
+    @Body(new ZodValidationPipe(featureOfferSchema)) dto: FeatureOfferDto,
+  ) {
+    return this.offersService.setFeatured(
+      dto.offer_id,
+      dto.is_featured,
+      user.id,
+    );
   }
 
   @Get('business/:businessId')

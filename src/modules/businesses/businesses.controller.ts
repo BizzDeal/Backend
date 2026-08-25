@@ -42,6 +42,8 @@ import {
   BusinessQueryDto,
   featureBusinessSchema,
   FeatureBusinessDto,
+  topBusinessSchema,
+  TopBusinessDto,
   updateBusinessStatusSchema,
   UpdateBusinessStatusDto,
   createCategorySchema,
@@ -323,6 +325,46 @@ export class BusinessesController {
     return this.businessesService.featureBusiness(
       dto.businessId,
       dto.is_featured,
+      user.id,
+      ip,
+    );
+  }
+
+  @Put('top')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Mark or Unmark Top Business (Admin Only)',
+    description:
+      'Manually sets or unsets a business as a top business displayed in the Top Businesses section.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Top business status updated successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request: Invalid payload format.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: Requires Admin role.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found.',
+  })
+  async topBusiness(
+    @Body(new ZodValidationPipe(topBusinessSchema))
+    dto: TopBusinessDto,
+    @CurrentUser() user: User,
+    @Ip() ip?: string,
+  ) {
+    return this.businessesService.setTop(
+      dto.businessId,
+      dto.is_top,
       user.id,
       ip,
     );

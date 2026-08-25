@@ -90,6 +90,9 @@ export class BusinessProfile {
   @Column({ type: 'boolean', default: false })
   is_featured: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  is_top: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
