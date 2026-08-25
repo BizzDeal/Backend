@@ -74,12 +74,14 @@ export async function seedDummyBusinesses(
     const cat = categoryMap.get(cDef.slug);
     if (!cat) continue;
 
-    // Seed 3 businesses per category
+    // Seed 10 businesses per category (1 Featured, 5 Top, 4 Regular)
     const businessesForCategory = [
+      // Index 0: Featured Store
       {
         name: `Apex ${cDef.name} Hub`,
         description: `Premier ${cDef.name.toLowerCase()} services and top-rated solutions in Andhra Pradesh. Official featured merchant on BizzDeal.`,
       },
+      // Indices 1 to 5: Top Businesses
       {
         name: `Vizag ${cDef.name} Center`,
         description: `Reliable and trusted ${cDef.name.toLowerCase()} provider with verified deals, discounts, and customer rewards.`,
@@ -87,6 +89,35 @@ export async function seedDummyBusinesses(
       {
         name: `Royal ${cDef.name} Enterprise`,
         description: `High-quality ${cDef.name.toLowerCase()} solutions tailored for retail and commercial clients across Visakhapatnam & Vijayawada.`,
+      },
+      {
+        name: `Prime ${cDef.name} Hub`,
+        description: `Leading destination for premium ${cDef.name.toLowerCase()} offerings and exclusive member discounts.`,
+      },
+      {
+        name: `Elite ${cDef.name} Solutions`,
+        description: `Top-rated specialist in ${cDef.name.toLowerCase()} delivering excellence and instant wallet savings.`,
+      },
+      {
+        name: `Grand ${cDef.name} Works`,
+        description: `Highly reputed merchant providing dependable ${cDef.name.toLowerCase()} services with unmatched quality.`,
+      },
+      // Indices 6 to 9: Regular Businesses
+      {
+        name: `Star ${cDef.name} Mart`,
+        description: `Popular neighborhood outlet for all your ${cDef.name.toLowerCase()} requirements.`,
+      },
+      {
+        name: `Metro ${cDef.name} Plaza`,
+        description: `Convenient and accessible merchant for quick and affordable ${cDef.name.toLowerCase()} deals.`,
+      },
+      {
+        name: `Golden ${cDef.name} Care`,
+        description: `Friendly customer service and certified quality in ${cDef.name.toLowerCase()} across Andhra Pradesh.`,
+      },
+      {
+        name: `Smart ${cDef.name} Point`,
+        description: `Modern and efficient solutions for daily ${cDef.name.toLowerCase()} needs at great prices.`,
       },
     ];
 
@@ -101,12 +132,13 @@ export async function seedDummyBusinesses(
       globalBizCount++;
 
       let status = BusinessStatus.ACTIVE;
-      if (globalBizCount === 120) status = BusinessStatus.SUSPENDED;
-      if (globalBizCount === 121) status = BusinessStatus.PENDING;
-      if (globalBizCount === 122) status = BusinessStatus.REJECTED;
+      if (globalBizCount === 448) status = BusinessStatus.SUSPENDED;
+      if (globalBizCount === 449) status = BusinessStatus.PENDING;
+      if (globalBizCount === 450) status = BusinessStatus.REJECTED;
 
-      // Exactly 1 featured store per category (the first store of each category)
+      // Exactly 1 featured store (index 0) and 5 top businesses (indices 1-5) per category
       const isFeatured = catBizIdx === 0;
+      const isTop = catBizIdx >= 1 && catBizIdx <= 5;
 
       const address = SAMPLE_LOCATIONS[(globalBizCount - 1) % SAMPLE_LOCATIONS.length];
 
@@ -124,6 +156,7 @@ export async function seedDummyBusinesses(
           district_id: visakhaDistrict ? visakhaDistrict.id : null,
           status,
           is_featured: isFeatured,
+          is_top: isTop,
           video_url: 'https://www.youtube.com/embed/hOgVAYpHPCc',
         });
         biz = await bizRepo.save(biz);
@@ -134,6 +167,7 @@ export async function seedDummyBusinesses(
         biz.address = address;
         biz.status = status;
         biz.is_featured = isFeatured;
+        biz.is_top = isTop;
         biz.video_url = 'https://www.youtube.com/embed/hOgVAYpHPCc';
         if (apState) biz.state_id = apState.id;
         if (visakhaDistrict) biz.district_id = visakhaDistrict.id;
@@ -153,7 +187,7 @@ export async function seedDummyBusinesses(
   }
 
   logger.log(
-    `Successfully seeded ${allSeededBusinesses.length} businesses across ${BUSINESS_CATEGORIES.length} official categories (1 featured store per category).`,
+    `Successfully seeded ${allSeededBusinesses.length} businesses across ${BUSINESS_CATEGORIES.length} official categories (1 featured store, 5 top businesses, and 4 regular businesses per category).`,
   );
 
   resultMap['allBusinesses'] = allSeededBusinesses as unknown as BusinessProfile;

@@ -114,13 +114,13 @@ export async function seedDummyUsers(dataSource: DataSource): Promise<SeededUser
     address: string;
   }
 
-  // Generate 140 Owner Configurations
+  // Generate 450 Owner Configurations for 40+ categories with 10 businesses each
   const ownerConfigs: UserConfigItem[] = [];
-  for (let i = 1; i <= 140; i++) {
+  for (let i = 1; i <= 450; i++) {
     let ownerStatus = UserStatus.ACTIVE;
-    if (i === 3) ownerStatus = UserStatus.PENDING;
-    else if (i === 4) ownerStatus = UserStatus.REJECTED;
-    else if (i === 5) ownerStatus = UserStatus.SUSPENDED;
+    if (i === 448) ownerStatus = UserStatus.PENDING;
+    else if (i === 449) ownerStatus = UserStatus.REJECTED;
+    else if (i === 450) ownerStatus = UserStatus.SUSPENDED;
     
     ownerConfigs.push({
       key: `owner${i}`,

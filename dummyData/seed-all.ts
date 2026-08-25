@@ -52,14 +52,14 @@ async function bootstrap() {
     logger.log('=====================================================');
     logger.log('DATASET SUMMARY:');
     logger.log('- Categories: 40+ official business categories');
-    logger.log('- Businesses: 120+ businesses (across all categories with 1 featured store per category)');
-    logger.log('- Offers:     700+ offers (Multiple DISCOUNT, CASHBACK & BIZZ_COINS per business)');
-    logger.log('- Users:      147 total users (1 Admin, 2 Agents, 140 Business Owners, 4 Customers)');
+    logger.log('- Businesses: 400+ businesses (10 per category: 1 featured, 5 top, 4 regular)');
+    logger.log('- Offers:     2000+ offers (Multiple DISCOUNT, CASHBACK & BIZZ_COINS per business)');
+    logger.log('- Users:      457 total users (1 Admin, 2 Agents, 450 Business Owners, 4 Customers)');
     logger.log('-----------------------------------------------------');
     logger.log('LOGIN CREDENTIALS SUMMARY (PASSWORD FOR ALL IS "1234"):');
     logger.log('- ADMIN:       admin@bizzdeal.com');
     logger.log('- SALES AGENT: agent1@bizzdeal.com');
-    logger.log('- OWNERS:      owner1@bizzdeal.com to owner140@bizzdeal.com');
+    logger.log('- OWNERS:      owner1@bizzdeal.com to owner450@bizzdeal.com');
     logger.log('- CUSTOMER 1:  customer1@bizzdeal.com (VIP / Funded Wallet)');
     logger.log('- CUSTOMER 2:  customer2@bizzdeal.com (BizzCoins / Voucher)');
     logger.log('=====================================================\n');
