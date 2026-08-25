@@ -37,23 +37,16 @@ export class BizzCoinsController {
 
   @Post('issue')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MEMBER, UserRole.ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.FORBIDDEN)
   @ApiOperation({
-    summary: 'Issue Bizz Coins to Customer',
+    summary: 'Issue Bizz Coins to Customer (Disabled)',
     description:
-      'Allows Members (for their business) or Admins to issue Bizz Coins directly to a customer by phone number.',
+      'Manual Bizz Coin issuance is disabled. Bizz Coins are awarded automatically through platform reward rules.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Bizz Coins issued successfully and customer wallet updated.',
-  })
-  async issue(
-    @CurrentUser() user: User,
-    @Body(new ZodValidationPipe(issueBizzCoinsSchema)) dto: IssueBizzCoinsDto,
-  ) {
-    return this.bizzCoinsService.issueCoins(dto, user);
+  async issue() {
+    return this.bizzCoinsService.issueCoins();
   }
 
   @Post('redeem')

@@ -35,6 +35,9 @@ export class SettingsService implements OnModuleInit {
         mega_deals_fixed_threshold: 500,
         home_feed_limit: 20,
         bizz_coin_value: 1.00,
+        customer_signup_bizz_points: 100,
+        customer_redemption_reward_bizz_points: 75,
+        member_referral_bizz_points: 100,
       });
       await this.settingsRepository.save(settings);
     }
@@ -59,6 +62,9 @@ export class SettingsService implements OnModuleInit {
       mega_deals_fixed_threshold: 500,
       home_feed_limit: 20,
       bizz_coin_value: 1.00,
+      customer_signup_bizz_points: 100,
+      customer_redemption_reward_bizz_points: 75,
+      member_referral_bizz_points: 100,
     });
     const saved = await this.settingsRepository.save(defaultSettings);
     this.cachedSettings = saved;
@@ -79,6 +85,15 @@ export class SettingsService implements OnModuleInit {
     }
     if (dto.bizz_coin_value !== undefined) {
       settings.bizz_coin_value = dto.bizz_coin_value;
+    }
+    if (dto.customer_signup_bizz_points !== undefined) {
+      settings.customer_signup_bizz_points = dto.customer_signup_bizz_points;
+    }
+    if (dto.customer_redemption_reward_bizz_points !== undefined) {
+      settings.customer_redemption_reward_bizz_points = dto.customer_redemption_reward_bizz_points;
+    }
+    if (dto.member_referral_bizz_points !== undefined) {
+      settings.member_referral_bizz_points = dto.member_referral_bizz_points;
     }
 
     const saved = await this.settingsRepository.save(settings);

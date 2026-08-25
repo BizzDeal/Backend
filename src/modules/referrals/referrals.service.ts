@@ -6,6 +6,7 @@ import { User } from '../users/entities/user.entity';
 import { CreateReferralSlipDto, ReferralQueryDto, AdminReferralQueryDto, AppreciateReferralDto, AdminDailyStatsQueryDto } from './schemas/referrals.schema';
 import { ReferralType } from '../../common/enums';
 import { ChatService } from '../chat/chat.service';
+import { BizzCoinsService } from '../bizz-coins/bizz-coins.service';
 
 @Injectable()
 export class ReferralsService {
@@ -15,6 +16,7 @@ export class ReferralsService {
     @InjectRepository(User)
     private userRepo: Repository<User>,
     private chatService: ChatService,
+    private bizzCoinsService: BizzCoinsService,
   ) {}
 
   async createReferralSlip(referrerId: string, dto: CreateReferralSlipDto) {
@@ -297,9 +299,26 @@ export class ReferralsService {
 
     await this.referralRepo.save(referral);
 
+    const currentUser = await this.userRepo.findOne({ where: { id: userId }, relations: { profile: true } });
+    const recipientName = currentUser?.profile?.full_name || 'Member';
+
+    // Award Bizz Coins to the referring member
+    let coinsAwarded = 0;
+    if (referral.referrer_id) {
+      try {
+        const coinResult = await this.bizzCoinsService.awardMemberReferralAppreciationCoins(
+          referral.referrer_id,
+          recipientName,
+          referral.contact_name,
+        );
+        coinsAwarded = coinResult.coinsAwarded;
+      } catch (err) {
+        console.error('Failed to award referral appreciation Bizz Coins:', err);
+      }
+    }
+
     // Send automated community chat message
     try {
-      const currentUser = await this.userRepo.findOne({ where: { id: userId }, relations: { profile: true } });
       if (currentUser && referral.referrer) {
         const referrerName = referral.referrer.profile?.full_name || 'Member';
         const costStr = Number(dto.cost_of_business).toLocaleString('en-IN');
@@ -318,6 +337,7 @@ export class ReferralsService {
       success: true,
       message: 'Referral appreciated successfully.',
       data: referral,
+      coins_awarded: coinsAwarded,
     };
   }
 

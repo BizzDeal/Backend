@@ -176,6 +176,8 @@ describe('BizzCoinsService', () => {
       );
 
       expect(result.success).toBe(true);
+      expect(result.bonus_points_awarded).toBe(75);
+      expect(result.new_balance).toBe(50 - 10 + 75);
       expect(mockManager.save).toHaveBeenCalledWith(
         Profile,
         expect.objectContaining({ primary_business_id: 'bus-1' }),
@@ -188,6 +190,41 @@ describe('BizzCoinsService', () => {
           total_visits: 1,
         }),
       );
+    });
+  });
+
+  describe('issueCoins', () => {
+    it('should throw ForbiddenException as manual issuance is disabled', async () => {
+      await expect(service.issueCoins()).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('awardCustomerSignupBonus', () => {
+    it('should award configured signup bonus to customer wallet and create transaction', async () => {
+      mockWalletRepo.findOne.mockResolvedValue({
+        id: 'wallet-1',
+        user_id: 'cust-1',
+        balance: 0,
+      });
+
+      const result = await service.awardCustomerSignupBonus('cust-1');
+
+      expect(result.bonusAmount).toBe(100);
+      expect(mockWalletRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'wallet-1',
+          user_id: 'cust-1',
+          balance: 100,
+        }),
+      );
+      expect(mockTxRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bizz_coin_wallet_id: 'wallet-1',
+          user_id: 'cust-1',
+          amount: 100,
+        }),
+      );
+      expect(mockTxRepo.save).toHaveBeenCalled();
     });
   });
 });

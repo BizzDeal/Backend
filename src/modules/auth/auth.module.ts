@@ -15,6 +15,7 @@ import { MediaModule } from '../media/media.module';
 import { LocationModule } from '../location/location.module';
 import { ReferralsModule } from '../referrals/referrals.module';
 import { MailModule } from '../mail/mail.module';
+import { BizzCoinsModule } from '../bizz-coins/bizz-coins.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { MailModule } from '../mail/mail.module';
     LocationModule,
     ReferralsModule,
     MailModule,
+    BizzCoinsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, OtpService],

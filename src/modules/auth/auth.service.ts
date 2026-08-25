@@ -19,6 +19,7 @@ import { MailService } from '../mail/mail.service';
 import { MediaService } from '../media/media.service';
 import { LocationService } from '../location/services/location.service';
 import { ReferralsService } from '../referrals/referrals.service';
+import { BizzCoinsService } from '../bizz-coins/bizz-coins.service';
 import {
   UserRole,
   UserStatus,
@@ -47,6 +48,7 @@ export class AuthService {
     private readonly mediaService: MediaService,
     private readonly locationService: LocationService,
     private readonly referralsService: ReferralsService,
+    private readonly bizzCoinsService: BizzCoinsService,
   ) {}
 
   private hashToken(token: string): string {
@@ -381,10 +383,22 @@ export class AuthService {
       );
     }
 
+    // Award welcome Bizz Points
+    let pointsMsg = '';
+    try {
+      const bonusRes = await this.bizzCoinsService.awardCustomerSignupBonus(newUser.id);
+      if (bonusRes?.bonusAmount && bonusRes.bonusAmount > 0) {
+        pointsMsg = ` ${bonusRes.bonusAmount} Bizz Points have been credited to your wallet.`;
+      }
+    } catch (err) {
+      // Non-blocking log if points awarding had an issue
+      console.error('Failed to award customer signup bonus:', err);
+    }
+
     const { pin_hash: _pin_hash, ...userWithoutPin } = newUser;
     return {
       success: true,
-      message: 'Customer registered successfully. Please login to continue.'
+      message: `Customer registered successfully!${pointsMsg} Please login to continue.`,
     };
   }
 
