@@ -887,6 +887,12 @@ export class BusinessesService {
       throw new NotFoundException('Business not found');
     }
 
+    if (isFeatured && business.status !== BusinessStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Only active businesses can be marked as featured',
+      );
+    }
+
     const oldFeatured = business.is_featured;
 
     // Enforce single featured store rule:
@@ -941,6 +947,12 @@ export class BusinessesService {
     });
     if (!business) {
       throw new NotFoundException('Business not found');
+    }
+
+    if (isTop && business.status !== BusinessStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Only active businesses can be marked as top business',
+      );
     }
 
     const oldTop = business.is_top;

@@ -590,6 +590,12 @@ export class OffersService {
       throw new NotFoundException('Offer not found');
     }
 
+    if (isFeatured && offer.status !== OfferStatus.APPROVED) {
+      throw new BadRequestException(
+        'Only approved offers can be marked as Top Deal',
+      );
+    }
+
     offer.is_featured = isFeatured;
     const savedOffer = await this.offerRepository.save(offer);
 
