@@ -31,6 +31,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { MailModule } from './modules/mail/mail.module';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { VideosModule } from './modules/videos/videos.module';
 
 @Module({
   imports: [
@@ -88,6 +89,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     PaymentSettingsModule,
     SettingsModule,
     PaymentsModule,
+    VideosModule,
   ],
   controllers: [AppController],
   providers: [

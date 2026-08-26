@@ -134,3 +134,22 @@ export enum PaymentPurpose {
   REGISTRATION_FEE = 'REGISTRATION_FEE',
   WALLET_TOPUP = 'WALLET_TOPUP',
 }
+
+export enum VideoType {
+  SHORT_PORTRAIT = 'SHORT_PORTRAIT',
+  LANDSCAPE = 'LANDSCAPE',
+  SQUARE = 'SQUARE',
+}
+
+export enum VideoCategory {
+  OFFER = 'OFFER',
+  BUSINESS_TOUR = 'BUSINESS_TOUR',
+  PRODUCT_DEMO = 'PRODUCT_DEMO',
+  TESTIMONIAL = 'TESTIMONIAL',
+  GENERAL = 'GENERAL',
+}
+
+export enum VideoStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+}
