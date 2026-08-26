@@ -2,13 +2,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { Video } from './entities/video.entity';
+import { VideoLike } from './entities/video-like.entity';
 import { User } from '../users/entities/user.entity';
 import { VideosController } from './videos.controller';
 import { VideosService } from './videos.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Video, User]),
+    TypeOrmModule.forFeature([Video, VideoLike, User]),
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
     }),

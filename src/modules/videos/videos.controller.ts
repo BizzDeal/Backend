@@ -50,8 +50,9 @@ export class VideosController {
   @ApiResponse({ status: 200, description: 'Videos retrieved successfully' })
   async getPublicVideos(
     @Query(new ZodValidationPipe(videoQuerySchema)) query: VideoQueryDto,
+    @CurrentUser() user?: User,
   ) {
-    return this.videosService.getPublicVideos(query);
+    return this.videosService.getPublicVideos(query, user?.id);
   }
 
   @Get('my')
@@ -73,8 +74,11 @@ export class VideosController {
     summary: 'Get single video by ID',
   })
   @ApiResponse({ status: 200, description: 'Video retrieved successfully' })
-  async getVideoById(@Param('id') id: string) {
-    return this.videosService.getVideoById(id);
+  async getVideoById(
+    @Param('id') id: string,
+    @CurrentUser() user?: User,
+  ) {
+    return this.videosService.getVideoById(id, user?.id);
   }
 
   @Post()
@@ -83,8 +87,8 @@ export class VideosController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Save & Publish a new video link',
-    description: 'Allows members to save video URLs (YouTube Shorts, Reels, MP4, etc.) with orientation, category, and tags.',
+    summary: 'Create/Post a new video',
+    description: 'Allows active members and admins to post videos.',
   })
   @ApiResponse({ status: 201, description: 'Video created successfully' })
   async createVideo(
@@ -99,7 +103,7 @@ export class VideosController {
   @Roles(UserRole.MEMBER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Update video details',
+    summary: 'Update an existing video',
   })
   @ApiResponse({ status: 200, description: 'Video updated successfully' })
   async updateVideo(
@@ -116,7 +120,7 @@ export class VideosController {
   @Roles(UserRole.MEMBER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Delete video',
+    summary: 'Delete a video',
   })
   @ApiResponse({ status: 200, description: 'Video deleted successfully' })
   async deleteVideo(
@@ -141,9 +145,12 @@ export class VideosController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Like a video',
+    summary: 'Toggle like on a video',
   })
-  async recordLike(@Param('id') id: string) {
-    return this.videosService.toggleLike(id);
+  async recordLike(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.videosService.toggleLike(id, user.id);
   }
 }

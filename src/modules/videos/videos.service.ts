@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Video } from './entities/video.entity';
+import { VideoLike } from './entities/video-like.entity';
 import { VideoStatus, VideoType } from '../../common/enums';
 import { CreateVideoDto, UpdateVideoDto, VideoQueryDto } from './schemas/videos.schema';
 
@@ -17,6 +18,8 @@ export class VideosService {
   constructor(
     @InjectRepository(Video)
     private readonly videoRepo: Repository<Video>,
+    @InjectRepository(VideoLike)
+    private readonly videoLikeRepo: Repository<VideoLike>,
   ) {}
 
   private extractYouTubeThumbnail(url: string): string | null {
@@ -35,7 +38,7 @@ export class VideosService {
     return lower.includes('shorts/') || lower.includes('instagram.com/reel/') || lower.includes('tiktok.com');
   }
 
-  async getPublicVideos(query: VideoQueryDto) {
+  async getPublicVideos(query: VideoQueryDto, userId?: string) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(query.limit) || 20));
     const skip = (page - 1) * limit;
@@ -73,8 +76,23 @@ export class VideosService {
 
     const [items, total] = await qb.getManyAndCount();
 
+    let likedVideoIds = new Set<string>();
+    if (userId && items.length > 0) {
+      const itemIds = items.map((v) => v.id);
+      const userLikes = await this.videoLikeRepo
+        .createQueryBuilder('vl')
+        .where('vl.user_id = :userId AND vl.video_id IN (:...itemIds)', { userId, itemIds })
+        .getMany();
+      likedVideoIds = new Set(userLikes.map((l) => l.video_id));
+    }
+
+    const enhancedItems = items.map((item) => ({
+      ...item,
+      is_liked: likedVideoIds.has(item.id),
+    }));
+
     return {
-      items,
+      items: enhancedItems,
       meta: {
         total,
         page,
@@ -102,7 +120,18 @@ export class VideosService {
       throw new NotFoundException(`Video with ID ${id} not found`);
     }
 
-    return video;
+    let isLiked = false;
+    if (userId) {
+      const like = await this.videoLikeRepo.findOne({
+        where: { video_id: id, user_id: userId },
+      });
+      isLiked = !!like;
+    }
+
+    return {
+      ...video,
+      is_liked: isLiked,
+    };
   }
 
   async createVideo(userId: string, dto: CreateVideoDto) {
@@ -187,8 +216,41 @@ export class VideosService {
     return { success: true };
   }
 
-  async toggleLike(id: string) {
-    await this.videoRepo.increment({ id }, 'likes_count', 1);
-    return { success: true };
+  async toggleLike(id: string, userId: string) {
+    const video = await this.videoRepo.findOne({ where: { id } });
+    if (!video) {
+      throw new NotFoundException(`Video with ID ${id} not found`);
+    }
+
+    const existingLike = await this.videoLikeRepo.findOne({
+      where: { video_id: id, user_id: userId },
+    });
+
+    let isLiked = false;
+    let updatedLikesCount = video.likes_count || 0;
+
+    if (existingLike) {
+      // User already liked -> UNLIKE (dislike)
+      await this.videoLikeRepo.remove(existingLike);
+      updatedLikesCount = Math.max(0, updatedLikesCount - 1);
+      await this.videoRepo.update(id, { likes_count: updatedLikesCount });
+      isLiked = false;
+    } else {
+      // User hasn't liked -> LIKE
+      const newLike = this.videoLikeRepo.create({
+        video_id: id,
+        user_id: userId,
+      });
+      await this.videoLikeRepo.save(newLike);
+      updatedLikesCount = updatedLikesCount + 1;
+      await this.videoRepo.update(id, { likes_count: updatedLikesCount });
+      isLiked = true;
+    }
+
+    return {
+      success: true,
+      is_liked: isLiked,
+      likes_count: updatedLikesCount,
+    };
   }
 }
