@@ -9,6 +9,7 @@ import { seedDummyBusinesses } from './02-seed-businesses';
 import { seedDummyOffers } from './03-seed-offers';
 import { seedDummyVouchersAndWallets } from './04-seed-vouchers-wallets';
 import { seedDummyInteractionsAndAnalytics } from './05-seed-interactions-analytics';
+import { seedDummyVideos } from './06-seed-videos';
 
 dotenv.config();
 
@@ -46,7 +47,10 @@ async function bootstrap() {
     logger.log('\n--- Step 5: Seeding Meetings, Chats, Notifications & Analytics ---');
     await seedDummyInteractionsAndAnalytics(dataSource, users, businesses);
 
-    logger.log('\n=====================================================');
+    // 6. Seed Member Videos & Feed Media
+    logger.log('\n--- Step 6: Seeding Member Videos & Feed Media ---');
+    const videoResult = await seedDummyVideos(dataSource, users, businesses, offers);
+
     logger.log('\n=====================================================');
     logger.log('SUCCESSFULLY INSERTED ALL EXPANDED DUMMY TEST DATA INTO DB!');
     logger.log('=====================================================');
@@ -54,6 +58,7 @@ async function bootstrap() {
     logger.log('- Categories: 40+ official business categories');
     logger.log('- Businesses: 400+ businesses (10 per category: 1 featured, 5 top, 4 regular)');
     logger.log('- Offers:     2000+ offers (Multiple DISCOUNT, CASHBACK & BIZZ_COINS per business)');
+    logger.log(`- Videos:     ${videoResult.allVideos.length} member videos (Shorts, Tours, Demos, Reviews)`);
     logger.log('- Users:      457 total users (1 Admin, 2 Agents, 450 Business Owners, 4 Customers)');
     logger.log('-----------------------------------------------------');
     logger.log('LOGIN CREDENTIALS SUMMARY (PASSWORD FOR ALL IS "1234"):');

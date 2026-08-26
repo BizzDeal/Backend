@@ -38,7 +38,8 @@ async function clearDummyData() {
       logger.log(`Deleted test user: ${user.email}`);
     }
 
-    // Clean up dummy analytics
+    // Clean up dummy analytics and orphaned videos if any
+    await dataSource.query(`DELETE FROM member_videos WHERE user_id NOT IN (SELECT id FROM users)`).catch(() => null);
     await dataSource.query(`DELETE FROM analytics_platform_kpis WHERE month = '2026-08'`).catch(() => null);
     await dataSource.query(`DELETE FROM analytics_monthly_metrics WHERE year = 2026 AND month = 8`).catch(() => null);
 
