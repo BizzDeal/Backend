@@ -28,6 +28,10 @@ export class User {
   pin_hash?: string;
 
   @Index()
+  @Column({ type: 'varchar', length: 20, unique: true, nullable: true })
+  invite_code: string | null;
+
+  @Index()
   @Column({
     type: 'enum',
     enum: UserRole,

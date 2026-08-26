@@ -464,5 +464,111 @@ export class BizzCoinsService {
       transaction: savedTx,
     };
   }
+
+  async awardAppShareCoins(
+    sharerId: string,
+    joinerId: string,
+  ): Promise<{ sharerCoins: number; joinerCoins: number }> {
+    if (sharerId === joinerId) {
+      return { sharerCoins: 0, joinerCoins: 0 };
+    }
+
+    const settings = await this.settingsService.getSettings();
+    const sharerCoins =
+      settings?.app_share_sharer_bizz_points !== undefined &&
+      settings?.app_share_sharer_bizz_points !== null
+        ? Number(settings.app_share_sharer_bizz_points)
+        : 50;
+
+    const joinerCoins =
+      settings?.app_share_joiner_bizz_points !== undefined &&
+      settings?.app_share_joiner_bizz_points !== null
+        ? Number(settings.app_share_joiner_bizz_points)
+        : 50;
+
+    const sharerUser = await this.userRepository.findOne({
+      where: { id: sharerId },
+      relations: { profile: true },
+    });
+    const joinerUser = await this.userRepository.findOne({
+      where: { id: joinerId },
+      relations: { profile: true },
+    });
+
+    const sharerName = sharerUser?.profile?.full_name || 'Your friend';
+    const joinerName = joinerUser?.profile?.full_name || 'A new user';
+
+    // Award Sharer Coins
+    let sharerNewBalance = 0;
+    if (sharerCoins > 0 && sharerUser) {
+      const sharerWallet = await this.getOrCreateWallet(sharerId);
+      sharerNewBalance = (Number(sharerWallet.balance) || 0) + sharerCoins;
+      sharerWallet.balance = sharerNewBalance;
+      await this.walletRepository.save(sharerWallet);
+
+      const sharerTx = this.transactionRepository.create({
+        bizz_coin_wallet_id: sharerWallet.id,
+        user_id: sharerId,
+        business_id: null,
+        type: BizzCoinTransactionType.CREDIT,
+        amount: sharerCoins,
+        description: `App Share Reward: Received ${sharerCoins} Bizz Points for inviting ${joinerName} to BizzDeal! 🎉`,
+      });
+      await this.transactionRepository.save(sharerTx);
+
+      try {
+        this.appEventsGateway.emitToUser(sharerId, 'BIZZ_COINS_ISSUED', {
+          coins: sharerCoins,
+          new_balance: sharerNewBalance,
+          business_name: 'App Share Invite Reward',
+        });
+        await this.notificationsService.sendBulkToUsers({
+          user_ids: [sharerId],
+          title: '🎉 App Referral Reward!',
+          message: `You earned ${sharerCoins} Bizz Points because ${joinerName} joined BizzDeal using your invite code! Current balance: ${sharerNewBalance}.`,
+          type: NotificationType.GENERAL,
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to send app share reward notification to sharer: ${err}`);
+      }
+    }
+
+    // Award Joiner Coins
+    let joinerNewBalance = 0;
+    if (joinerCoins > 0 && joinerUser) {
+      const joinerWallet = await this.getOrCreateWallet(joinerId);
+      joinerNewBalance = (Number(joinerWallet.balance) || 0) + joinerCoins;
+      joinerWallet.balance = joinerNewBalance;
+      await this.walletRepository.save(joinerWallet);
+
+      const joinerTx = this.transactionRepository.create({
+        bizz_coin_wallet_id: joinerWallet.id,
+        user_id: joinerId,
+        business_id: null,
+        type: BizzCoinTransactionType.CREDIT,
+        amount: joinerCoins,
+        description: `Welcome Referral Reward: Received ${joinerCoins} Bizz Points for joining BizzDeal via ${sharerName}'s invite! 🎉`,
+      });
+      await this.transactionRepository.save(joinerTx);
+
+      try {
+        this.appEventsGateway.emitToUser(joinerId, 'BIZZ_COINS_ISSUED', {
+          coins: joinerCoins,
+          new_balance: joinerNewBalance,
+          business_name: 'Referral Signup Bonus',
+        });
+        await this.notificationsService.sendBulkToUsers({
+          user_ids: [joinerId],
+          title: '🎁 Welcome Bonus Credited!',
+          message: `You received ${joinerCoins} Bizz Points for joining via an invite code from ${sharerName}! Current balance: ${joinerNewBalance}.`,
+          type: NotificationType.GENERAL,
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to send app join reward notification to joiner: ${err}`);
+      }
+    }
+
+    return { sharerCoins, joinerCoins };
+  }
 }
 

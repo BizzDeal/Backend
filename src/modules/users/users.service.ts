@@ -28,6 +28,7 @@ import { RegionFilterDto } from '../../common/dto/region-filter.dto';
 import { ChatService } from '../chat/chat.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SettingsService } from '../settings/settings.service';
 import { PaginatedResponseDto } from '../../common/dto/pagination.dto';
 
 interface CreateUserData {
@@ -63,7 +64,34 @@ export class UsersService {
     private readonly chatService: ChatService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    private readonly settingsService: SettingsService,
   ) {}
+
+  async getInviteDetails(userId: string) {
+    let user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.invite_code) {
+      user.invite_code = await this.generateUniqueInviteCode();
+      await this.usersRepository.update(user.id, { invite_code: user.invite_code });
+    }
+
+    const settings = await this.settingsService.getSettings();
+    const appUrl = settings.app_invite_base_url || 'https://play.google.com/store/apps/details?id=com.bizzdeal.app';
+
+    return {
+      success: true,
+      message: 'Invite link details retrieved successfully',
+      data: {
+        invite_code: user.invite_code,
+        app_url: appUrl,
+        sharer_reward_coins: settings.app_share_sharer_bizz_points ?? 50,
+        joiner_reward_coins: settings.app_share_joiner_bizz_points ?? 50,
+      },
+    };
+  }
 
   async findAll(query: UserQueryDto = {}) {
     const whereCondition: any = {};
@@ -179,13 +207,45 @@ export class UsersService {
     });
   }
 
+  async findByInviteCode(inviteCode: string): Promise<User | null> {
+    if (!inviteCode || typeof inviteCode !== 'string') return null;
+    return this.usersRepository.findOne({
+      where: { invite_code: inviteCode.trim().toUpperCase() },
+      relations: { profile: true },
+    });
+  }
+
+  async generateUniqueInviteCode(): Promise<string> {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let isUnique = false;
+    let code = '';
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
+      attempts++;
+      let randomPart = '';
+      for (let i = 0; i < 8; i++) {
+        randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      code = `BD-${randomPart}`;
+      const existing = await this.usersRepository.findOne({ where: { invite_code: code } });
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+
+    return code;
+  }
+
   async create(userData: CreateUserData): Promise<User> {
+    const invite_code = await this.generateUniqueInviteCode();
     const user = this.usersRepository.create({
       email: userData.email,
       phone: userData.phone,
       pin_hash: userData.pin_hash,
       role: userData.role,
       status: userData.status,
+      invite_code,
     });
     const savedUser = await this.usersRepository.save(user);
     

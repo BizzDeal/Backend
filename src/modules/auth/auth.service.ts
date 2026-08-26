@@ -294,6 +294,18 @@ export class AuthService {
       );
       await this.mailService.sendConfirmationEmail(newUser.email, verificationToken);
 
+      // Award referral/invite coins if reference_code was provided
+      if (dto.reference_code) {
+        try {
+          const sharer = await this.usersService.findByInviteCode(dto.reference_code);
+          if (sharer && sharer.id !== newUser.id) {
+            await this.bizzCoinsService.awardAppShareCoins(sharer.id, newUser.id);
+          }
+        } catch (inviteErr) {
+          console.error('Failed to award referral coins for member registration:', inviteErr);
+        }
+      }
+
       return {
         success: true,
         message: 'Member registered successfully. Please check your email to verify your account.'
@@ -393,6 +405,21 @@ export class AuthService {
     } catch (err) {
       // Non-blocking log if points awarding had an issue
       console.error('Failed to award customer signup bonus:', err);
+    }
+
+    // Award invite/referral coins if invite_code was provided
+    if (dto.invite_code) {
+      try {
+        const sharer = await this.usersService.findByInviteCode(dto.invite_code);
+        if (sharer && sharer.id !== newUser.id) {
+          const shareRewardRes = await this.bizzCoinsService.awardAppShareCoins(sharer.id, newUser.id);
+          if (shareRewardRes?.joinerCoins > 0) {
+            pointsMsg += ` You also earned ${shareRewardRes.joinerCoins} bonus Bizz Points for joining via invite!`;
+          }
+        }
+      } catch (inviteErr) {
+        console.error('Failed to award referral coins for customer registration:', inviteErr);
+      }
     }
 
     const { pin_hash: _pin_hash, ...userWithoutPin } = newUser;

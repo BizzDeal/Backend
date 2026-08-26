@@ -31,6 +31,15 @@ export class PlatformSettings {
   @Column({ type: 'int', default: 100 })
   member_referral_bizz_points: number;
 
+  @Column({ type: 'int', default: 50 })
+  app_share_sharer_bizz_points: number;
+
+  @Column({ type: 'int', default: 50 })
+  app_share_joiner_bizz_points: number;
+
+  @Column({ type: 'varchar', length: 255, default: 'https://play.google.com/store/apps/details?id=com.bizzdeal.app' })
+  app_invite_base_url: string;
+
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

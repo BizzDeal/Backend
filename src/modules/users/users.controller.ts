@@ -303,6 +303,23 @@ export class UsersController {
     return this.usersService.getProfile(user.id);
   }
 
+  @Get('me/invite-link')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get My Invite Link Details',
+    description:
+      'Retrieves the personal invite code and app download URL along with reward configuration for sharing.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Invite link details returned successfully.',
+  })
+  async getMyInviteLink(@CurrentUser() user: User) {
+    return this.usersService.getInviteDetails(user.id);
+  }
+
   @Get('by-phone/:phone')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

@@ -12,6 +12,7 @@ import { LocationModule } from '../location/location.module';
 import { ChatModule } from '../chat/chat.module';
 import { MailModule } from '../mail/mail.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SettingsModule } from '../settings/settings.module';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 
@@ -28,6 +29,7 @@ import { UsersController } from './users.controller';
     ChatModule,
     MailModule,
     NotificationsModule,
+    SettingsModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

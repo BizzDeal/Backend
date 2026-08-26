@@ -201,6 +201,7 @@ export const registerCustomerSchema = z.object({
   email: z.string().email('Invalid email address'),
   address: z.string().min(5, 'Address is required').optional().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   otp: z.string().length(6, 'OTP must be exactly 6 digits'),
+  invite_code: z.string().optional().or(z.literal('')).transform(val => val === '' ? null : val),
 });
 
 export class RegisterCustomerDto {
@@ -252,6 +253,13 @@ export class RegisterCustomerDto {
     example: '123456',
   })
   otp: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Optional invite code of the member/customer who referred this user',
+    example: 'BD-A1B2C3D4',
+  })
+  invite_code?: string | null;
 
   @ApiPropertyOptional({
     type: 'string',

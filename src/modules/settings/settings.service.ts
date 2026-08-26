@@ -38,6 +38,9 @@ export class SettingsService implements OnModuleInit {
         customer_signup_bizz_points: 100,
         customer_redemption_reward_bizz_points: 75,
         member_referral_bizz_points: 100,
+        app_share_sharer_bizz_points: 50,
+        app_share_joiner_bizz_points: 50,
+        app_invite_base_url: 'https://play.google.com/store/apps/details?id=com.bizzdeal.app',
       });
       await this.settingsRepository.save(settings);
     }
@@ -65,6 +68,9 @@ export class SettingsService implements OnModuleInit {
       customer_signup_bizz_points: 100,
       customer_redemption_reward_bizz_points: 75,
       member_referral_bizz_points: 100,
+      app_share_sharer_bizz_points: 50,
+      app_share_joiner_bizz_points: 50,
+      app_invite_base_url: 'https://play.google.com/store/apps/details?id=com.bizzdeal.app',
     });
     const saved = await this.settingsRepository.save(defaultSettings);
     this.cachedSettings = saved;
@@ -94,6 +100,15 @@ export class SettingsService implements OnModuleInit {
     }
     if (dto.member_referral_bizz_points !== undefined) {
       settings.member_referral_bizz_points = dto.member_referral_bizz_points;
+    }
+    if (dto.app_share_sharer_bizz_points !== undefined) {
+      settings.app_share_sharer_bizz_points = dto.app_share_sharer_bizz_points;
+    }
+    if (dto.app_share_joiner_bizz_points !== undefined) {
+      settings.app_share_joiner_bizz_points = dto.app_share_joiner_bizz_points;
+    }
+    if (dto.app_invite_base_url !== undefined) {
+      settings.app_invite_base_url = dto.app_invite_base_url;
     }
 
     const saved = await this.settingsRepository.save(settings);
