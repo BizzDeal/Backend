@@ -5,6 +5,10 @@ import { User } from './entities/user.entity';
 import { Profile } from './entities/profile.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
 import { BusinessProfile } from '../businesses/entities/business-profile.entity';
+import { CustomerBusiness } from '../businesses/entities/customer-business.entity';
+import { Voucher } from '../vouchers/entities/voucher.entity';
+import { Wallet } from '../wallet/entities/wallet.entity';
+import { Referral } from '../referrals/entities/referral.entity';
 import { AuditModule } from '../audit/audit.module';
 import { MediaModule } from '../media/media.module';
 import { BusinessesModule } from '../businesses/businesses.module';
@@ -18,7 +22,16 @@ import { UsersController } from './users.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Profile, MediaFile, BusinessProfile]),
+    TypeOrmModule.forFeature([
+      User,
+      Profile,
+      MediaFile,
+      BusinessProfile,
+      CustomerBusiness,
+      Voucher,
+      Wallet,
+      Referral,
+    ]),
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'bizz_deal_access_secret',
     }),

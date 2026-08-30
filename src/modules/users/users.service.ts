@@ -11,6 +11,10 @@ import { User } from './entities/user.entity';
 import { Profile } from './entities/profile.entity';
 import { MediaFile } from '../media/entities/media-file.entity';
 import { BusinessProfile } from '../businesses/entities/business-profile.entity';
+import { CustomerBusiness } from '../businesses/entities/customer-business.entity';
+import { Voucher } from '../vouchers/entities/voucher.entity';
+import { Wallet } from '../wallet/entities/wallet.entity';
+import { Referral } from '../referrals/entities/referral.entity';
 import { AuditService } from '../audit/audit.service';
 import { MediaService } from '../media/media.service';
 import { BusinessesService } from '../businesses/businesses.service';
@@ -20,6 +24,7 @@ import {
   BusinessStatus,
   MediaPurpose,
   NotificationType,
+  VoucherStatus,
 } from '../../common/enums';
 import { UpdateProfileDto, UserQueryDto } from './schemas/users.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
@@ -56,6 +61,14 @@ export class UsersService {
     private readonly mediaRepository: Repository<MediaFile>,
     @InjectRepository(BusinessProfile)
     private readonly businessRepository: Repository<BusinessProfile>,
+    @InjectRepository(CustomerBusiness)
+    private readonly customerBusinessRepository: Repository<CustomerBusiness>,
+    @InjectRepository(Voucher)
+    private readonly voucherRepository: Repository<Voucher>,
+    @InjectRepository(Wallet)
+    private readonly walletRepository: Repository<Wallet>,
+    @InjectRepository(Referral)
+    private readonly referralRepository: Repository<Referral>,
     private readonly auditService: AuditService,
     private readonly mediaService: MediaService,
     private readonly businessesService: BusinessesService,
@@ -619,6 +632,70 @@ export class UsersService {
     };
   }
 
+  private async computeUserStats(user: User, business: BusinessProfile | null) {
+    if (user.role === UserRole.MEMBER && business) {
+      // 1. Store visits / footfalls received at member's store
+      const visitsResult = await this.customerBusinessRepository
+        .createQueryBuilder('cb')
+        .select('SUM(cb.total_visits)', 'total')
+        .where('cb.business_id = :businessId', { businessId: business.id })
+        .getRawOne();
+      const storeVisits = Number(visitsResult?.total || 0);
+
+      // 2. Unique customers dealt with at member's store
+      const customersDealt = await this.customerBusinessRepository.count({
+        where: { business_id: business.id },
+      });
+
+      // 3. Profit / revenue gained from beginning
+      const referralRevenueResult = await this.referralRepository
+        .createQueryBuilder('ref')
+        .select('SUM(ref.cost_of_business)', 'total')
+        .where('ref.to_member_id = :userId', { userId: user.id })
+        .andWhere('ref.is_appreciated = :isAppreciated', { isAppreciated: true })
+        .getRawOne();
+      const referralRevenue = Number(referralRevenueResult?.total || 0);
+
+      const voucherBenefitsResult = await this.voucherRepository
+        .createQueryBuilder('v')
+        .leftJoin('v.offer', 'offer')
+        .select('SUM(offer.discount_value)', 'total')
+        .where('v.business_id = :businessId', { businessId: business.id })
+        .andWhere('v.status = :status', { status: VoucherStatus.REDEEMED })
+        .getRawOne();
+      const voucherBenefits = Number(voucherBenefitsResult?.total || 0);
+
+      const wallet = await this.walletRepository.findOne({ where: { user_id: user.id } });
+      const walletSavings = Number(wallet?.total_savings || 0);
+
+      const profitGained = referralRevenue + voucherBenefits + walletSavings;
+
+      return {
+        stores_visited: storeVisits,
+        customers_dealt: customersDealt,
+        profit_gained: Math.round(profitGained),
+      };
+    } else {
+      // CUSTOMER
+      const storesVisited = await this.customerBusinessRepository.count({
+        where: { customer_id: user.id },
+      });
+
+      const dealsAvailed = await this.voucherRepository.count({
+        where: { customer_id: user.id, status: VoucherStatus.REDEEMED },
+      });
+
+      const wallet = await this.walletRepository.findOne({ where: { user_id: user.id } });
+      const totalSavings = Number(wallet?.total_savings || 0);
+
+      return {
+        stores_visited: storesVisited,
+        customers_dealt: dealsAvailed,
+        profit_gained: Math.round(totalSavings),
+      };
+    }
+  }
+
   private async buildUserProfileData(user: User) {
     const mediaFiles = await this.mediaRepository.find({
       where: {
@@ -673,11 +750,13 @@ export class UsersService {
     }
 
     const completionData = this.calculateProfileCompletion(user, profile_pic_url, business_logo_url, business);
+    const stats = await this.computeUserStats(user, business);
 
     const { pin_hash: _pin_hash, ...userWithoutPin } = user;
     return {
       ...userWithoutPin,
       ...completionData,
+      stats,
       full_name: user.profile?.full_name || null,
       whatsapp: user.profile?.whatsapp || null,
       address: user.profile?.address || null,
