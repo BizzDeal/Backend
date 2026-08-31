@@ -862,6 +862,36 @@ export class AnalyticsService implements OnModuleInit {
       where: { referrer_id: userId }
     });
 
+    // Given referrals stats
+    const referralsGiven = await this.referralRepo.count({
+      where: { referrer_id: userId }
+    });
+    const referralsGivenCompleted = await this.referralRepo.count({
+      where: { referrer_id: userId, is_appreciated: true }
+    });
+    const givenRevenueResult = await this.referralRepo
+      .createQueryBuilder('ref')
+      .select('SUM(ref.cost_of_business)', 'total')
+      .where('ref.referrer_id = :userId', { userId })
+      .andWhere('ref.is_appreciated = :isAppreciated', { isAppreciated: true })
+      .getRawOne();
+    const givenBusinessValue = Number(givenRevenueResult?.total || 0);
+
+    // Received referrals stats
+    const referralsReceived = await this.referralRepo.count({
+      where: { to_member_id: userId }
+    });
+    const referralsReceivedCompleted = await this.referralRepo.count({
+      where: { to_member_id: userId, is_appreciated: true }
+    });
+    const receivedRevenueResult = await this.referralRepo
+      .createQueryBuilder('ref')
+      .select('SUM(ref.cost_of_business)', 'total')
+      .where('ref.to_member_id = :userId', { userId })
+      .andWhere('ref.is_appreciated = :isAppreciated', { isAppreciated: true })
+      .getRawOne();
+    const receivedBusinessValue = Number(receivedRevenueResult?.total || 0);
+
     // Fallback to platform stats if no district is set for the user, 
     // so the UI still renders the stats section
     const filter = user?.profile?.district_id ? { district: user.profile.district_id } : undefined;
@@ -894,6 +924,12 @@ export class AnalyticsService implements OnModuleInit {
         redeemedThisWeek,
         activeOffersCount,
         successfulReferrals,
+        referralsGiven,
+        referralsGivenCompleted,
+        givenBusinessValue,
+        referralsReceived,
+        referralsReceivedCompleted,
+        receivedBusinessValue,
         districtStats,
       },
     };
