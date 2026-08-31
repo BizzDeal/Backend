@@ -8,8 +8,16 @@ export async function seedAdminUser(userRepository: Repository<User>): Promise<v
   const logger = new Logger('SeedAdminUser');
   logger.log('Checking and seeding Admin User...');
 
-  const email = 'support@bizzdeal.in';
-  const phone = '9999999999';
+  const email = 'admin@bizzdeal.com';
+  const phone = '9876543210';
+
+  // Deactivate legacy duplicate admin if present
+  const legacyAdmin = await userRepository.findOne({ where: { email: 'support@bizzdeal.in' } });
+  if (legacyAdmin) {
+    legacyAdmin.status = UserStatus.UNVERIFIED;
+    await userRepository.save(legacyAdmin);
+    logger.log('Deactivated duplicate legacy admin: support@bizzdeal.in');
+  }
 
   const existingAdmin = await userRepository.findOne({
     where: { email },

@@ -826,7 +826,7 @@ export class AnalyticsService implements OnModuleInit {
     // Get user and their profile to find the district
     const user = await this.userRepo.findOne({ 
       where: { id: userId }, 
-      relations: { profile: true } 
+      relations: { profile: { district: true } } 
     });
 
     // Get business for this member
@@ -895,6 +895,7 @@ export class AnalyticsService implements OnModuleInit {
     // Fallback to platform stats if no district is set for the user, 
     // so the UI still renders the stats section
     const filter = user?.profile?.district_id ? { district: user.profile.district_id } : undefined;
+    const districtName = user?.profile?.district?.name || 'Region';
     
     let districtStats: any = null;
     const overview = await this.getOverviewAnalytics(filter);
@@ -909,9 +910,32 @@ export class AnalyticsService implements OnModuleInit {
       }
       const totalBusinesses = await businessesQb.getCount();
 
+      const referralsQb = this.referralRepo.createQueryBuilder('ref')
+        .leftJoin('ref.referrer', 'referrer')
+        .leftJoin('referrer.profile', 'profile');
+      if (filter?.district) {
+        referralsQb.where('profile.district_id = :district', { district: filter.district });
+      }
+      const totalReferrals = await referralsQb.getCount();
+
+      const refValueQb = this.referralRepo.createQueryBuilder('ref')
+        .leftJoin('ref.referrer', 'referrer')
+        .leftJoin('referrer.profile', 'profile')
+        .select('SUM(ref.cost_of_business)', 'total')
+        .where('ref.is_appreciated = :isAppreciated', { isAppreciated: true });
+      if (filter?.district) {
+        refValueQb.andWhere('profile.district_id = :district', { district: filter.district });
+      }
+      const refValueRes = await refValueQb.getRawOne();
+      const totalReferralBusinessValue = Number(refValueRes?.total || 0);
+      const totalBusinessValue = (overview.data?.revenue || 0) + totalReferralBusinessValue;
+
       districtStats = {
         ...overview.data,
-        totalBusinesses
+        totalBusinesses,
+        totalReferrals,
+        totalBusinessValue,
+        districtName,
       };
     }
 

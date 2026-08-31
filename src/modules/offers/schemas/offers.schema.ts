@@ -29,7 +29,11 @@ export const createOfferSchema = z
       if (typeof val === 'string' || val instanceof Date) return new Date(val);
       return val;
     }, z.date()),
-    video_url: z.string().url().optional().nullable(),
+    video_url: z
+      .preprocess((val) => {
+        if (val === '' || val === null || val === undefined) return null;
+        return val;
+      }, z.string().url().nullable().optional()),
   })
   .refine((data) => data.end_date >= data.start_date, {
     message: 'end_date cannot be earlier than start_date',
@@ -140,7 +144,11 @@ export const updateOfferSchema = z
       .optional(),
     status: z.nativeEnum(OfferStatus).optional(),
     is_featured: z.boolean().optional(),
-    video_url: z.string().url().optional().nullable(),
+    video_url: z
+      .preprocess((val) => {
+        if (val === '' || val === null || val === undefined) return null;
+        return val;
+      }, z.string().url().nullable().optional()),
   })
   .refine(
     (data) => {

@@ -62,7 +62,7 @@ export async function seedDummyBusinesses(
     (await districtRepo.findOne({ where: { name: 'Visakhapatnam' } })) ||
     (await districtRepo.findOne({ where: {} }));
 
-  const allOwners = users.allOwners || [];
+  const allOwners = [users.agent1, users.agent2, ...(users.allOwners || [])];
   let ownerIndex = 0;
 
   const allSeededBusinesses: BusinessProfile[] = [];

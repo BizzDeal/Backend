@@ -114,6 +114,23 @@ export async function seedDummyUsers(dataSource: DataSource): Promise<SeededUser
     address: string;
   }
 
+  const FIRST_NAMES = [
+    'Rajesh', 'Suresh', 'Ramesh', 'Vikram', 'Amit', 'Anand', 'Kiran', 'Deepak',
+    'Sunil', 'Praveen', 'Manoj', 'Vijay', 'Sanjay', 'Santosh', 'Mahesh', 'Ganesh',
+    'Priya', 'Ananya', 'Sneha', 'Kavita', 'Pooja', 'Sunita', 'Divya', 'Lakshmi',
+    'Deepa', 'Swati', 'Meera', 'Radha', 'Shweta', 'Nisha', 'Aarti', 'Ritu',
+    'Karthik', 'Arjun', 'Rahul', 'Rohit', 'Varun', 'Tarun', 'Harish', 'Naveen',
+    'Siddharth', 'Aditya', 'Gaurav', 'Alok', 'Prashant', 'Ashish', 'Vikas', 'Manish',
+    'Bhavna', 'Geeta', 'Suman', 'Sarita', 'Rekha', 'Usha', 'Madhavi', 'Padma'
+  ];
+
+  const LAST_NAMES = [
+    'Sharma', 'Verma', 'Patel', 'Reddy', 'Rao', 'Nair', 'Mehta', 'Joshi',
+    'Gupta', 'Kumar', 'Singh', 'Sundaram', 'Iyer', 'Menon', 'Kulkarni', 'Deshmukh',
+    'Bhat', 'Hegde', 'Pillai', 'Choudhury', 'Mishra', 'Pandey', 'Shukla', 'Trivedi',
+    'Saxena', 'Agarwal', 'Bansal', 'Jain', 'Shah', 'Dalal', 'Malhotra', 'Kapoor'
+  ];
+
   // Generate 450 Owner Configurations for 40+ categories with 10 businesses each
   const ownerConfigs: UserConfigItem[] = [];
   for (let i = 1; i <= 450; i++) {
@@ -122,13 +139,17 @@ export async function seedDummyUsers(dataSource: DataSource): Promise<SeededUser
     else if (i === 449) ownerStatus = UserStatus.REJECTED;
     else if (i === 450) ownerStatus = UserStatus.SUSPENDED;
     
+    const firstName = FIRST_NAMES[(i - 1) % FIRST_NAMES.length];
+    const lastName = LAST_NAMES[Math.floor((i - 1) / FIRST_NAMES.length) % LAST_NAMES.length];
+    const fullName = `${firstName} ${lastName}`;
+
     ownerConfigs.push({
       key: `owner${i}`,
       email: `owner${i}@bizzdeal.com`,
       phone: `98765${(10000 + i).toString().padStart(5, '0')}`,
       role: UserRole.MEMBER,
       status: ownerStatus,
-      fullName: `Owner ${i} (Merchant User)`,
+      fullName,
       address: `D.No ${i}-${(i % 10) + 1}-12, Commercial St, Andhra Pradesh`,
     });
   }
