@@ -374,6 +374,7 @@ export class UsersService {
 
     const businesses = await this.businessRepository.find({
       where: { owner_id: In(memberIds) },
+      relations: { category: true },
     });
 
     const profilePicMap = new Map<string, string>();
@@ -407,7 +408,8 @@ export class UsersService {
         businessProfile: b ? {
           business_name: b.name,
           description: b.description,
-          category_id: b.category_id
+          category_id: b.category_id,
+          category_name: b.category?.name || null,
         } : undefined
       };
     });
