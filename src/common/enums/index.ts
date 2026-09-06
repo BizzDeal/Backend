@@ -89,6 +89,7 @@ export enum MediaType {
 export enum MediaPurpose {
   PROFILE_PIC = 'PROFILE_PIC',
   BUSINESS_LOGO = 'BUSINESS_LOGO',
+  BUSINESS_BANNER = 'BUSINESS_BANNER',
   OFFER_IMAGE = 'OFFER_IMAGE',
   GENERAL = 'GENERAL',
 }

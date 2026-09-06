@@ -76,6 +76,13 @@ export class BusinessProfile {
   @JoinColumn({ name: 'logo_id' })
   logo: MediaFile | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  banner_id: string | null;
+
+  @ManyToOne(() => MediaFile, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'banner_id' })
+  banner: MediaFile | null;
+
   @Column({ type: 'varchar', nullable: true })
   video_url: string | null;
 

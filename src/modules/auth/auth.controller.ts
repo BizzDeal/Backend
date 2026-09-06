@@ -161,6 +161,7 @@ export class AuthController {
     FileFieldsInterceptor([
       { name: 'profile_pic', maxCount: 1 },
       { name: 'business_logo', maxCount: 1 },
+      { name: 'business_banner', maxCount: 1 },
     ]),
   )
   async registerMember(
@@ -169,6 +170,7 @@ export class AuthController {
     files?: {
       profile_pic?: Express.Multer.File[];
       business_logo?: Express.Multer.File[];
+      business_banner?: Express.Multer.File[];
     },
   ) {
     return this.authService.registerMember(dto, files);

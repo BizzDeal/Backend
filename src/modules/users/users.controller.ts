@@ -185,6 +185,7 @@ export class UsersController {
       [
         { name: 'profile_pic', maxCount: 1 },
         { name: 'business_logo', maxCount: 1 },
+        { name: 'business_banner', maxCount: 1 },
       ],
       { limits: { fileSize: 10 * 1024 * 1024 } },
     ),
@@ -196,6 +197,7 @@ export class UsersController {
     files?: {
       profile_pic?: Express.Multer.File[];
       business_logo?: Express.Multer.File[];
+      business_banner?: Express.Multer.File[];
     },
   ) {
     return this.usersService.updateProfile(user.id, dto, files);

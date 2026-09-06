@@ -518,12 +518,12 @@ export class UsersService {
       },
     };
   }
-
-  private calculateProfileCompletion(
+private calculateProfileCompletion(
     user: User,
     profilePicUrl: string | null,
     businessLogoUrl: string | null,
-    business: BusinessProfile | null
+    business: BusinessProfile | null,
+    businessBannerUrl?: string | null,
   ) {
     let completion_score = 0;
     const missing_fields: string[] = [];
@@ -549,11 +549,11 @@ export class UsersService {
         { name: 'phone', has: hasPhone, mandatory: true },
         { name: 'email', has: hasEmail, mandatory: true },
         { name: 'state_id', has: hasState, mandatory: true },
-        { name: 'district_id', has: hasDistrict, mandatory: true },
-        { name: 'pincode', has: hasPincode, mandatory: true },
+        { name: 'district_id', has: hasDistrict, mandatory: false },
+        { name: 'pincode', has: hasPincode, mandatory: false },
         { name: 'address', has: hasAddress, mandatory: false },
         { name: 'profile_picture', has: hasProfilePic, mandatory: false },
-        { name: 'whatsapp', has: hasWhatsapp, mandatory: false }
+        { name: 'whatsapp', has: hasWhatsapp, mandatory: false },
       ];
 
       let mandatoryPass = true;
@@ -583,6 +583,7 @@ export class UsersService {
       const hasBusinessPincode = !!business?.pincode && /^[1-9][0-9]{5}$/.test(business.pincode);
       const hasBusinessAddress = !!business?.address;
       const hasLogo = !!businessLogoUrl;
+      const hasBanner = !!businessBannerUrl;
       const hasWebsite = !!business?.website;
       const hasGst = !!business?.gst_number;
 
@@ -604,6 +605,7 @@ export class UsersService {
         { name: 'profile_picture', has: hasProfilePic, mandatory: false },
         { name: 'business_address', has: hasBusinessAddress, mandatory: false },
         { name: 'business_logo', has: hasLogo, mandatory: false },
+        { name: 'business_banner', has: hasBanner, mandatory: false },
         { name: 'website', has: hasWebsite, mandatory: false },
         { name: 'gst_number', has: hasGst, mandatory: false },
       ];
@@ -705,18 +707,22 @@ export class UsersService {
         purpose: In([
           MediaPurpose.PROFILE_PIC,
           MediaPurpose.BUSINESS_LOGO,
+          MediaPurpose.BUSINESS_BANNER,
         ]),
       },
     });
 
     let profile_pic_url: string | null = null;
     let business_logo_url: string | null = null;
+    let business_banner_url: string | null = null;
 
     mediaFiles.forEach((m) => {
       if (m.purpose === MediaPurpose.PROFILE_PIC) {
         profile_pic_url = m.file_url;
       } else if (m.purpose === MediaPurpose.BUSINESS_LOGO) {
         business_logo_url = m.file_url;
+      } else if (m.purpose === MediaPurpose.BUSINESS_BANNER) {
+        business_banner_url = m.file_url;
       }
     });
 
@@ -737,6 +743,12 @@ export class UsersService {
         });
         if (logoFile) business_logo_url = logoFile.file_url;
       }
+      if (business?.banner_id && !business_banner_url) {
+        const bannerFile = await this.mediaRepository.findOne({
+          where: { id: business.banner_id },
+        });
+        if (bannerFile) business_banner_url = bannerFile.file_url;
+      }
     } else if (user.role === UserRole.CUSTOMER && user.profile?.primary_business_id) {
       const pb = await this.businessRepository.findOne({
         where: { id: user.profile.primary_business_id },
@@ -751,7 +763,7 @@ export class UsersService {
       }
     }
 
-    const completionData = this.calculateProfileCompletion(user, profile_pic_url, business_logo_url, business);
+    const completionData = this.calculateProfileCompletion(user, profile_pic_url, business_logo_url, business, business_banner_url);
     const stats = await this.computeUserStats(user, business);
 
     const { pin_hash: _pin_hash, ...userWithoutPin } = user;
@@ -782,6 +794,8 @@ export class UsersService {
         user.role === UserRole.MEMBER ? business?.gst_number || null : undefined,
       business_logo_url:
         user.role === UserRole.MEMBER ? business_logo_url : undefined,
+      business_banner_url:
+        user.role === UserRole.MEMBER ? business_banner_url : undefined,
       business_address:
         user.role === UserRole.MEMBER ? business?.address || null : undefined,
       business_state_id:
@@ -841,6 +855,7 @@ export class UsersService {
     files?: {
       profile_pic?: Express.Multer.File[];
       business_logo?: Express.Multer.File[];
+      business_banner?: Express.Multer.File[];
     },
   ) {
     const user = await this.findOneById(userId);
@@ -995,6 +1010,15 @@ export class UsersService {
             MediaPurpose.BUSINESS_LOGO,
           );
           businessUpdate.logo_id = logoMedia.id;
+        }
+
+        if (files?.business_banner?.[0]) {
+          const bannerMedia = await this.mediaService.replaceUserFile(
+            files.business_banner[0],
+            userId,
+            MediaPurpose.BUSINESS_BANNER,
+          );
+          businessUpdate.banner_id = bannerMedia.id;
         }
 
         if (Object.keys(businessUpdate).length > 0) {

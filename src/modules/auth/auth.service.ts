@@ -184,6 +184,7 @@ export class AuthService {
     files?: {
       profile_pic?: Express.Multer.File[];
       business_logo?: Express.Multer.File[];
+      business_banner?: Express.Multer.File[];
     },
   ): Promise<{
     success: boolean;
@@ -263,6 +264,16 @@ export class AuthService {
         logoId = logoMedia.id;
       }
 
+      let bannerId: string | null = null;
+      if (files?.business_banner?.[0]) {
+        const bannerMedia = await this.mediaService.saveFile(
+          files.business_banner[0],
+          newUser.id,
+          MediaPurpose.BUSINESS_BANNER,
+        );
+        bannerId = bannerMedia.id;
+      }
+
       // Save the business profile details
       await this.businessesService.createBusiness({
         owner_id: newUser.id,
@@ -276,6 +287,7 @@ export class AuthService {
         district_id: dto.business_district_id,
         pincode: dto.business_pincode,
         logo_id: logoId,
+        banner_id: bannerId,
         status: BusinessStatus.PENDING_PAYMENT,
       });
 

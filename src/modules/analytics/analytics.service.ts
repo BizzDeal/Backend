@@ -934,8 +934,31 @@ export class AnalyticsService implements OnModuleInit {
         ...overview.data,
         totalBusinesses,
         totalReferrals,
+        referralBusinessValue: totalReferralBusinessValue,
         totalBusinessValue,
         districtName,
+      };
+    }
+
+    let globalStats: any = null;
+    const globalOverview = await this.getOverviewAnalytics(undefined);
+    if (globalOverview.success) {
+      const globalBusinesses = await this.businessRepo.count();
+      const globalReferrals = await this.referralRepo.count();
+      const globalRefValueRes = await this.referralRepo
+        .createQueryBuilder('ref')
+        .select('SUM(ref.cost_of_business)', 'total')
+        .where('ref.is_appreciated = :isAppreciated', { isAppreciated: true })
+        .getRawOne();
+      const globalReferralBusinessValue = Number(globalRefValueRes?.total || 0);
+      const globalTotalBusinessValue = (globalOverview.data?.revenue || 0) + globalReferralBusinessValue;
+
+      globalStats = {
+        ...globalOverview.data,
+        totalBusinesses: globalBusinesses,
+        totalReferrals: globalReferrals,
+        referralBusinessValue: globalReferralBusinessValue,
+        totalBusinessValue: globalTotalBusinessValue,
       };
     }
 
@@ -955,6 +978,7 @@ export class AnalyticsService implements OnModuleInit {
         referralsReceivedCompleted,
         receivedBusinessValue,
         districtStats,
+        globalStats,
       },
     };
   }

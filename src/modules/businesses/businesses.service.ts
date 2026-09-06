@@ -148,14 +148,14 @@ export class BusinessesService {
   private async enrichBusinessesWithMediaAndCategory(businesses: BusinessProfile[]) {
     if (businesses.length === 0) return [];
 
-    const logoIds = businesses
-      .map((b) => b.logo_id)
+    const mediaIds = businesses
+      .flatMap((b) => [b.logo_id, b.banner_id])
       .filter((id): id is string => !!id);
 
     const mediaMap = new Map<string, string>();
-    if (logoIds.length > 0) {
+    if (mediaIds.length > 0) {
       const mediaFiles = await this.mediaRepository.find({
-        where: { id: In(logoIds) },
+        where: { id: In(mediaIds) },
       });
       mediaFiles.forEach((m) => mediaMap.set(m.id, m.file_url));
     }
@@ -218,6 +218,8 @@ export class BusinessesService {
         has_bizz_coin_offer: hasBizzCoinOffer,
         logo_url: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
         logoUrl: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
+        banner_url: b.banner_id ? mediaMap.get(b.banner_id) || null : null,
+        bannerUrl: b.banner_id ? mediaMap.get(b.banner_id) || null : null,
       };
     });
   }

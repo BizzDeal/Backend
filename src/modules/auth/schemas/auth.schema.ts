@@ -191,6 +191,13 @@ export class RegisterMemberDto {
     description: 'Optional business logo image upload',
   })
   business_logo?: any;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Optional business banner image upload',
+  })
+  business_banner?: any;
 }
 
 export const registerCustomerSchema = z.object({
