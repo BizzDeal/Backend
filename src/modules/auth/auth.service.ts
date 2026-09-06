@@ -183,7 +183,6 @@ export class AuthService {
     dto: RegisterMemberDto,
     files?: {
       profile_pic?: Express.Multer.File[];
-      business_logo?: Express.Multer.File[];
       business_banner?: Express.Multer.File[];
     },
   ): Promise<{
@@ -254,16 +253,6 @@ export class AuthService {
     });
 
     try {
-      let logoId: string | null = null;
-      if (files?.business_logo?.[0]) {
-        const logoMedia = await this.mediaService.saveFile(
-          files.business_logo[0],
-          newUser.id,
-          MediaPurpose.BUSINESS_LOGO,
-        );
-        logoId = logoMedia.id;
-      }
-
       let bannerId: string | null = null;
       if (files?.business_banner?.[0]) {
         const bannerMedia = await this.mediaService.saveFile(
@@ -286,7 +275,6 @@ export class AuthService {
         state_id: dto.business_state_id,
         district_id: dto.business_district_id,
         pincode: dto.business_pincode,
-        logo_id: logoId,
         banner_id: bannerId,
         status: BusinessStatus.PENDING_PAYMENT,
       });

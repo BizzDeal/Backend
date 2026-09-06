@@ -70,13 +70,6 @@ export class BusinessProfile {
   pincode: string | null;
 
   @Column({ type: 'uuid', nullable: true })
-  logo_id: string | null;
-
-  @ManyToOne(() => MediaFile, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'logo_id' })
-  logo: MediaFile | null;
-
-  @Column({ type: 'uuid', nullable: true })
   banner_id: string | null;
 
   @ManyToOne(() => MediaFile, { nullable: true, onDelete: 'SET NULL' })

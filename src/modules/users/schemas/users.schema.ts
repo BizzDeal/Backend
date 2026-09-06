@@ -169,13 +169,6 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({
     type: 'string',
     format: 'binary',
-    description: 'Replacement business logo image upload (for members)',
-  })
-  business_logo?: any;
-
-  @ApiPropertyOptional({
-    type: 'string',
-    format: 'binary',
     description: 'Replacement business banner image upload (for members)',
   })
   business_banner?: any;

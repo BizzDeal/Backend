@@ -149,7 +149,7 @@ export class BusinessesService {
     if (businesses.length === 0) return [];
 
     const mediaIds = businesses
-      .flatMap((b) => [b.logo_id, b.banner_id])
+      .flatMap((b) => [b.banner_id])
       .filter((id): id is string => !!id);
 
     const mediaMap = new Map<string, string>();
@@ -216,8 +216,8 @@ export class BusinessesService {
         initials,
         hasBizzCoinOffer,
         has_bizz_coin_offer: hasBizzCoinOffer,
-        logo_url: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
-        logoUrl: b.logo_id ? mediaMap.get(b.logo_id) || null : null,
+        logo_url: null,
+        logoUrl: null,
         banner_url: b.banner_id ? mediaMap.get(b.banner_id) || null : null,
         bannerUrl: b.banner_id ? mediaMap.get(b.banner_id) || null : null,
       };
@@ -672,7 +672,6 @@ export class BusinessesService {
     userId: string,
     userRole: UserRole,
     dto: UpdateBusinessDto,
-    logoFile?: Express.Multer.File,
     ipAddress?: string,
   ) {
     if (!this.isUUID(id)) {
@@ -721,15 +720,6 @@ export class BusinessesService {
     if (dto.district_id !== undefined) updateData.district_id = dto.district_id;
     if (dto.pincode !== undefined) updateData.pincode = dto.pincode;
     if (dto.video_url !== undefined) updateData.video_url = dto.video_url;
-
-    if (logoFile) {
-      const media = await this.mediaService.replaceUserFile(
-        logoFile,
-        business.owner_id,
-        MediaPurpose.BUSINESS_LOGO,
-      );
-      updateData.logo_id = media.id;
-    }
 
     if (!isAdmin && business.status === BusinessStatus.REJECTED) {
       this.logger.log(
@@ -783,16 +773,16 @@ export class BusinessesService {
       );
     }
 
-    if (business.logo_id) {
+    if (business.banner_id) {
       try {
-        const logo = await this.mediaRepository.findOne({
-          where: { id: business.logo_id },
+        const banner = await this.mediaRepository.findOne({
+          where: { id: business.banner_id },
         });
-        if (logo) {
-          await this.mediaRepository.remove(logo);
+        if (banner) {
+          await this.mediaRepository.remove(banner);
         }
       } catch (err) {
-        // Continue if logo cleanup fails
+        // Continue if banner cleanup fails
       }
     }
 

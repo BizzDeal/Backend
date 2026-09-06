@@ -42,7 +42,7 @@ export class ChatService implements OnModuleInit {
     const mediaFiles = await this.mediaRepository.find({
       where: {
         uploaded_by_id: In(userIds),
-        purpose: In([MediaPurpose.PROFILE_PIC, MediaPurpose.BUSINESS_LOGO]),
+        purpose: MediaPurpose.PROFILE_PIC,
       },
       order: { created_at: 'DESC' },
     });

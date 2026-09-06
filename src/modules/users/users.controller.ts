@@ -174,7 +174,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Update Own Profile',
     description:
-      'Updates the profile details of the currently authenticated user along with replacement file uploads (profile_pic and business_logo).',
+      'Updates the profile details of the currently authenticated user along with replacement file uploads (profile_pic and business_banner).',
   })
   @ApiResponse({
     status: 200,
@@ -184,7 +184,6 @@ export class UsersController {
     FileFieldsInterceptor(
       [
         { name: 'profile_pic', maxCount: 1 },
-        { name: 'business_logo', maxCount: 1 },
         { name: 'business_banner', maxCount: 1 },
       ],
       { limits: { fileSize: 10 * 1024 * 1024 } },
@@ -196,7 +195,6 @@ export class UsersController {
     @UploadedFiles()
     files?: {
       profile_pic?: Express.Multer.File[];
-      business_logo?: Express.Multer.File[];
       business_banner?: Express.Multer.File[];
     },
   ) {

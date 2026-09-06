@@ -518,11 +518,10 @@ export class UsersService {
       },
     };
   }
-private calculateProfileCompletion(
+  private calculateProfileCompletion(
     user: User,
     profilePicUrl: string | null,
-    businessLogoUrl: string | null,
-    business: BusinessProfile | null,
+    business?: BusinessProfile | null,
     businessBannerUrl?: string | null,
   ) {
     let completion_score = 0;
@@ -582,7 +581,6 @@ private calculateProfileCompletion(
       const hasBusinessDistrict = !!business?.district_id;
       const hasBusinessPincode = !!business?.pincode && /^[1-9][0-9]{5}$/.test(business.pincode);
       const hasBusinessAddress = !!business?.address;
-      const hasLogo = !!businessLogoUrl;
       const hasBanner = !!businessBannerUrl;
       const hasWebsite = !!business?.website;
       const hasGst = !!business?.gst_number;
@@ -604,7 +602,6 @@ private calculateProfileCompletion(
         { name: 'address', has: hasAddress, mandatory: false },
         { name: 'profile_picture', has: hasProfilePic, mandatory: false },
         { name: 'business_address', has: hasBusinessAddress, mandatory: false },
-        { name: 'business_logo', has: hasLogo, mandatory: false },
         { name: 'business_banner', has: hasBanner, mandatory: false },
         { name: 'website', has: hasWebsite, mandatory: false },
         { name: 'gst_number', has: hasGst, mandatory: false },
@@ -706,21 +703,17 @@ private calculateProfileCompletion(
         uploaded_by_id: user.id,
         purpose: In([
           MediaPurpose.PROFILE_PIC,
-          MediaPurpose.BUSINESS_LOGO,
           MediaPurpose.BUSINESS_BANNER,
         ]),
       },
     });
 
     let profile_pic_url: string | null = null;
-    let business_logo_url: string | null = null;
     let business_banner_url: string | null = null;
 
     mediaFiles.forEach((m) => {
       if (m.purpose === MediaPurpose.PROFILE_PIC) {
         profile_pic_url = m.file_url;
-      } else if (m.purpose === MediaPurpose.BUSINESS_LOGO) {
-        business_logo_url = m.file_url;
       } else if (m.purpose === MediaPurpose.BUSINESS_BANNER) {
         business_banner_url = m.file_url;
       }
@@ -737,12 +730,6 @@ private calculateProfileCompletion(
       business = await this.businessRepository.findOne({
         where: { owner_id: user.id },
       });
-      if (business?.logo_id && !business_logo_url) {
-        const logoFile = await this.mediaRepository.findOne({
-          where: { id: business.logo_id },
-        });
-        if (logoFile) business_logo_url = logoFile.file_url;
-      }
       if (business?.banner_id && !business_banner_url) {
         const bannerFile = await this.mediaRepository.findOne({
           where: { id: business.banner_id },
@@ -763,7 +750,7 @@ private calculateProfileCompletion(
       }
     }
 
-    const completionData = this.calculateProfileCompletion(user, profile_pic_url, business_logo_url, business, business_banner_url);
+    const completionData = this.calculateProfileCompletion(user, profile_pic_url, business, business_banner_url);
     const stats = await this.computeUserStats(user, business);
 
     const { pin_hash: _pin_hash, ...userWithoutPin } = user;
@@ -792,8 +779,6 @@ private calculateProfileCompletion(
         user.role === UserRole.MEMBER ? business?.website || null : undefined,
       gst_number:
         user.role === UserRole.MEMBER ? business?.gst_number || null : undefined,
-      business_logo_url:
-        user.role === UserRole.MEMBER ? business_logo_url : undefined,
       business_banner_url:
         user.role === UserRole.MEMBER ? business_banner_url : undefined,
       business_address:
@@ -854,7 +839,6 @@ private calculateProfileCompletion(
     dto: UpdateProfileDto,
     files?: {
       profile_pic?: Express.Multer.File[];
-      business_logo?: Express.Multer.File[];
       business_banner?: Express.Multer.File[];
     },
   ) {
@@ -1001,15 +985,6 @@ private calculateProfileCompletion(
 
         if (dto.business_pincode !== undefined) {
           businessUpdate.pincode = dto.business_pincode;
-        }
-
-        if (files?.business_logo?.[0]) {
-          const logoMedia = await this.mediaService.replaceUserFile(
-            files.business_logo[0],
-            userId,
-            MediaPurpose.BUSINESS_LOGO,
-          );
-          businessUpdate.logo_id = logoMedia.id;
         }
 
         if (files?.business_banner?.[0]) {

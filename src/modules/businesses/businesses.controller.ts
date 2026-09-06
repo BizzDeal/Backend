@@ -441,12 +441,10 @@ export class BusinessesController {
     status: 403,
     description: 'Forbidden: Insufficient rights.',
   })
-  @UseInterceptors(FileInterceptor('business_logo'))
   async update(
     @Param('id') id: string,
     @CurrentUser() user: User,
     @Body(new ZodValidationPipe(updateBusinessSchema)) dto: UpdateBusinessDto,
-    @UploadedFile() business_logo?: Express.Multer.File,
     @Ip() ip?: string,
   ) {
     return this.businessesService.update(
@@ -454,7 +452,6 @@ export class BusinessesController {
       user.id,
       user.role,
       dto,
-      business_logo,
       ip,
     );
   }

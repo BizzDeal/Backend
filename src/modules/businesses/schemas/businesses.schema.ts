@@ -74,13 +74,6 @@ export class UpdateBusinessDto {
   pincode?: string | null;
 
   @ApiPropertyOptional({
-    type: 'string',
-    format: 'binary',
-    description: 'Replacement business logo file image',
-  })
-  business_logo?: any;
-
-  @ApiPropertyOptional({
     type: String,
     description: 'Video URL for the business profile',
   })
