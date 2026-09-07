@@ -4,9 +4,10 @@ import { Repository } from 'typeorm';
 import { Referral } from './entities/referral.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateReferralSlipDto, ReferralQueryDto, AdminReferralQueryDto, AppreciateReferralDto, AdminDailyStatsQueryDto } from './schemas/referrals.schema';
-import { ReferralType } from '../../common/enums';
+import { ReferralType, NotificationType } from '../../common/enums';
 import { ChatService } from '../chat/chat.service';
 import { BizzCoinsService } from '../bizz-coins/bizz-coins.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ReferralsService {
@@ -17,6 +18,7 @@ export class ReferralsService {
     private userRepo: Repository<User>,
     private chatService: ChatService,
     private bizzCoinsService: BizzCoinsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async createReferralSlip(referrerId: string, dto: CreateReferralSlipDto) {
@@ -44,6 +46,30 @@ export class ReferralsService {
     });
 
     await this.referralRepo.save(referral);
+
+    // Notify the recipient member
+    const referrerUser = await this.userRepo.findOne({
+      where: { id: referrerId },
+      relations: { profile: true },
+    });
+    const referrerName = referrerUser?.profile?.full_name || 'A fellow member';
+
+    try {
+      await this.notificationsService.create({
+        user_id: dto.to_member_id,
+        title: '🤝 New Referral Received!',
+        message: `${referrerName} has sent you a new ${dto.referral_type.toLowerCase()} referral for "${dto.contact_name}".`,
+        type: NotificationType.GENERAL,
+        data: {
+          referral_id: referral.id,
+          referrer_id: referrerId,
+          type: 'REFERRAL',
+          screen: 'referrals',
+        },
+      });
+    } catch (notifErr) {
+      console.error('Failed to dispatch referral received notification:', notifErr);
+    }
 
     return {
       success: true,
@@ -314,6 +340,27 @@ export class ReferralsService {
         coinsAwarded = coinResult.coinsAwarded;
       } catch (err) {
         console.error('Failed to award referral appreciation Bizz Coins:', err);
+      }
+    }
+
+    // Dispatch dedicated in-app and push notification to the referring member
+    if (referral.referrer_id) {
+      try {
+        const costStr = Number(dto.cost_of_business).toLocaleString('en-IN');
+        await this.notificationsService.create({
+          user_id: referral.referrer_id,
+          title: '🌟 Referral Appreciated!',
+          message: `${recipientName} appreciated your referral for ${referral.contact_name}! Business worth ₹${costStr} was closed.`,
+          type: NotificationType.GENERAL,
+          data: {
+            referral_id: referral.id,
+            recipient_id: userId,
+            type: 'REFERRAL_APPRECIATION',
+            screen: 'referrals',
+          },
+        });
+      } catch (notifErr) {
+        console.error('Failed to dispatch referral appreciation notification:', notifErr);
       }
     }
 

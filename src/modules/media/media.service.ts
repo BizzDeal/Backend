@@ -169,6 +169,39 @@ export class MediaService {
   }
 
   /**
+   * Deletes all files for a given user and purpose from storage and DB.
+   */
+  async deleteUserFilesByPurpose(
+    userId: string,
+    purpose: MediaPurpose,
+  ): Promise<void> {
+    const oldFiles = await this.mediaRepository.find({
+      where: { uploaded_by_id: userId, purpose },
+    });
+
+    for (const oldFile of oldFiles) {
+      if (oldFile.public_id) {
+        try {
+          await this.s3Client.send(
+            new DeleteObjectCommand({
+              Bucket: this.bucketName,
+              Key: oldFile.public_id,
+            }),
+          );
+        } catch (err) {
+          this.logger.warn(
+            `Could not delete old storage file (${oldFile.public_id}): ${err instanceof Error ? err.message : err}`,
+          );
+        }
+      }
+    }
+
+    if (oldFiles.length > 0) {
+      await this.mediaRepository.remove(oldFiles);
+    }
+  }
+
+  /**
    * Deletes a specific media file record and its corresponding storage object.
    */
   async deleteFileById(mediaId: string): Promise<void> {

@@ -174,7 +174,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Update Own Profile',
     description:
-      'Updates the profile details of the currently authenticated user along with replacement file uploads (profile_pic and business_banner).',
+      'Updates the profile details of the currently authenticated user along with replacement file uploads (profile_pic and business_banner) or removal flags (remove_profile_pic and remove_business_banner).',
   })
   @ApiResponse({
     status: 200,

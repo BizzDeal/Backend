@@ -7,6 +7,7 @@ import { ReferralsService } from './referrals.service';
 import { ReferralsController } from './referrals.controller';
 import { ChatModule } from '../chat/chat.module';
 import { BizzCoinsModule } from '../bizz-coins/bizz-coins.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { BizzCoinsModule } from '../bizz-coins/bizz-coins.module';
     }),
     ChatModule,
     BizzCoinsModule,
+    NotificationsModule,
   ],
   controllers: [ReferralsController],
   providers: [ReferralsService],

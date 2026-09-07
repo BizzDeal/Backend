@@ -558,6 +558,7 @@ export class ChatService implements OnModuleInit {
     }
     
     if (group) {
+      await this.addUserToDefaultGroup(user.id);
       return this.sendMessage(group.id, message, MessageType.TEXT, null, user);
     }
     

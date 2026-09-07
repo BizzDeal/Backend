@@ -725,6 +725,7 @@ export class UsersService {
     let primary_business_category_name: string | null = null;
     let primary_business_state_name: string | null = null;
     let primary_business_district_name: string | null = null;
+    let primary_business_banner_url: string | null = null;
     
     if (user.role === UserRole.MEMBER) {
       business = await this.businessRepository.findOne({
@@ -739,7 +740,7 @@ export class UsersService {
     } else if (user.role === UserRole.CUSTOMER && user.profile?.primary_business_id) {
       const pb = await this.businessRepository.findOne({
         where: { id: user.profile.primary_business_id },
-        relations: { category: true, state: true, district: true }
+        relations: { category: true, state: true, district: true, banner: true }
       });
       if (pb) {
         primary_business_name = pb.name;
@@ -747,6 +748,7 @@ export class UsersService {
         primary_business_category_name = pb.category?.name || null;
         primary_business_state_name = pb.state?.name || null;
         primary_business_district_name = pb.district?.name || null;
+        primary_business_banner_url = pb.banner?.file_url || null;
       }
     }
 
@@ -803,6 +805,8 @@ export class UsersService {
         user.role === UserRole.CUSTOMER ? primary_business_state_name : undefined,
       primary_business_district_name:
         user.role === UserRole.CUSTOMER ? primary_business_district_name : undefined,
+      primary_business_banner_url:
+        user.role === UserRole.CUSTOMER ? primary_business_banner_url : undefined,
     };
   }
 
@@ -920,7 +924,12 @@ export class UsersService {
       }
     }
 
-    if (files?.profile_pic?.[0]) {
+    if (dto.remove_profile_pic) {
+      await this.mediaService.deleteUserFilesByPurpose(
+        userId,
+        MediaPurpose.PROFILE_PIC,
+      );
+    } else if (files?.profile_pic?.[0]) {
       await this.mediaService.replaceUserFile(
         files.profile_pic[0],
         userId,
@@ -987,7 +996,17 @@ export class UsersService {
           businessUpdate.pincode = dto.business_pincode;
         }
 
-        if (files?.business_banner?.[0]) {
+        if (dto.remove_business_banner) {
+          await this.mediaService.deleteUserFilesByPurpose(
+            userId,
+            MediaPurpose.BUSINESS_BANNER,
+          );
+          if (business.banner_id) {
+            const oldBannerId = business.banner_id;
+            businessUpdate.banner_id = null;
+            await this.mediaService.deleteFileById(oldBannerId);
+          }
+        } else if (files?.business_banner?.[0]) {
           const bannerMedia = await this.mediaService.replaceUserFile(
             files.business_banner[0],
             userId,

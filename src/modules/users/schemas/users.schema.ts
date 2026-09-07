@@ -37,6 +37,20 @@ export const updateProfileSchema = z.object({
   business_state_id: z.string().uuid().optional().nullable().or(z.literal('')),
   business_district_id: z.string().uuid('Valid district UUID is required').optional().nullable().or(z.literal('')),
   business_pincode: z.string().regex(/^[1-9][0-9]{5}$/, 'Valid 6-digit pincode is required').optional().nullable().or(z.literal('')),
+  remove_profile_pic: z
+    .preprocess((val) => {
+      if (val === true || val === 'true') return true;
+      if (val === false || val === 'false') return false;
+      return undefined;
+    }, z.boolean().optional())
+    .optional(),
+  remove_business_banner: z
+    .preprocess((val) => {
+      if (val === true || val === 'true') return true;
+      if (val === false || val === 'false') return false;
+      return undefined;
+    }, z.boolean().optional())
+    .optional(),
 });
 
 export class UpdateProfileDto {
@@ -172,6 +186,20 @@ export class UpdateProfileDto {
     description: 'Replacement business banner image upload (for members)',
   })
   business_banner?: any;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Flag to remove current profile picture',
+    example: false,
+  })
+  remove_profile_pic?: boolean;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Flag to remove current business banner (for members)',
+    example: false,
+  })
+  remove_business_banner?: boolean;
 }
 
 export const memberActionSchema = z.object({
