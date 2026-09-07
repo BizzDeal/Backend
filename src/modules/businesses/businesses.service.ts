@@ -32,6 +32,8 @@ import {
   BusinessQueryDto,
   CreateCategoryDto,
   UpdateCategoryDto,
+  CategoryMemberDto,
+  CategoryWithMember,
 } from './schemas/businesses.schema';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { SettingsService } from '../settings/settings.service';
@@ -67,11 +69,111 @@ export class BusinessesService {
     return uuidRegex.test(str);
   }
 
-  async getCategories(query?: { page?: number; limit?: number; search?: string }): Promise<{
+  private async attachMembersToCategories(
+    categories: BusinessCategory[],
+    districtId?: string,
+  ): Promise<CategoryWithMember[]> {
+    if (categories.length === 0) {
+      return [];
+    }
+
+    const categoryIds = categories.map((c) => c.id);
+    const qb = this.businessRepository
+      .createQueryBuilder('business')
+      .leftJoinAndSelect('business.owner', 'owner')
+      .leftJoinAndSelect('owner.profile', 'profile')
+      .leftJoinAndSelect('business.district', 'district')
+      .leftJoinAndSelect('business.state', 'state')
+      .where('business.category_id IN (:...categoryIds)', { categoryIds })
+      .andWhere('business.status = :status', { status: BusinessStatus.ACTIVE })
+      .orderBy('business.created_at', 'ASC');
+
+    if (districtId) {
+      qb.andWhere(
+        '(business.district_id = :districtId OR profile.district_id = :districtId)',
+        { districtId },
+      );
+    }
+
+    const activeBusinesses = await qb.getMany();
+
+    const ownerIds = activeBusinesses
+      .map((b) => b.owner_id)
+      .filter((id): id is string => !!id);
+
+    const profilePicMap = new Map<string, string>();
+    if (ownerIds.length > 0) {
+      const profilePics = await this.mediaRepository.find({
+        where: {
+          uploaded_by_id: In(ownerIds),
+          purpose: MediaPurpose.PROFILE_PIC,
+        },
+      });
+      profilePics.forEach((p) => {
+        if (p.uploaded_by_id) {
+          profilePicMap.set(p.uploaded_by_id, p.file_url);
+        }
+      });
+    }
+
+    const memberMap = new Map<string, CategoryMemberDto>();
+    for (const biz of activeBusinesses) {
+      if (!memberMap.has(biz.category_id)) {
+        const ownerName =
+          biz.owner?.profile?.full_name || biz.owner?.phone || biz.name;
+        const initials = (ownerName || biz.name || 'BD')
+          .split(' ')
+          .map((w: string) => w[0])
+          .slice(0, 2)
+          .join('')
+          .toUpperCase();
+
+        memberMap.set(biz.category_id, {
+          id: biz.id,
+          name: ownerName,
+          business_name: biz.name,
+          profile_pic_url: profilePicMap.get(biz.owner_id) || null,
+          phone: biz.owner?.phone || '',
+          whatsapp: biz.owner?.profile?.whatsapp || biz.owner?.phone || '',
+          website: biz.website || null,
+          address: biz.address || null,
+          district_name: biz.district?.name || null,
+          state_name: biz.state?.name || null,
+          owner_id: biz.owner_id,
+          initials,
+          description: biz.description || null,
+        });
+      }
+    }
+
+    return categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description,
+      icon: cat.icon,
+      is_active: cat.is_active,
+      created_at: cat.created_at,
+      updated_at: cat.updated_at,
+      member: memberMap.get(cat.id) || null,
+    }));
+  }
+
+  async getCategories(query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    district?: string;
+  }): Promise<{
     success: boolean;
     count?: number;
-    data: BusinessCategory[];
-    meta?: any;
+    data: CategoryWithMember[];
+    meta?: {
+      currentPage: number;
+      itemsPerPage: number;
+      totalItems: number;
+      totalPages: number;
+    };
   }> {
     if (query?.page && query?.limit) {
       const qb = this.categoryRepository.createQueryBuilder('category');
@@ -92,10 +194,14 @@ export class BusinessesService {
       qb.take(limit);
 
       const [categories, totalItems] = await qb.getManyAndCount();
+      const enrichedCategories = await this.attachMembersToCategories(
+        categories,
+        query.district,
+      );
 
       return {
         success: true,
-        data: categories,
+        data: enrichedCategories,
         meta: {
           currentPage: page,
           itemsPerPage: limit,
@@ -109,10 +215,15 @@ export class BusinessesService {
         order: { name: 'ASC' },
       });
 
+      const enrichedCategories = await this.attachMembersToCategories(
+        categories,
+        query?.district,
+      );
+
       return {
         success: true,
-        count: categories.length,
-        data: categories,
+        count: enrichedCategories.length,
+        data: enrichedCategories,
       };
     }
   }
@@ -158,6 +269,25 @@ export class BusinessesService {
         where: { id: In(mediaIds) },
       });
       mediaFiles.forEach((m) => mediaMap.set(m.id, m.file_url));
+    }
+
+    const ownerIds = businesses
+      .map((b) => b.owner_id)
+      .filter((id): id is string => !!id);
+
+    const profilePicMap = new Map<string, string>();
+    if (ownerIds.length > 0) {
+      const profilePics = await this.mediaRepository.find({
+        where: {
+          uploaded_by_id: In(ownerIds),
+          purpose: MediaPurpose.PROFILE_PIC,
+        },
+      });
+      profilePics.forEach((p) => {
+        if (p.uploaded_by_id) {
+          profilePicMap.set(p.uploaded_by_id, p.file_url);
+        }
+      });
     }
 
     const businessIds = businesses.map((b) => b.id);
@@ -218,15 +348,19 @@ export class BusinessesService {
         has_bizz_coin_offer: hasBizzCoinOffer,
         logo_url: null,
         logoUrl: null,
+        profile_pic_url: profilePicMap.get(b.owner_id) || null,
         banner_url: b.banner_id ? mediaMap.get(b.banner_id) || null : null,
         bannerUrl: b.banner_id ? mediaMap.get(b.banner_id) || null : null,
       };
     });
   }
 
-  async getCategoryById(idOrSlug: string): Promise<{
+  async getCategoryById(
+    idOrSlug: string,
+    districtId?: string,
+  ): Promise<{
     success: boolean;
-    data: BusinessCategory;
+    data: CategoryWithMember;
   }> {
     let category: BusinessCategory | null = null;
     if (this.isUUID(idOrSlug)) {
@@ -243,9 +377,14 @@ export class BusinessesService {
       throw new NotFoundException('Business category not found');
     }
 
+    const [withMember] = await this.attachMembersToCategories(
+      [category],
+      districtId,
+    );
+
     return {
       success: true,
-      data: category,
+      data: withMember,
     };
   }
 

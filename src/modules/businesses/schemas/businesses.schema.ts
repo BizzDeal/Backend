@@ -362,3 +362,56 @@ export class UpdateCategoryDto {
   })
   is_active?: boolean;
 }
+
+export class CategoryMemberDto {
+  @ApiProperty({ type: String, description: 'Business ID' })
+  id: string;
+
+  @ApiProperty({ type: String, description: 'Member full name or business name' })
+  name: string;
+
+  @ApiProperty({ type: String, description: 'Business name' })
+  business_name: string;
+
+  @ApiPropertyOptional({ type: String, description: 'Profile picture URL', nullable: true })
+  profile_pic_url: string | null;
+
+  @ApiProperty({ type: String, description: 'Contact phone number' })
+  phone: string;
+
+  @ApiProperty({ type: String, description: 'WhatsApp phone number' })
+  whatsapp: string;
+
+  @ApiPropertyOptional({ type: String, description: 'Website URL', nullable: true })
+  website: string | null;
+
+  @ApiPropertyOptional({ type: String, description: 'Business address', nullable: true })
+  address: string | null;
+
+  @ApiPropertyOptional({ type: String, description: 'District name', nullable: true })
+  district_name: string | null;
+
+  @ApiPropertyOptional({ type: String, description: 'State name', nullable: true })
+  state_name: string | null;
+
+  @ApiProperty({ type: String, description: 'Owner User ID' })
+  owner_id: string;
+
+  @ApiProperty({ type: String, description: 'Initials for avatar fallback' })
+  initials: string;
+
+  @ApiPropertyOptional({ type: String, description: 'Business description', nullable: true })
+  description: string | null;
+}
+
+export interface CategoryWithMember {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+  member: CategoryMemberDto | null;
+}

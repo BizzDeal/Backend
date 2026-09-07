@@ -69,7 +69,9 @@ export class BusinessesController {
     status: 200,
     description: 'List of business categories successfully retrieved.',
   })
-  async getCategories(@Query() query: any) {
+  async getCategories(
+    @Query() query: { page?: number; limit?: number; search?: string; district?: string },
+  ) {
     return this.businessesService.getCategories(query);
   }
 
@@ -88,8 +90,11 @@ export class BusinessesController {
     status: 404,
     description: 'Business category not found.',
   })
-  async getCategoryById(@Param('id') id: string) {
-    return this.businessesService.getCategoryById(id);
+  async getCategoryById(
+    @Param('id') id: string,
+    @Query('district') district?: string,
+  ) {
+    return this.businessesService.getCategoryById(id, district);
   }
 
   @Post('categories')
