@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { FeaturedBusinessRequest } from './entities/featured-business-request.entity';
 import { BusinessProfile } from '../businesses/entities/business-profile.entity';
 import { BusinessCategory } from '../businesses/entities/business-category.entity';
@@ -38,6 +38,8 @@ export class FeaturedBusinessService {
     private readonly businessRepo: Repository<BusinessProfile>,
     @InjectRepository(BusinessCategory)
     private readonly categoryRepo: Repository<BusinessCategory>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private readonly mediaService: MediaService,
     private readonly notificationsService: NotificationsService,
     private readonly appEventsGateway: AppEventsGateway,
@@ -130,6 +132,15 @@ export class FeaturedBusinessService {
       business = await this.businessRepo.findOne({
         where: { owner_id: user.id },
       });
+      if (!business) {
+        const userWithProfile = await this.userRepo.findOne({
+          where: { id: user.id },
+          relations: { business_profile: true },
+        });
+        if (userWithProfile?.business_profile) {
+          business = userWithProfile.business_profile;
+        }
+      }
       if (!business) {
         throw new NotFoundException(
           'Could not find a business profile associated with your account.',
@@ -265,13 +276,38 @@ export class FeaturedBusinessService {
    * Get member's own requests
    */
   async getMyRequests(user: User): Promise<FeaturedBusinessRequest[]> {
-    const business = await this.businessRepo.findOne({
+    const businesses = await this.businessRepo.find({
       where: { owner_id: user.id },
     });
-    if (!business) return [];
+    const businessIds = businesses.map((b) => b.id);
+
+    const userWithProfile = await this.userRepo.findOne({
+      where: { id: user.id },
+      relations: { business_profile: true },
+    });
+    if (
+      userWithProfile?.business_profile?.id &&
+      !businessIds.includes(userWithProfile.business_profile.id)
+    ) {
+      businessIds.push(userWithProfile.business_profile.id);
+    }
+
+    if (businessIds.length === 0) {
+      if (user.role === UserRole.ADMIN) {
+        return this.featuredRequestRepo.find({
+          relations: {
+            banner: true,
+            category: true,
+            business: true,
+          },
+          order: { created_at: 'DESC' },
+        });
+      }
+      return [];
+    }
 
     return this.featuredRequestRepo.find({
-      where: { business_id: business.id },
+      where: { business_id: In(businessIds) },
       relations: {
         banner: true,
         category: true,

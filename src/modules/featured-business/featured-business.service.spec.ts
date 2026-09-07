@@ -68,12 +68,17 @@ describe('FeaturedBusinessService', () => {
       emitToUser: jest.fn(),
     };
 
+    const userRepo = {
+      findOne: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FeaturedBusinessService,
         { provide: getRepositoryToken(FeaturedBusinessRequest), useValue: featuredRequestRepo },
         { provide: getRepositoryToken(BusinessProfile), useValue: businessRepo },
         { provide: getRepositoryToken(BusinessCategory), useValue: categoryRepo },
+        { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: MediaService, useValue: mediaService },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: AppEventsGateway, useValue: appEventsGateway },
