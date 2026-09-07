@@ -6,14 +6,17 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
-import { OfferType, DiscountType, OfferStatus } from '../../../common/enums';
+import { FeaturedRequestStatus } from '../../../common/enums';
 import { BusinessProfile } from '../../businesses/entities/business-profile.entity';
+import { BusinessCategory } from '../../businesses/entities/business-category.entity';
 import { MediaFile } from '../../media/entities/media-file.entity';
 import { User } from '../../users/entities/user.entity';
 
-@Entity('offers')
-export class Offer {
+@Entity('featured_business_requests')
+@Index(['category_id', 'status'])
+export class FeaturedBusinessRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -24,27 +27,25 @@ export class Offer {
   @JoinColumn({ name: 'business_id' })
   business: BusinessProfile;
 
+  @Column({ type: 'uuid' })
+  category_id: string;
+
+  @ManyToOne(() => BusinessCategory, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'category_id' })
+  category: BusinessCategory;
+
   @Column({ type: 'varchar', length: 255 })
   title: string;
 
   @Column({ type: 'text' })
   description: string;
 
-  @Column({
-    type: 'enum',
-    enum: OfferType,
-  })
-  offer_type: OfferType;
+  @Column({ type: 'uuid', nullable: true })
+  banner_id: string | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  discount_value: number | null;
-
-  @Column({
-    type: 'enum',
-    enum: DiscountType,
-    nullable: true,
-  })
-  discount_type: DiscountType | null;
+  @ManyToOne(() => MediaFile, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'banner_id' })
+  banner: MediaFile | null;
 
   @Column({ type: 'timestamptz' })
   start_date: Date;
@@ -52,19 +53,15 @@ export class Offer {
   @Column({ type: 'timestamptz' })
   end_date: Date;
 
-  @Column({ type: 'uuid', nullable: true })
-  image_id: string | null;
-
-  @ManyToOne(() => MediaFile, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'image_id' })
-  image: MediaFile | null;
-
   @Column({
     type: 'enum',
-    enum: OfferStatus,
-    default: OfferStatus.PENDING,
+    enum: FeaturedRequestStatus,
+    default: FeaturedRequestStatus.PENDING,
   })
-  status: OfferStatus;
+  status: FeaturedRequestStatus;
+
+  @Column({ type: 'text', nullable: true })
+  rejection_reason: string | null;
 
   @Column({ type: 'uuid', nullable: true })
   approved_by_id: string | null;
@@ -75,9 +72,6 @@ export class Offer {
 
   @Column({ type: 'timestamptz', nullable: true })
   approved_at: Date | null;
-
-  @Column({ type: 'boolean', default: false })
-  is_featured: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

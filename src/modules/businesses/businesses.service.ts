@@ -401,7 +401,8 @@ export class BusinessesService {
       !!query.email ||
       !!query.address ||
       !!query.state ||
-      !!query.district;
+      !!query.district ||
+      !!query.exclude_districts;
 
     const needsCategoryJoin =
       !!searchKeyword ||
@@ -433,6 +434,15 @@ export class BusinessesService {
       qb.andWhere('(business.district_id = :district OR profile.district_id = :district)', {
         district: query.district,
       });
+    }
+    if (query.exclude_districts) {
+      const excluded = query.exclude_districts.split(',').map((s) => s.trim()).filter(Boolean);
+      if (excluded.length > 0) {
+        qb.andWhere(
+          '((business.district_id IS NULL OR business.district_id NOT IN (:...excludeDistricts)) AND (profile.district_id IS NULL OR profile.district_id NOT IN (:...excludeDistricts)))',
+          { excludeDistricts: excluded },
+        );
+      }
     }
 
     if (searchKeyword) {

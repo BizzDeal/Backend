@@ -100,7 +100,7 @@ export class BizzCoinsService {
     return {
       has_active_offer: hasActiveOffer,
       is_featured: isFeatured,
-      can_redeem: isFeatured || hasActiveOffer,
+      can_redeem: hasActiveOffer,
       business_id: business.id,
     };
   }
@@ -139,9 +139,9 @@ export class BizzCoinsService {
         },
       });
 
-      if (!activeOffer && !business.is_featured) {
+      if (!activeOffer) {
         throw new BadRequestException(
-          'You must have a featured business or an active Bizz Coins offer to redeem Bizz Coins for customers.',
+          'You must have an active Bizz Coins offer to redeem Bizz Coins for customers.',
         );
       }
     }

@@ -318,6 +318,8 @@ export class UsersService {
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('profile.state', 'state')
       .leftJoinAndSelect('profile.district', 'district')
+      .leftJoinAndSelect('user.business_profile', 'business_profile')
+      .leftJoinAndSelect('business_profile.category', 'business_category')
       .where('user.role = :role', { role: UserRole.MEMBER });
       
     if (status) {
@@ -326,18 +328,24 @@ export class UsersService {
       qb.andWhere('user.status != :unverifiedStatus', { unverifiedStatus: UserStatus.UNVERIFIED });
     }
     if (query.state) {
-      qb.andWhere('profile.state_id = :state', { state: query.state });
+      qb.andWhere('(profile.state_id = :state OR business_profile.state_id = :state)', { state: query.state });
     }
     if (query.district) {
-      qb.andWhere('profile.district_id = :district', { district: query.district });
+      qb.andWhere('(profile.district_id = :district OR business_profile.district_id = :district)', { district: query.district });
     }
     if (query.exclude_districts) {
-      qb.andWhere('profile.district_id NOT IN (:...exclude_districts)', { exclude_districts: query.exclude_districts.split(',') });
+      const excluded = query.exclude_districts.split(',').map((s) => s.trim()).filter(Boolean);
+      if (excluded.length > 0) {
+        qb.andWhere(
+          '((profile.district_id IS NULL OR profile.district_id NOT IN (:...exclude_districts)) AND (business_profile.district_id IS NULL OR business_profile.district_id NOT IN (:...exclude_districts)))',
+          { exclude_districts: excluded }
+        );
+      }
     }
     if (query.search) {
       qb.andWhere(
-        '(profile.full_name ILIKE :kw OR user.email ILIKE :kw OR user.phone ILIKE :kw OR profile.whatsapp ILIKE :kw)',
-        { kw: `%${query.search}%` }
+        '(profile.full_name ILIKE :kw OR business_profile.name ILIKE :kw OR business_category.name ILIKE :kw OR user.email ILIKE :kw OR user.phone ILIKE :kw OR profile.whatsapp ILIKE :kw)',
+        { kw: `%${query.search.trim()}%` }
       );
     }
 
@@ -393,23 +401,28 @@ export class UsersService {
 
     const data = members.map((user) => {
       const { pin_hash: _pin_hash, ...userWithoutPin } = user;
-      const b = businessMap.get(user.id);
+      const b = businessMap.get(user.id) || user.business_profile;
+      const business_name = b?.name || null;
+      const category_name = b?.category?.name || null;
       return {
         ...userWithoutPin,
         full_name: user.profile?.full_name || null,
         whatsapp: user.profile?.whatsapp || null,
         address: user.profile?.address || null,
-        state_id: user.profile?.state_id || null,
+        state_id: user.profile?.state_id || b?.state_id || null,
         state_name: user.profile?.state?.name || null,
-        district_id: user.profile?.district_id || null,
+        district_id: user.profile?.district_id || b?.district_id || null,
         district_name: user.profile?.district?.name || null,
+        business_district_id: b?.district_id || null,
         profile_pic_url: profilePicMap.get(user.id) || null,
         business_id: b?.id || null,
+        business_name,
+        category_name,
         businessProfile: b ? {
           business_name: b.name,
           description: b.description,
           category_id: b.category_id,
-          category_name: b.category?.name || null,
+          category_name,
         } : undefined
       };
     });

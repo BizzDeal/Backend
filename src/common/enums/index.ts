@@ -77,6 +77,15 @@ export enum NotificationType {
   WALLET = 'WALLET',
   MEETING = 'MEETING',
   CHAT = 'CHAT',
+  FEATURED_REQUEST = 'FEATURED_REQUEST',
+}
+
+export enum FeaturedRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED',
+  CANCELLED = 'CANCELLED',
 }
 
 export enum MediaType {

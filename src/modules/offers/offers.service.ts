@@ -106,20 +106,7 @@ export class OffersService {
         if (imageId) {
           existingBizzCoinsOffer.image_id = imageId;
         }
-        if (dto.video_url !== undefined) {
-          existingBizzCoinsOffer.video_url = dto.video_url;
-        }
         const updated = await this.offerRepository.save(existingBizzCoinsOffer);
-        if (isAdmin) {
-          const b = await this.businessRepository.findOne({ where: { id: dto.business_id } });
-          if (b) {
-            if (b.category_id) {
-              await this.businessRepository.update({ category_id: b.category_id, is_featured: true }, { is_featured: false });
-            }
-            b.is_featured = true;
-            await this.businessRepository.save(b);
-          }
-        }
         return this.transformOfferAsync(updated);
       }
     }
@@ -137,21 +124,9 @@ export class OffersService {
       status: isAdmin ? OfferStatus.APPROVED : OfferStatus.PENDING,
       approved_by_id: isAdmin ? user.id : null,
       approved_at: isAdmin ? new Date() : null,
-      video_url: dto.video_url ?? null,
     });
 
     const savedOffer = await this.offerRepository.save(offer);
-
-    if (isAdmin && isBizzCoins) {
-      const b = await this.businessRepository.findOne({ where: { id: dto.business_id } });
-      if (b) {
-        if (b.category_id) {
-          await this.businessRepository.update({ category_id: b.category_id, is_featured: true }, { is_featured: false });
-        }
-        b.is_featured = true;
-        await this.businessRepository.save(b);
-      }
-    }
 
     return this.transformOfferAsync(savedOffer);
   }
@@ -393,7 +368,6 @@ export class OffersService {
     if (dto.start_date !== undefined)
       offer.start_date = new Date(dto.start_date);
     if (dto.end_date !== undefined) offer.end_date = new Date(dto.end_date);
-    if (dto.video_url !== undefined) offer.video_url = dto.video_url;
     if (isAdmin && dto.is_featured !== undefined) offer.is_featured = dto.is_featured;
 
     if (isAdmin && dto.status) {
@@ -402,13 +376,6 @@ export class OffersService {
       if (dto.status === OfferStatus.APPROVED) {
         offer.approved_by_id = user.id;
         offer.approved_at = new Date();
-        if (offer.offer_type === OfferType.BIZZ_COINS && offer.business_id) {
-          const b = await this.businessRepository.findOne({ where: { id: offer.business_id } });
-          if (b) {
-            b.is_featured = true;
-            await this.businessRepository.save(b);
-          }
-        }
       }
       if (oldStatus !== dto.status && (dto.status === OfferStatus.APPROVED || dto.status === OfferStatus.REJECTED)) {
         await this.notifyMemberOfferStatus(offer, dto.status === OfferStatus.APPROVED ? 'APPROVED' : 'REJECTED');
@@ -531,22 +498,6 @@ export class OffersService {
 
     const savedOffer = await this.offerRepository.save(offer);
 
-    if (offer.offer_type === OfferType.BIZZ_COINS && offer.business_id) {
-      const business = await this.businessRepository.findOne({
-        where: { id: offer.business_id },
-      });
-      if (business) {
-        if (business.category_id) {
-          await this.businessRepository.update(
-            { category_id: business.category_id, is_featured: true },
-            { is_featured: false },
-          );
-        }
-        business.is_featured = true;
-        await this.businessRepository.save(business);
-      }
-    }
-
     await this.notifyMemberOfferStatus(offer, 'APPROVED');
 
     delete (savedOffer as any).business;
@@ -630,7 +581,7 @@ export class OffersService {
         : `❌ ${offerTypeName} Request Update`;
 
       const message = status === 'APPROVED'
-        ? `Your ${offerTypeName.toLowerCase()} "${offer.title}" has been approved by Admin! ${isBizzCoins ? 'Your business is now a Featured Business.' : ''}`
+        ? `Your ${offerTypeName.toLowerCase()} "${offer.title}" has been approved by Admin!`
         : `Your ${offerTypeName.toLowerCase()} "${offer.title}" was rejected by Admin.${reason ? ' Reason: ' + reason : ''}`;
 
       await this.notificationsService.create({
@@ -653,7 +604,6 @@ export class OffersService {
         title: offer.title,
         status,
         business_id: offer.business_id,
-        is_featured: isBizzCoins && status === 'APPROVED',
         reason,
       });
     } catch (err) {

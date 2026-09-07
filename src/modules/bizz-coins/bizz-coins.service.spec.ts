@@ -153,6 +153,7 @@ describe('BizzCoinsService', () => {
 
     it('should set primary store and track customer visit when customer has no primary store', async () => {
       mockBusinessRepo.findOne.mockResolvedValue(mockBusiness);
+      mockOfferRepo.findOne.mockResolvedValue({ id: 'offer-1', offer_type: OfferType.BIZZ_COINS, status: OfferStatus.APPROVED });
       mockUserRepo.findOne.mockResolvedValue(mockCustomer);
       mockWalletRepo.findOne.mockResolvedValue({ id: 'wallet-1', user_id: 'cust-1', balance: 50 });
 
