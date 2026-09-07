@@ -25,11 +25,13 @@ import {
 import { ChatService } from './chat.service';
 import { MediaService } from '../media/media.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { ActiveMemberGuard } from '../../common/guards/active-member.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { User } from '../users/entities/user.entity';
-import { MessageType, MediaPurpose } from '../../common/enums';
+import { MessageType, MediaPurpose, UserRole } from '../../common/enums';
 import {
   CreateConversationDto,
   SendMessageDto,
@@ -46,7 +48,8 @@ import { Query } from '@nestjs/common';
 
 @ApiTags('Chat')
 @Controller('chat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.MEMBER, UserRole.ADMIN)
 @ApiBearerAuth()
 export class ChatController {
   constructor(

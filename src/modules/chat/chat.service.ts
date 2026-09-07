@@ -81,7 +81,11 @@ export class ChatService implements OnModuleInit {
 
   async addUserToDefaultGroup(userId: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user || user.status === UserStatus.UNVERIFIED) {
+    if (
+      !user ||
+      user.status === UserStatus.UNVERIFIED ||
+      (user.role !== UserRole.MEMBER && user.role !== UserRole.ADMIN)
+    ) {
       return;
     }
 
@@ -151,8 +155,10 @@ export class ChatService implements OnModuleInit {
   }
 
   async findConversations(user: User): Promise<any[]> {
-    // Also ensuring user is in the default group just in case
-    await this.addUserToDefaultGroup(user.id);
+    // Only members and admins belong in the default community group
+    if (user.role === UserRole.MEMBER || user.role === UserRole.ADMIN) {
+      await this.addUserToDefaultGroup(user.id);
+    }
 
     const participants = await this.participantRepository.find({
       where: { user_id: user.id },
@@ -558,7 +564,9 @@ export class ChatService implements OnModuleInit {
     }
     
     if (group) {
-      await this.addUserToDefaultGroup(user.id);
+      if (user.role === UserRole.MEMBER || user.role === UserRole.ADMIN) {
+        await this.addUserToDefaultGroup(user.id);
+      }
       return this.sendMessage(group.id, message, MessageType.TEXT, null, user);
     }
     

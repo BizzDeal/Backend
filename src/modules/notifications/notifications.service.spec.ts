@@ -20,6 +20,7 @@ describe('NotificationsService', () => {
   let deviceRepo: jest.Mocked<Repository<UserDevice>>;
   let firebaseService: jest.Mocked<FirebaseService>;
   let userRepo: jest.Mocked<Repository<User>>;
+  let qbMock: any;
 
   const mockUser: User = {
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -67,6 +68,14 @@ describe('NotificationsService', () => {
   };
 
   beforeEach(async () => {
+    qbMock = {
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([[mockNotification], 1]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
@@ -78,6 +87,7 @@ describe('NotificationsService', () => {
             find: jest.fn(),
             findOne: jest.fn(),
             remove: jest.fn(),
+            createQueryBuilder: jest.fn().mockImplementation(() => qbMock),
           },
         },
         {
@@ -205,31 +215,41 @@ describe('NotificationsService', () => {
 
   describe('findAll', () => {
     it('should filter by user_id for non-admin users', async () => {
-      notificationRepo.find.mockResolvedValue([mockNotification]);
+      qbMock.andWhere.mockClear();
       const result = await service.findAll(mockUser);
-      expect(result).toEqual([mockNotification]);
-      expect(notificationRepo.find).toHaveBeenCalledWith({
-        where: { user_id: mockUser.id },
-        order: { created_at: 'DESC' },
-      });
+      expect(result.data).toEqual([mockNotification]);
+      expect(qbMock.andWhere).toHaveBeenCalledWith('notif.user_id = :userId', { userId: mockUser.id });
+    });
+
+    it('should exclude member-only notifications for customer users', async () => {
+      qbMock.andWhere.mockClear();
+      const customerUser = { ...mockUser, role: UserRole.CUSTOMER };
+      const result = await service.findAll(customerUser);
+      expect(result.data).toEqual([mockNotification]);
+      expect(qbMock.andWhere).toHaveBeenCalledWith('notif.user_id = :userId', { userId: customerUser.id });
+      expect(qbMock.andWhere).toHaveBeenCalledWith(
+        'notif.type NOT IN (:...excludedMemberTypes)',
+        expect.objectContaining({
+          excludedMemberTypes: [
+            NotificationType.CHAT,
+            NotificationType.MEETING,
+            NotificationType.FEATURED_REQUEST,
+          ],
+        }),
+      );
     });
 
     it('should not restrict by user_id for admin users unless specified', async () => {
-      notificationRepo.find.mockResolvedValue([mockNotification]);
+      qbMock.andWhere.mockClear();
       await service.findAll(mockAdmin, { is_read: false });
-      expect(notificationRepo.find).toHaveBeenCalledWith({
-        where: { is_read: false },
-        order: { created_at: 'DESC' },
-      });
+      expect(qbMock.andWhere).not.toHaveBeenCalledWith('notif.user_id = :userId', expect.anything());
+      expect(qbMock.andWhere).toHaveBeenCalledWith('notif.is_read = :isRead', { isRead: false });
     });
 
     it('should filter by query.user_id for admin users when specified', async () => {
-      notificationRepo.find.mockResolvedValue([mockNotification]);
+      qbMock.andWhere.mockClear();
       await service.findAll(mockAdmin, { user_id: mockUser.id });
-      expect(notificationRepo.find).toHaveBeenCalledWith({
-        where: { user_id: mockUser.id },
-        order: { created_at: 'DESC' },
-      });
+      expect(qbMock.andWhere).toHaveBeenCalledWith('notif.user_id = :userId', { userId: mockUser.id });
     });
   });
 

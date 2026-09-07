@@ -35,6 +35,24 @@ export class NotificationsService {
     const qb = this.notificationRepository.createQueryBuilder('notif');
     if (user.role !== UserRole.ADMIN) {
       qb.andWhere('notif.user_id = :userId', { userId: user.id });
+      if (user.role === UserRole.CUSTOMER) {
+        qb.andWhere('notif.type NOT IN (:...excludedMemberTypes)', {
+          excludedMemberTypes: [
+            NotificationType.CHAT,
+            NotificationType.MEETING,
+            NotificationType.FEATURED_REQUEST,
+          ],
+        });
+        qb.andWhere(
+          "(notif.data->>'audience' IS NULL OR notif.data->>'audience' != 'ALL_MEMBERS')",
+        );
+        qb.andWhere(
+          "(notif.data->>'screen' IS NULL OR notif.data->>'screen' != 'referrals')",
+        );
+        qb.andWhere(
+          "(notif.data->>'type' IS NULL OR notif.data->>'type' NOT IN ('REFERRAL', 'REFERRAL_APPRECIATION'))",
+        );
+      }
     } else if (query?.user_id) {
       qb.andWhere('notif.user_id = :userId', { userId: query.user_id });
     }
