@@ -131,8 +131,11 @@ export class AuthService {
     }
 
     if (user.status === UserStatus.REJECTED) {
+      const reasonSuffix = user.rejection_reason
+        ? ` Reason: ${user.rejection_reason}`
+        : '';
       throw new UnauthorizedException(
-        'Your registration request was rejected.',
+        `Your registration request was rejected.${reasonSuffix}`,
       );
     }
 

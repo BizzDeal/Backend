@@ -41,6 +41,8 @@ import {
   OfferQueryDto,
   offerActionSchema,
   OfferActionDto,
+  rejectOfferSchema,
+  RejectOfferDto,
   featureOfferSchema,
   FeatureOfferDto,
 } from './schemas/offers.schema';
@@ -224,7 +226,7 @@ export class OffersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Reject Offer (Admin Only)',
-    description: 'Rejects a pending offer with an optional reason.',
+    description: 'Rejects a pending offer with a reason.',
   })
   @ApiResponse({
     status: 200,
@@ -236,7 +238,7 @@ export class OffersController {
   })
   async reject(
     @CurrentUser() user: User,
-    @Body(new ZodValidationPipe(offerActionSchema)) dto: OfferActionDto,
+    @Body(new ZodValidationPipe(rejectOfferSchema)) dto: RejectOfferDto,
   ) {
     return this.offersService.reject(dto.offer_id, user.id, dto.reason);
   }

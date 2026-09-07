@@ -132,7 +132,7 @@ export class MailService {
     }
   }
 
-  async sendMemberStatusEmail(to: string, status: UserStatus): Promise<boolean> {
+  async sendMemberStatusEmail(to: string, status: UserStatus, reason?: string): Promise<boolean> {
     let title = '';
     let message = '';
     let color = '';
@@ -142,7 +142,7 @@ export class MailService {
       message = 'Great news! Your BizzDeal member account has been approved and is now active.';
       color = '#10b981'; // green
     } else if (status === UserStatus.REJECTED) {
-      title = 'Member Account Update';
+      title = 'Member Account Application Update';
       message = 'We regret to inform you that your BizzDeal member account application has been rejected.';
       color = '#ef4444'; // red
     } else if (status === UserStatus.SUSPENDED) {
@@ -153,12 +153,20 @@ export class MailService {
       return false;
     }
 
+    const reasonHtml = (status === UserStatus.REJECTED && reason)
+      ? `<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; margin: 16px 0; border-radius: 4px;">
+          <strong style="color: #991b1b; display: block; margin-bottom: 4px;">Rejection Reason:</strong>
+          <span style="color: #7f1d1d;">${reason}</span>
+        </div>`
+      : '';
+
     const subject = `BizzDeal: ${title}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
         ${this.getHeaderHtml()}
         <h2 style="color: ${color}; text-align: center;">${title}</h2>
         <p style="color: #374151; font-size: 16px;">${message}</p>
+        ${reasonHtml}
         ${this.getFooterHtml()}
       </div>
     `;
@@ -170,7 +178,7 @@ export class MailService {
     return success;
   }
 
-  async sendBusinessStatusEmail(to: string, status: BusinessStatus, businessName: string): Promise<boolean> {
+  async sendBusinessStatusEmail(to: string, status: BusinessStatus, businessName: string, reason?: string): Promise<boolean> {
     let title = '';
     let message = '';
     let color = '';
@@ -191,12 +199,20 @@ export class MailService {
       return false;
     }
 
+    const reasonHtml = (status === BusinessStatus.REJECTED && reason)
+      ? `<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; margin: 16px 0; border-radius: 4px;">
+          <strong style="color: #991b1b; display: block; margin-bottom: 4px;">Rejection Reason:</strong>
+          <span style="color: #7f1d1d;">${reason}</span>
+        </div>`
+      : '';
+
     const subject = `BizzDeal: ${title}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
         ${this.getHeaderHtml()}
         <h2 style="color: ${color}; text-align: center;">${title}</h2>
         <p style="color: #374151; font-size: 16px;">${message}</p>
+        ${reasonHtml}
         ${this.getFooterHtml()}
       </div>
     `;

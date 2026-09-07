@@ -50,6 +50,9 @@ export class User {
   @Column({ type: 'uuid', nullable: true })
   approved_by_id: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  rejection_reason: string | null;
+
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'approved_by_id' })
   approved_by: User | null;

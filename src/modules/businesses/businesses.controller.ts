@@ -426,7 +426,7 @@ export class BusinessesController {
     @CurrentUser() user: User,
     @Ip() ip?: string,
   ) {
-    return this.businessesService.updateStatus(id, dto.status, user.id, ip);
+    return this.businessesService.updateStatus(id, dto.status, user.id, dto.reason, ip);
   }
 
   @Put(':id')

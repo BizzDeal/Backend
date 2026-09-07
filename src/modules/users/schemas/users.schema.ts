@@ -214,6 +214,25 @@ export class MemberActionDto {
   memberId: string;
 }
 
+export const rejectMemberSchema = z.object({
+  memberId: z.string().uuid('Valid member ID is required'),
+  reason: z.string().min(3, 'Rejection reason must be at least 3 characters'),
+});
+
+export class RejectMemberDto {
+  @ApiProperty({
+    description: 'UUID of the member being acted upon',
+    example: 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
+  })
+  memberId: string;
+
+  @ApiProperty({
+    description: 'Reason for rejecting member registration (minimum 3 characters)',
+    example: 'Incomplete documents or invalid business details',
+  })
+  reason: string;
+}
+
 export const userQuerySchema = z.object({
   ...regionFilterSchemaBase,
   search: z.string().optional(),

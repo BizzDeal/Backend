@@ -808,6 +808,10 @@ export class UsersService {
         user.role === UserRole.MEMBER ? (business?.is_featured ?? false) : undefined,
       is_top:
         user.role === UserRole.MEMBER ? (business?.is_top ?? false) : undefined,
+      business_status:
+        user.role === UserRole.MEMBER ? business?.status || null : undefined,
+      business_rejection_reason:
+        user.role === UserRole.MEMBER ? business?.rejection_reason || null : undefined,
       primary_business_name:
         user.role === UserRole.CUSTOMER ? primary_business_name : undefined,
       primary_business_id:
@@ -1071,11 +1075,12 @@ export class UsersService {
       status: UserStatus.ACTIVE,
       approved_by_id: adminId ?? null,
       approved_at: new Date(),
+      rejection_reason: null,
     });
 
     await this.businessRepository.update(
       { owner_id: memberId },
-      { status: BusinessStatus.ACTIVE },
+      { status: BusinessStatus.ACTIVE, rejection_reason: null },
     );
 
     await this.auditService.createLog({
@@ -1113,7 +1118,7 @@ export class UsersService {
     };
   }
 
-  async rejectMember(memberId: string, adminId?: string, ipAddress?: string) {
+  async rejectMember(memberId: string, adminId?: string, reason?: string, ipAddress?: string) {
     await this.validateAdminRole(adminId, memberId);
     const user = await this.findOneById(memberId);
     if (!user) {
@@ -1127,11 +1132,12 @@ export class UsersService {
     const oldStatus = user.status;
     await this.usersRepository.update(memberId, {
       status: UserStatus.REJECTED,
+      rejection_reason: reason || null,
     });
 
     await this.businessRepository.update(
       { owner_id: memberId },
-      { status: BusinessStatus.REJECTED },
+      { status: BusinessStatus.REJECTED, rejection_reason: reason || null },
     );
 
     await this.auditService.createLog({
@@ -1140,7 +1146,7 @@ export class UsersService {
       entity_type: 'User',
       entity_id: memberId,
       old_data: { status: oldStatus },
-      new_data: { status: UserStatus.REJECTED },
+      new_data: { status: UserStatus.REJECTED, rejection_reason: reason },
       ip_address: ipAddress,
     });
 
@@ -1149,18 +1155,23 @@ export class UsersService {
     }
 
     // Send Notification and Email
+    const reasonText = reason ? ` Reason: ${reason}` : '';
     await this.notificationsService.create({
       user_id: memberId,
       title: 'Member Account Update',
-      message: 'We regret to inform you that your BizzDeal member account application has been rejected.',
+      message: `We regret to inform you that your BizzDeal member account application has been rejected.${reasonText}`,
       type: NotificationType.GENERAL,
+      data: {
+        status: UserStatus.REJECTED,
+        reason,
+      },
     });
-    await this.mailService.sendMemberStatusEmail(user.email, UserStatus.REJECTED);
+    await this.mailService.sendMemberStatusEmail(user.email, UserStatus.REJECTED, reason);
 
     return {
       success: true,
       message: 'Member rejected successfully',
-      data: { memberId, status: UserStatus.REJECTED },
+      data: { memberId, status: UserStatus.REJECTED, rejection_reason: reason },
     };
   }
 

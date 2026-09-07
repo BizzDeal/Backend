@@ -87,6 +87,9 @@ export class BusinessProfile {
   })
   status: BusinessStatus;
 
+  @Column({ type: 'text', nullable: true })
+  rejection_reason: string | null;
+
   @Column({ type: 'boolean', default: false })
   is_featured: boolean;
 

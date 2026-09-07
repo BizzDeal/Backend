@@ -387,6 +387,7 @@ export class OffersService {
         `Offer ${offer.id} modified by member ${user.id} after being REJECTED. Setting status to PENDING for re-approval.`,
       );
       offer.status = OfferStatus.PENDING;
+      offer.rejection_reason = null;
       offer.approved_by_id = null;
       offer.approved_at = null;
     }
@@ -495,6 +496,7 @@ export class OffersService {
     offer.status = OfferStatus.APPROVED;
     offer.approved_by_id = adminId;
     offer.approved_at = new Date();
+    offer.rejection_reason = null;
 
     const savedOffer = await this.offerRepository.save(offer);
 
@@ -520,6 +522,7 @@ export class OffersService {
     }
 
     offer.status = OfferStatus.REJECTED;
+    offer.rejection_reason = reason || null;
     if (reason) {
       this.logger.log(
         `Offer ${offerId} rejected by admin ${adminId}. Reason: ${reason}`,

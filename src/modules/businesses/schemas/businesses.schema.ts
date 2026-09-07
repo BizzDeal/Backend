@@ -80,9 +80,20 @@ export class UpdateBusinessDto {
   video_url?: string | null;
 }
 
-export const updateBusinessStatusSchema = z.object({
-  status: z.nativeEnum(BusinessStatus),
-});
+export const updateBusinessStatusSchema = z
+  .object({
+    status: z.nativeEnum(BusinessStatus),
+    reason: z.string().optional(),
+  })
+  .refine(
+    (data) =>
+      data.status !== BusinessStatus.REJECTED ||
+      (typeof data.reason === 'string' && data.reason.trim().length >= 3),
+    {
+      message: 'Rejection reason is required and must be at least 3 characters',
+      path: ['reason'],
+    },
+  );
 
 export class UpdateBusinessStatusDto {
   @ApiProperty({
@@ -91,6 +102,13 @@ export class UpdateBusinessStatusDto {
     example: BusinessStatus.ACTIVE,
   })
   status: BusinessStatus;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Reason for rejection if status is REJECTED (minimum 3 characters)',
+    example: 'Business address cannot be verified',
+  })
+  reason?: string;
 }
 
 export const businessQuerySchema = z.object({

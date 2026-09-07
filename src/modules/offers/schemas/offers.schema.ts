@@ -310,6 +310,27 @@ export class OfferActionDto {
   reason?: string;
 }
 
+export const rejectOfferSchema = z.object({
+  offer_id: z.string().uuid({ message: 'Valid offer_id UUID is required' }),
+  reason: z.string().min(3, { message: 'Rejection reason must be at least 3 characters' }),
+});
+
+export class RejectOfferDto {
+  @ApiProperty({
+    type: String,
+    description: 'UUID of the offer to reject',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  offer_id: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'Reason for rejection (minimum 3 characters)',
+    example: 'Discount percentage is invalid or promotional image does not meet standards',
+  })
+  reason: string;
+}
+
 export const featureOfferSchema = z.object({
   offer_id: z.string().uuid({ message: 'Valid offer_id UUID is required' }),
   is_featured: z.boolean(),

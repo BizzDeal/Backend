@@ -875,6 +875,7 @@ export class BusinessesService {
         `Business listing ${business.id} modified by member ${userId} after being REJECTED. Setting status to PENDING for admin re-approval.`,
       );
       updateData.status = BusinessStatus.PENDING;
+      updateData.rejection_reason = null;
     }
 
     if (
@@ -956,6 +957,7 @@ export class BusinessesService {
     businessId: string,
     status: BusinessStatus,
     adminId: string,
+    reason?: string,
     ipAddress?: string,
   ) {
     if (!this.isUUID(businessId)) {
@@ -970,9 +972,14 @@ export class BusinessesService {
     }
 
     const oldStatus = business.status;
-    await this.businessRepository.update(businessId, {
-      status,
-    });
+    const updatePayload: Partial<BusinessProfile> = { status };
+    if (status === BusinessStatus.REJECTED) {
+      updatePayload.rejection_reason = reason || null;
+    } else if (status === BusinessStatus.ACTIVE) {
+      updatePayload.rejection_reason = null;
+    }
+
+    await this.businessRepository.update(businessId, updatePayload);
 
     await this.auditService.createLog({
       user_id: adminId,
@@ -980,7 +987,7 @@ export class BusinessesService {
       entity_type: 'Business',
       entity_id: businessId,
       old_data: { status: oldStatus },
-      new_data: { status },
+      new_data: { status, rejection_reason: reason },
       ip_address: ipAddress,
     });
 
@@ -993,6 +1000,7 @@ export class BusinessesService {
     );
 
     if (updated && updated.owner) {
+      const reasonText = (status === BusinessStatus.REJECTED && reason) ? ` Reason: ${reason}` : '';
       const titleMap = {
         [BusinessStatus.ACTIVE]: 'Business Profile Approved',
         [BusinessStatus.REJECTED]: 'Business Profile Update',
@@ -1000,7 +1008,7 @@ export class BusinessesService {
       };
       const messageMap = {
         [BusinessStatus.ACTIVE]: `Your business profile for ${updated.name} has been approved and is now live.`,
-        [BusinessStatus.REJECTED]: `We regret to inform you that your business profile for ${updated.name} has been rejected.`,
+        [BusinessStatus.REJECTED]: `We regret to inform you that your business profile for ${updated.name} has been rejected.${reasonText}`,
         [BusinessStatus.SUSPENDED]: `Your business profile for ${updated.name} has been suspended.`
       };
 
@@ -1010,8 +1018,13 @@ export class BusinessesService {
           title: titleMap[status],
           message: messageMap[status],
           type: NotificationType.GENERAL,
+          data: {
+            status,
+            business_id: businessId,
+            reason,
+          },
         });
-        await this.mailService.sendBusinessStatusEmail(updated.owner.email, status, updated.name);
+        await this.mailService.sendBusinessStatusEmail(updated.owner.email, status, updated.name, reason);
       }
     }
 

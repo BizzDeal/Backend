@@ -35,6 +35,8 @@ import {
   UpdateProfileDto,
   memberActionSchema,
   MemberActionDto,
+  rejectMemberSchema,
+  RejectMemberDto,
 } from './schemas/users.schema';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -228,7 +230,7 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Reject Member',
-    description: 'Rejects a member registration.',
+    description: 'Rejects a member registration with a reason.',
   })
   @ApiResponse({
     status: 200,
@@ -237,9 +239,9 @@ export class UsersController {
   async rejectMember(
     @CurrentUser() admin: User,
     @Ip() ip: string,
-    @Body(new ZodValidationPipe(memberActionSchema)) dto: MemberActionDto,
+    @Body(new ZodValidationPipe(rejectMemberSchema)) dto: RejectMemberDto,
   ) {
-    return this.usersService.rejectMember(dto.memberId, admin.id, ip);
+    return this.usersService.rejectMember(dto.memberId, admin.id, dto.reason, ip);
   }
 
   @Put('suspend-member')

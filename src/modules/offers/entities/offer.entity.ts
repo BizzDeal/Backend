@@ -66,6 +66,9 @@ export class Offer {
   })
   status: OfferStatus;
 
+  @Column({ type: 'text', nullable: true })
+  rejection_reason: string | null;
+
   @Column({ type: 'uuid', nullable: true })
   approved_by_id: string | null;
 
