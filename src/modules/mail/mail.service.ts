@@ -65,18 +65,20 @@ export class MailService {
 
   private getHeaderHtml(): string {
     const baseUrl = this.getBaseUrl();
+    const assetBase = baseUrl.includes('localhost') ? 'https://bizzdeal-backend.up.railway.app' : baseUrl;
     return `
       <div style="text-align: center; margin-bottom: 20px;">
-        <img src="https://api.bizzdeal.in/assets/logo-text.png" alt="BizzDeal Logo" style="max-height: 50px;">
+        <img src="${assetBase}/assets/logo-text.png" alt="BizzDeal Logo" style="max-height: 50px;">
       </div>
     `;
   }
 
   private getFooterHtml(): string {
     const baseUrl = this.getBaseUrl();
+    const assetBase = baseUrl.includes('localhost') ? 'https://bizzdeal-backend.up.railway.app' : baseUrl;
     return `
       <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
-        <img src="https://api.bizzdeal.in/assets/icon-only.png" alt="BizzDeal Icon" style="max-height: 30px; margin-bottom: 10px; border-radius: 4px;">
+        <img src="${assetBase}/assets/icon-only1.png" alt="BizzDeal Icon" style="max-height: 30px; margin-bottom: 10px; border-radius: 4px;">
         <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} BizzDeal. All rights reserved.</p>
       </div>
     `;

@@ -125,7 +125,10 @@ export class MediaService {
     const savedRecord = await this.mediaRepository.save(mediaRecord);
     
     // Set file_url pointing to our local proxy/redirect endpoint
-    const backendUrl = this.configService.get<string>('BACKEND_URL') || 'http://localhost:3000';
+    const backendUrl =
+      this.configService.get<string>('BACKEND_URL') ||
+      this.configService.get<string>('DOMAIN') ||
+      'http://localhost:3000';
     savedRecord.file_url = `${backendUrl}/bizzdeal/api/media/file/${savedRecord.id}`;
     
     return this.mediaRepository.save(savedRecord);

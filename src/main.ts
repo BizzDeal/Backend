@@ -8,6 +8,8 @@ import { SWAGGER_AUTH_SCRIPT } from './common/utils/swagger-auth.script';
 import helmet from 'helmet';
 import compression from 'compression';
 
+import { Request, Response, NextFunction } from 'express';
+
 // Ensure India Time Zone (Asia/Kolkata, UTC+05:30) for Node process and PostgreSQL driver
 process.env.TZ = process.env.TZ || 'Asia/Kolkata';
 process.env.PGTZ = process.env.PGTZ || 'Asia/Kolkata';
@@ -44,6 +46,39 @@ async function bootstrap() {
   // Configure views
   app.setBaseViewsDir(join(__dirname, '..', 'views'));
   app.setViewEngine('ejs');
+
+  // Subdomain routing middleware:
+  // - app.bizzdeal.in: serves the static landing page
+  // - admin.bizzdeal.in: redirects root to /admin portal
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || req.hostname || '') as string;
+    const host = rawHost.toLowerCase().split(':')[0];
+    const path = req.path || req.url || '';
+
+    // Bypass API routes, Swagger documentation, static assets, and media files
+    if (
+      path.startsWith('/bizzdeal/api') ||
+      path.startsWith('/bizzdeal/swagger') ||
+      path.startsWith('/assets') ||
+      path.includes('.')
+    ) {
+      return next();
+    }
+
+    // Requests to app.bizzdeal.in -> render static landing page
+    if (host.startsWith('app.') || host === 'app.bizzdeal.in') {
+      return res.render('landing');
+    }
+
+    // Requests to admin.bizzdeal.in -> if root, redirect to /admin
+    if (host.startsWith('admin.') || host === 'admin.bizzdeal.in') {
+      if (path === '/' || path === '') {
+        return res.redirect('/admin');
+      }
+    }
+
+    next();
+  });
 
   // Set the global context path so all API routes are prefixed dynamically
   const contextPath = configService.get<string>('CONTEXT_PATH') || '/bizzdeal/api';
