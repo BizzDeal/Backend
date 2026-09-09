@@ -375,6 +375,12 @@ export class ChatService implements OnModuleInit {
       throw new BadRequestException('Cannot start a conversation with an unverified user');
     }
 
+    // Chatting is strictly restricted to member-to-member and admin-to-member only (not clients/customers)
+    const allowedRoles = [UserRole.MEMBER, UserRole.ADMIN];
+    if (!allowedRoles.includes(user.role as UserRole) || !allowedRoles.includes(otherUser.role as UserRole)) {
+      throw new ForbiddenException('Chatting is only permitted between members and administrators');
+    }
+
     // Find existing DIRECT conversation between these two
     let conv = await this.conversationRepository.createQueryBuilder('conv')
       .innerJoin('conv.participants', 'p1', 'p1.user_id = :userId', { userId: user.id })

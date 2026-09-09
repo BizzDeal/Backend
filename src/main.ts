@@ -5,6 +5,7 @@ import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { SWAGGER_AUTH_SCRIPT } from './common/utils/swagger-auth.script';
+import { SettingsService } from './modules/settings/settings.service';
 import helmet from 'helmet';
 import compression from 'compression';
 
@@ -36,6 +37,7 @@ async function bootstrap() {
   );
   app.use(compression());
   const configService = app.get(ConfigService);
+  const settingsService = app.get(SettingsService);
 
   // Enable CORS for frontend applications and test clients
   app.enableCors({
@@ -47,10 +49,11 @@ async function bootstrap() {
   app.setBaseViewsDir(join(__dirname, '..', 'views'));
   app.setViewEngine('ejs');
 
-  // Subdomain routing middleware:
-  // - app.bizzdeal.in: serves the static landing page
+  // Subdomain & local routing middleware:
+  // - localhost / 127.0.0.1 (root or /landing): serves the static landing page in local development
+  // - app.bizzdeal.in: serves the static landing page in production
   // - admin.bizzdeal.in: redirects root to /admin portal
-  app.use((req: Request, res: Response, next: NextFunction) => {
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
     const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || req.hostname || '') as string;
     const host = rawHost.toLowerCase().split(':')[0];
     const path = req.path || req.url || '';
@@ -65,14 +68,35 @@ async function bootstrap() {
       return next();
     }
 
-    // Requests to app.bizzdeal.in -> render static landing page
-    if (host.startsWith('app.') || host === 'app.bizzdeal.in') {
-      return res.render('landing');
+    const isLocal =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host === '[::1]';
+    const normalizedPath = path.replace(/\/+$/, '') || '/';
+
+    // Requests to app.bizzdeal.in or local development root/landing -> render static landing page
+    if (
+      host.startsWith('app.') ||
+      host === 'app.bizzdeal.in' ||
+      (isLocal && (normalizedPath === '/' || normalizedPath === '/landing'))
+    ) {
+      let playStoreUrl = 'https://play.google.com/store/apps/details?id=com.bizzdeal.app';
+      try {
+        const settings = await settingsService.getSettings();
+        if (settings?.app_invite_base_url) {
+          playStoreUrl = settings.app_invite_base_url;
+        }
+      } catch {
+        // Fallback default
+      }
+      return res.render('landing', { playStoreUrl });
     }
 
     // Requests to admin.bizzdeal.in -> if root, redirect to /admin
     if (host.startsWith('admin.') || host === 'admin.bizzdeal.in') {
-      if (path === '/' || path === '') {
+      if (normalizedPath === '/' || normalizedPath === '') {
         return res.redirect('/admin');
       }
     }

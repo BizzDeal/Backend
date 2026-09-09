@@ -8,7 +8,7 @@ import {
   MessageBody,
   WsException,
 } from '@nestjs/websockets';
-import { UseGuards, Logger } from '@nestjs/common';
+import { UseGuards, Logger, ForbiddenException } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import {
@@ -24,7 +24,7 @@ import {
   DeleteMessageWsSchema,
 } from './dto/chat-ws.dto';
 import { User } from '../users/entities/user.entity';
-import { ConversationType } from '../../common/enums';
+import { ConversationType, UserRole } from '../../common/enums';
 
 @WebSocketGateway({
   cors: {
@@ -48,6 +48,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket) {
     try {
       const user: User = await this.wsJwtAuthGuard.authenticateSocket(client);
+
+      if (user.role !== UserRole.MEMBER && user.role !== UserRole.ADMIN) {
+        throw new ForbiddenException('Chatting is only permitted for members and administrators');
+      }
+
       const authClient = client as AuthenticatedSocket;
       authClient.data = authClient.data || {};
       authClient.data.user = user;

@@ -4,262 +4,1183 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to BizzDeal</title>
+  <title>BizzDeal — Your Success Is Our Deal | Local Business & Referral Network</title>
+  <meta name="description" content="BizzDeal is Srikakulam's premier local business and referral network. Connect with trusted entrepreneurs, exchange formal referral slips, advertise with Featured Stores, promote with Bizz Videos using social links, and earn BizzCoins.">
   <link rel="icon" type="image/png" href="/assets/icon-only1.png">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Modern Typography: Outfit for headlines, Inter for interface -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
     :root {
-      --primary: #1565C0;
-      --primary-light: #2196F3;
-      --primary-gradient: linear-gradient(135deg, #0D47A1 0%, #1976D2 50%, #42A5F5 100%);
-      --bg-dark: #0B1120;
-      --card-bg: rgba(255, 255, 255, 0.05);
-      --card-border: rgba(255, 255, 255, 0.1);
-      --text-white: #FFFFFF;
-      --text-muted: #94A3B8;
+      color-scheme: light;
+      --bg-main: #fcfbf8;
+      --bg-surface: #ffffff;
+      --text-main: #182d43;
+      --text-muted: #5c6b78;
+      --text-dim: #687683;
+      --primary-600: #1763e8;
+      --primary-500: #1763e8;
+      --cyan-400: #1763e8;
+      --emerald-400: #257459;
+      --amber-400: #916119;
+      --purple-400: #7554ac;
+      --rose-400: #af4f68;
+      --border-subtle: #e2e6e9;
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 104px; }
+    body { font-family: var(--font-body); background: var(--bg-main); color: var(--text-main); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+    body.menu-open { overflow: hidden; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+    a, button { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 3px solid var(--primary-600); outline-offset: 5px; }
+    [hidden] { display: none !important; }
+    ::selection { background: #dce8ff; color: #182d43; }
+    .container { width: min(100% - 96px, 1200px); margin-inline: auto; }
+    .ui-icon { width: 24px; height: 24px; flex-shrink: 0; vertical-align: middle; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-definitions { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .skip-link { position: fixed; z-index: 1100; top: 12px; left: 16px; background: white; color: var(--primary-600); padding: 10px 20px; border-radius: 8px; transform: translateY(-160%); }
+    .skip-link:focus { transform: translateY(0); }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    /* Navigation */
+    .site-header { position: sticky; top: 0; z-index: 100; background: rgba(252, 251, 248, .96); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-subtle); }
+    .nav-inner { height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand-wrap { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; }
+    .brand-logo-icon { width: auto; height: 39px; object-fit: contain; }
+    .brand-logo-text { width: auto; height: 36px; object-fit: contain; }
+    .nav-links { display: flex; list-style: none; align-items: center; gap: 25px; }
+    .nav-link { font-size: 12px; font-weight: 500; color: #4d5d6e; transition: color .2s; }
+    .nav-link:hover, .footer-links a:hover { color: var(--primary-600); }
+    .nav-actions { display: flex; align-items: center; gap: 12px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 44px; padding: 11px 20px; border-radius: 8px; border: 1px solid transparent; font-size: 13px; font-weight: 600; line-height: 1.45; transition: background .2s, box-shadow .2s, transform .2s; }
+    .btn-primary { color: white; background: var(--primary-600); box-shadow: 0 4px 8px #1763e815; }
+    .btn-primary:hover { background: #0b4fc8; box-shadow: 0 6px 14px #1763e825; transform: translateY(-2px); }
+    .btn-ghost { background: white; border-color: #d3dae0; }
+    .btn-ghost:hover { background: #f1f5fb; border-color: #a9bbd1; }
+    .btn-emerald { background: #245c49; color: white; }
+    .btn-emerald:hover { background: #194a39; }
+    .btn-lg { min-height: 52px; padding: 15px 23px; font-size: 14px; }
+    .btn .ui-icon { width: 18px; height: 18px; }
+    .mobile-menu-btn { display: none; width: 44px; height: 44px; align-items: center; justify-content: center; border: 1px solid var(--border-subtle); border-radius: 8px; background: white; }
+    .mobile-drawer { position: fixed; z-index: 99; inset: 88px 0 0; overflow-y: auto; padding: 28px 24px; background: var(--bg-main); }
+    .mobile-nav-link { display: block; padding: 17px 0; border-bottom: 1px solid var(--border-subtle); font-size: 18px; }
+
+    /* Hero: an illustrated neighborhood network, with no device preview. */
+    .hero-section { padding: 76px 0 0; overflow: hidden; }
+    .hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center; }
+    .hero-badge { display: inline-flex; gap: 9px; align-items: center; font-size: 11px; font-weight: 600; color: #3f6553; padding: 6px 11px; border-radius: 6px; background: #edf2e7; margin-bottom: 23px; }
+    .badge-dot { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: #4e8b65; }
+    .hero-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(42px, 4.7vw, 64px); line-height: 1.08; letter-spacing: -.045em; margin-bottom: 25px; }
+    .hero-title .hero-title-intro { display: block; }
+    .hero-title .hero-title-location { display: block; font-size: .7em; letter-spacing: -.035em; margin: 9px 0; }
+    .gradient-text-blue, .gradient-text-gold { color: var(--primary-600); }
+    .hero-desc { max-width: 560px; color: var(--text-muted); font-size: 14px; line-height: 1.85; margin-bottom: 29px; }
+    .hero-cta-group { display: flex; flex-wrap: wrap; gap: 12px; }
+    .hero-visual { position: relative; min-width: 0; }
+    .network-art { display: block; width: 100%; height: auto; overflow: visible; }
+    .network-art text { font-family: var(--font-body); }
+    .hero-visual-caption { display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 11px; letter-spacing: .025em; color: #687b69; margin-top: -7px; }
+    .hero-visual-caption .ui-icon { width: 16px; height: 16px; }
+    .hero-highlights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; padding: 31px 0; margin-top: 65px; border-top: 1px solid #dadfdc; border-bottom: 1px solid #dadfdc; }
+    .highlight-item { padding-left: 28px; border-left: 1px solid #dadfdc; }
+    .highlight-item:first-child { padding-left: 0; border-left: 0; }
+    .highlight-val { font-family: var(--font-display); font-size: 28px; font-weight: 500; line-height: 1.2; letter-spacing: -.025em; margin-bottom: 7px; }
+    .highlight-lbl { color: var(--text-muted); font-size: 11px; line-height: 1.6; }
+
+    /* Shared section rhythm and typography */
+    .dual-section, .features-section, .community-section, .steps-section, .categories-section, .faq-section { padding: 94px 0; }
+    .section-head { text-align: center; max-width: 720px; margin: 0 auto 40px; }
+    .section-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; color: var(--primary-600); margin-bottom: 16px; }
+    .section-eyebrow::before { content: ''; width: 18px; height: 2px; background: currentColor; }
+    .section-title { font-family: var(--font-display); font-size: clamp(30px, 3vw, 42px); font-weight: 500; letter-spacing: -.035em; line-height: 1.15; margin-bottom: 16px; text-wrap: balance; }
+    .section-subtitle { font-size: 14px; color: var(--text-muted); line-height: 1.8; }
+    .benefit-title, .feature-name, .community-card-title, .col-title { font-family: var(--font-display); font-size: 20px; font-weight: 500; letter-spacing: -.02em; line-height: 1.35; }
+    .benefit-text, .feature-desc, .community-card-desc { font-size: 13px; line-height: 1.85; color: var(--text-muted); }
+
+    /* Business and shopper benefits */
+    .dual-section { background: var(--bg-main); }
+    .tab-switch-wrapper { display: flex; justify-content: center; margin-bottom: 36px; }
+    .tab-switch-container { display: inline-flex; padding: 5px; gap: 4px; background: #efefec; border: 1px solid #e5e5df; border-radius: 10px; }
+    .tab-btn { display: flex; align-items: center; justify-content: center; gap: 9px; border-radius: 7px; padding: 12px 22px; font-size: 12px; font-weight: 500; color: var(--text-muted); transition: color .2s, background .2s; }
+    .tab-btn .ui-icon { width: 18px; height: 18px; }
+    .tab-btn.active { background: white; color: var(--primary-600); box-shadow: 0 2px 5px #182d430e; }
+    .dual-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .benefit-card { background: white; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 28px; transition: border-color .2s, transform .2s; }
+    .benefit-card:hover { border-color: #a9bdd7; transform: translateY(-3px); }
+    .benefit-icon, .feature-icon-circle, .community-card-icon { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #edf3fd; color: #2668cd; margin-bottom: 23px; }
+    .amber .benefit-icon, .amber .community-card-icon { background: #fcf1df; color: #966826; }
+    .emerald .benefit-icon, .green .community-card-icon { background: #edf4e8; color: #427748; }
+    .purple .benefit-icon { background: #f2edfa; color: #7d61ad; }
+    .rose .benefit-icon { background: #fceef0; color: #b25874; }
+    .benefit-title { margin-bottom: 10px; }
+
+    /* Feature cards */
+    .features-section { background: #f0f4f8; border-block: 1px solid #e6ebef; }
+    .features-section .section-head { display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 90px; max-width: none; text-align: left; align-items: center; }
+    .features-section .section-eyebrow { grid-column: 1 / -1; }
+    .features-section .section-title { margin-bottom: 0; text-wrap: initial; }
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .feature-box { display: flex; flex-direction: column; padding: 28px; border: 1px solid #e0e6ed; background: white; border-radius: 12px; }
+    .feature-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+    .feature-icon-circle { margin: 0; }
+    .feature-badge { font-size: 9px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; border-radius: 4px; padding: 4px 8px; color: #356aa8; background: #eef4fc; }
+    .feature-name { margin-bottom: 11px; }
+    .feature-desc { flex-grow: 1; margin-bottom: 22px; }
+    .feature-highlight-bar { display: flex; gap: 8px; padding-top: 15px; border-top: 1px solid #e9ecef; font-size: 10px; font-weight: 500; color: #4c5e6f; }
+    .feature-highlight-bar .icon { color: #39735e; }
+
+    /* Conversations and community */
+    .community-section { background: white; }
+    .community-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    .community-card { padding: 32px; border-radius: 12px; background: #f0f4fc; }
+    .community-card.green { background: #f0f4e9; }
+    .community-card.amber { background: #fcf3e6; }
+    .community-card-icon { background: white; }
+    .community-card-title { margin-bottom: 14px; font-size: 23px; }
+    .community-card-desc { margin-bottom: 24px; }
+    .community-perks-list { display: flex; flex-direction: column; gap: 12px; list-style: none; border-top: 1px solid #182d431a; padding-top: 21px; color: #536575; font-size: 11px; }
+    .community-perks-list li { display: flex; align-items: baseline; gap: 9px; }
+    .community-perks-list .dot { flex-shrink: 0; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+
+    /* Getting started */
+    .steps-section { background: #fcfbf8; border-block: 1px solid #e8e8e2; }
+    .steps-split { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    .steps-column { padding: 34px; background: white; border: 1px solid #e3e6e7; border-radius: 12px; }
+    .steps-col-head { display: flex; align-items: center; gap: 12px; padding-bottom: 23px; border-bottom: 1px solid #e6eaec; margin-bottom: 28px; }
+    .col-icon { color: var(--primary-600); }
+    .step-list { display: flex; flex-direction: column; gap: 28px; }
+    .step-item { display: flex; gap: 18px; align-items: flex-start; position: relative; }
+    .step-item:not(:last-child)::after { content: ''; position: absolute; left: 16px; top: 41px; bottom: -19px; border-left: 1px dashed #d8dfe6; }
+    .step-number { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--primary-600); background: #edf3fd; border-radius: 50%; font-size: 12px; font-weight: 600; }
+    .steps-column:last-child .step-number { background: #f0f4e9; color: #4b7351; }
+    .step-details h4 { font-family: var(--font-display); font-size: 16px; font-weight: 500; line-height: 1.45; margin-bottom: 5px; }
+    .step-details p { font-size: 12px; line-height: 1.8; color: var(--text-muted); }
+
+    /* Local commerce and app invitation */
+    .categories-section { background: white; }
+    .categories-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 1000px; margin: 0 auto 48px; }
+    .category-chip { display: inline-flex; align-items: center; gap: 10px; padding: 13px 18px; background: #fafbf9; border: 1px solid #e4e8e3; border-radius: 8px; font-size: 12px; color: #4c5f58; }
+    .category-chip .ui-icon { width: 19px; height: 19px; }
+    .local-trust-card { display: flex; align-items: center; justify-content: space-between; gap: 32px; background: #f0f4e9; border-radius: 12px; padding: 30px 34px; }
+    .trust-text h3 { font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -.02em; margin-bottom: 5px; }
+    .trust-text p { max-width: 740px; color: #5a6c5c; font-size: 12px; line-height: 1.8; }
+    .download-section { padding: 0 0 94px; background: white; }
+    .download-card { display: grid; grid-template-columns: 1.5fr 1fr; gap: 60px; align-items: center; background: #edf3fe; border: 1px solid #dce6f7; border-radius: 16px; padding: 60px; }
+    .download-content h2 { max-width: 550px; font-family: var(--font-display); font-size: clamp(32px, 3.4vw, 44px); font-weight: 500; letter-spacing: -.035em; line-height: 1.15; margin-bottom: 19px; }
+    .download-content p { font-size: 13px; line-height: 1.85; color: var(--text-muted); margin-bottom: 24px; }
+    .store-badge { display: inline-flex; align-items: center; gap: 12px; padding: 11px 20px; background: #182d43; color: white; border: 1px solid transparent; border-radius: 8px; text-align: left; }
+    .store-badge:hover { background: #234666; }
+    .store-icon .ui-icon { width: 27px; height: 27px; }
+    .store-text-sub { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .07em; color: #d5e0ec; }
+    .store-text-main { display: block; font-family: var(--font-display); font-size: 17px; }
+    .download-emblem { text-align: center; position: relative; padding: 27px; }
+    .download-emblem-mark { display: grid; place-items: center; width: 154px; height: 154px; border-radius: 24px; margin: 0 auto 20px; background: white; border: 1px solid #dce6f7; box-shadow: 0 16px 32px #254e9810; transform: none; }
+    .download-emblem-mark img { width: 118px; height: 118px; object-fit: contain; transform: none; border-radius: 8px; }
+    .download-emblem strong { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 500; color: var(--text-main); margin-bottom: 6px; }
+    .download-emblem p { color: #5c6d82; font-size: 12px; line-height: 1.6; max-width: 240px; margin: 0 auto; }
+    .download-dialog { width: min(460px, calc(100% - 40px)); margin: auto; padding: 32px; border: 1px solid #dce6f7; border-radius: 16px; color: var(--text-main); background: white; box-shadow: 0 20px 70px #182d4326; }
+    .download-dialog::backdrop { background: #182d4366; }
+    .download-dialog h2 { font-family: var(--font-display); font-weight: 500; font-size: 28px; margin-bottom: 12px; }
+    .download-dialog p { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+    .dialog-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+    /* Questions and footer */
+    .faq-section { background: var(--bg-main); border-top: 1px solid #e8e8e2; }
+    .faq-section > .container { display: grid; grid-template-columns: .8fr 1.4fr; gap: 90px; align-items: start; }
+    .faq-section .section-head { text-align: left; margin: 0; }
+    .faq-section .section-title { text-wrap: initial; }
+    .faq-list { border-top: 1px solid #dce1e4; }
+    .faq-item { border-bottom: 1px solid #dce1e4; }
+    .faq-question { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left; gap: 20px; padding: 22px 0; font-size: 13px; font-weight: 500; line-height: 1.65; }
+    .faq-question:hover { color: var(--primary-600); }
+    .faq-icon { display: flex; justify-content: center; align-items: center; flex-shrink: 0; width: 25px; height: 25px; border-radius: 50%; border: 1px solid #d6dee5; font-size: 19px; font-weight: 400; color: #55758f; transition: transform .2s; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); color: var(--primary-600); }
+    .faq-answer { font-size: 12px; line-height: 1.9; padding: 0 34px 23px 0; color: var(--text-muted); }
+    .site-footer { padding: 60px 0 25px; background: #f3f3ef; border-top: 1px solid #e2e5df; }
+    .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 50px; margin-bottom: 50px; }
+    .footer-brand p { font-size: 12px; line-height: 1.85; color: var(--text-muted); margin: 19px 0 14px; max-width: 290px; }
+    .footer-slogan { color: var(--primary-600); font-family: var(--font-display); font-size: 14px; }
+    .footer-col h4 { font-size: 12px; font-weight: 600; margin-bottom: 20px; }
+    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 11px; line-height: 1.8; color: var(--text-muted); }
+    .footer-links .ui-icon { width: 15px; height: 15px; }
+    .footer-bottom { display: flex; justify-content: space-between; gap: 24px; border-top: 1px solid #dce1da; padding-top: 23px; font-size: 10px; color: var(--text-muted); }
+
+    @media (min-width: 1101px) { .mobile-drawer { display: none; } }
+    @media (max-width: 1100px) {
+      .nav-links { display: none; }
+      .mobile-menu-btn { display: inline-flex; }
+      .hero-grid { gap: 24px; }
+      .hero-title { font-size: 49px; }
+      .hero-section { padding-top: 60px; }
+      .benefit-card, .feature-box, .community-card { padding: 24px; }
+      .features-section .section-head { column-gap: 45px; }
+      .faq-section > .container { gap: 48px; }
+      .footer-grid { gap: 30px; }
     }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: var(--bg-dark);
-      background-image: 
-        radial-gradient(at 0% 0%, rgba(21, 101, 192, 0.3) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(33, 150, 243, 0.2) 0px, transparent 50%),
-        radial-gradient(at 50% 50%, rgba(13, 71, 161, 0.15) 0px, transparent 60%);
-      min-height: 100vh;
-      color: var(--text-white);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      overflow-x: hidden;
-      padding: 40px 20px 24px;
+    @media (max-width: 800px) {
+      .container { width: calc(100% - 48px); }
+      .hero-grid { grid-template-columns: 1fr; gap: 20px; }
+      .hero-text-col { max-width: 620px; margin: auto; text-align: center; }
+      .hero-title { font-size: clamp(43px, 7vw, 62px); }
+      .hero-desc { margin-inline: auto; }
+      .hero-cta-group { justify-content: center; }
+      .hero-visual { max-width: 480px; width: 100%; margin: 0 auto; }
+      .hero-highlights { margin-top: 36px; gap: 16px; }
+      .highlight-item { padding-left: 16px; }
+      .highlight-val { font-size: 24px; }
+      .dual-section, .features-section, .community-section, .steps-section, .categories-section, .faq-section { padding: 64px 0; }
+      .dual-cards-grid, .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .community-grid { grid-template-columns: 1fr; }
+      .community-card { padding: 30px; }
+      .features-section .section-head { grid-template-columns: 1fr; }
+      .features-section .section-title { margin-bottom: 16px; }
+      .steps-split { grid-template-columns: 1fr; }
+      .local-trust-card { flex-direction: column; text-align: center; }
+      .download-section { padding-bottom: 64px; }
+      .download-card { padding: 36px; grid-template-columns: 1.5fr 1fr; gap: 22px; }
+      .download-emblem { padding: 0; }
+      .download-emblem-mark { width: 120px; height: 120px; }
+      .download-emblem-mark img { width: 86px; height: 86px; }
+      .faq-section > .container { grid-template-columns: 1fr; gap: 25px; }
+      .faq-section .section-head { max-width: 500px; }
+      .footer-grid { grid-template-columns: repeat(2, 1fr); gap: 36px; }
     }
-
-    .main-container {
-      max-width: 720px;
-      width: 100%;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: auto 0;
+    @media (max-width: 520px) {
+      html { scroll-padding-top: 88px; }
+      .container { width: calc(100% - 40px); }
+      .nav-inner { height: 74px; gap: 8px; }
+      .brand-logo-icon { height: 29px; }
+      .brand-logo-text { height: 27px; }
+      .brand-wrap { gap: 6px; }
+      .nav-actions { gap: 8px; }
+      .nav-actions > .btn { padding: 9px 11px; font-size: 10px; }
+      .mobile-menu-btn { width: 40px; }
+      .mobile-drawer { top: 74px; }
+      .hero-section { padding-top: 40px; }
+      .hero-badge { font-size: 9px; margin-bottom: 22px; }
+      .hero-title { font-size: clamp(37px, 10vw, 49px); }
+      .hero-desc { font-size: 13px; line-height: 1.8; }
+      .hero-cta-group { gap: 10px; }
+      .hero-cta-group .btn { font-size: 12px; padding: 13px 14px; }
+      .hero-visual { margin-top: 8px; }
+      .hero-visual-caption { font-size: 10px; }
+      .hero-highlights { grid-template-columns: repeat(2, 1fr); gap: 25px 18px; padding: 25px 0; }
+      .highlight-item:nth-child(3) { padding-left: 0; border: 0; }
+      .highlight-lbl { font-size: 10px; }
+      .section-head { margin-bottom: 30px; }
+      .section-eyebrow { font-size: 9px; letter-spacing: .1em; }
+      .section-subtitle { font-size: 13px; }
+      .tab-switch-container { width: 100%; }
+      .tab-btn { flex: 1; flex-direction: column; gap: 6px; padding: 10px 8px; font-size: 10px; line-height: 1.6; }
+      .dual-cards-grid, .features-grid { grid-template-columns: 1fr; gap: 14px; }
+      .benefit-card, .feature-box { padding: 26px; }
+      .benefit-title, .feature-name { font-size: 21px; }
+      .benefit-text, .feature-desc { font-size: 13px; }
+      .steps-column { padding: 25px; }
+      .step-item { gap: 13px; }
+      .categories-chips { gap: 8px; }
+      .category-chip { padding: 10px 11px; font-size: 10px; gap: 7px; }
+      .local-trust-card { padding: 26px; }
+      .download-card { grid-template-columns: 1fr; padding: 30px 26px; }
+      .download-emblem { display: none; }
+      .footer-grid { column-gap: 24px; }
+      .footer-brand { grid-column: 1 / -1; }
+      .footer-bottom { flex-direction: column; gap: 9px; }
     }
-
-    .icon-badge {
-      width: 96px;
-      height: 96px;
-      border-radius: 50%;
-      background: #FFFFFF;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 12px 36px rgba(33, 150, 243, 0.35);
-      margin-bottom: 24px;
-      padding: 10px;
-      animation: float 4s ease-in-out infinite;
-    }
-
-    .icon-badge img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-
-    @keyframes float {
-      0%, 100% {
-        transform: translateY(0);
-      }
-      50% {
-        transform: translateY(-8px);
-      }
-    }
-
-    .brand-logo {
-      max-width: 220px;
-      height: auto;
-      margin-bottom: 24px;
-      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
-    }
-
-    .tagline-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(33, 150, 243, 0.15);
-      border: 1px solid rgba(33, 150, 243, 0.3);
-      padding: 8px 18px;
-      border-radius: 100px;
-      color: #60A5FA;
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 24px;
-      backdrop-filter: blur(8px);
-    }
-
-    .tagline-badge .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: #38BDF8;
-      box-shadow: 0 0 10px #38BDF8;
-    }
-
-    h1 {
-      font-family: 'Outfit', sans-serif;
-      font-size: clamp(36px, 6vw, 56px);
-      font-weight: 800;
-      line-height: 1.15;
-      margin-bottom: 18px;
-      background: linear-gradient(135deg, #FFFFFF 30%, #93C5FD 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: -0.02em;
-    }
-
-    p.subtitle {
-      font-size: clamp(16px, 2.5vw, 19px);
-      color: var(--text-muted);
-      line-height: 1.6;
-      max-width: 580px;
-      margin-bottom: 40px;
-    }
-
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      width: 100%;
-      margin-bottom: 40px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 24px 20px;
-      text-align: center;
-      backdrop-filter: blur(12px);
-      transition: transform 0.25s ease, border-color 0.25s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(33, 150, 243, 0.4);
-    }
-
-    .card-icon {
-      font-size: 28px;
-      margin-bottom: 12px;
-      display: inline-block;
-    }
-
-    .card-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 17px;
-      font-weight: 600;
-      color: #F1F5F9;
-      margin-bottom: 6px;
-    }
-
-    .card-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-
-    .app-cta {
-      background: linear-gradient(135deg, rgba(21, 101, 192, 0.25) 0%, rgba(33, 150, 243, 0.15) 100%);
-      border: 1px solid rgba(33, 150, 243, 0.35);
-      border-radius: 20px;
-      padding: 24px 32px;
-      width: 100%;
-      max-width: 540px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      backdrop-filter: blur(10px);
-    }
-
-    .app-cta h3 {
-      font-family: 'Outfit', sans-serif;
-      font-size: 18px;
-      font-weight: 600;
-      color: #E2E8F0;
-    }
-
-    .app-cta p {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    footer {
-      margin-top: 40px;
-      text-align: center;
-      font-size: 13px;
-      color: #64748B;
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
 
 <body>
-  <main class="main-container">
-    <!-- Globe Icon Badge -->
-    <div class="icon-badge">
-      <img src="/assets/icon-only1.png" alt="BizzDeal Icon">
-    </div>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3Z"/></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6m-6 4h6"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-16a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 15l4-5 4 2 5-7m-5 0h5v5"/></symbol><symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8V5h18v3a4 4 0 0 0 0 8v3H3v-3a4 4 0 0 0 0-8Zm12-3v3m0 3v2m0 3v3"/></symbol><symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M14.5 8H10a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H9.5M12 6v12"/></symbol><symbol id="i-gift" viewBox="0 0 24 24"><path d="M3 8h18v4H3zm2 4v9h14v-9M12 8v13"/><path d="M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol><symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5A8.5 8.5 0 0 1 12.5 20H4l-2 2V11.5a9.5 9.5 0 0 1 19 0Z"/><path d="M7 10h10M7 14h6"/></symbol><symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V3h8v4M3 12a20 20 0 0 0 18 0m-9 0v4"/></symbol><symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 7h14l2 14H3L5 7Z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></symbol><symbol id="i-dining" viewBox="0 0 24 24"><path d="M5 3v7m4-7v7M3 3v4a4 4 0 0 0 8 0V3M7 11v10M20 3c-4 2-5 6-5 9h5m0-9v18"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-13h-7Z"/></symbol><symbol id="i-health" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z"/></symbol><symbol id="i-shirt" viewBox="0 0 24 24"><path d="m8 3-6 4 3 5 2-1v10h10V11l2 1 3-5-6-4a4 4 0 0 1-8 0Z"/></symbol><symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V7l8-4v18m0-12h8v12M2 21h20M7 9v1m0 3v1m0 3v1m9-5v1m0 3v1"/></symbol><symbol id="i-car" viewBox="0 0 24 24"><path d="m5 7 2-4h10l2 4m-14 0h14l2 5v7H3v-7l2-5Zm-2 7h18M6 18v3m12-3v3M6 10h2m8 0h2"/></symbol><symbol id="i-learn" viewBox="0 0 24 24"><path d="m2 9 10-6 10 6-10 6L2 9Zm4 3v6a10 10 0 0 0 12 0v-6m4-3v9"/></symbol><symbol id="i-scales" viewBox="0 0 24 24"><path d="M12 3v18m-5 0h10M3 7l9-2 9 2M5 7l-3 7h6L5 7Zm14 0-3 7h6l-3-7Z"/></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 7h4l2-3h6l2 3h4v14H3V7Z"/><circle cx="12" cy="13" r="4"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="m5 3 16 9-16 9V3Z"/><path d="m5 3 11 14M5 21 16 7"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6l8-4Z"/><path d="m8 12 3 3 5-6"/></symbol></defs></svg>
 
-    <!-- Brand Logo Text -->
-    <img src="/assets/logo-text.png" alt="BizzDeal" class="brand-logo">
+  <!-- ============================================================
+       STICKY NAVIGATION BAR
+       ============================================================ -->
+  <header class="site-header">
+    <div class="container nav-inner">
+      <a href="/" class="brand-wrap">
+        <img src="/assets/icon-only1.png" alt="BizzDeal Icon" class="brand-logo-icon">
+        <img src="/assets/logo-text.png" alt="BizzDeal - Your Business is Our Success" class="brand-logo-text">
+      </a>
 
-    <div class="tagline-badge">
-      <span class="dot"></span>
-      <span>Empowering Local Business & Growth</span>
-    </div>
+      <!-- Desktop Links -->
+      <ul class="nav-links" aria-label="Main navigation">
+        <li><a href="#dual-network" class="nav-link">Network</a></li>
+        <li><a href="#features" class="nav-link">Core Pillars</a></li>
+        <li><a href="#community-chat" class="nav-link">Built-in Chat & Community</a></li>
+        <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+        <li><a href="#faqs" class="nav-link">FAQs</a></li>
+      </ul>
 
-    <!-- Main Title -->
-    <h1>Welcome to BizzDeal</h1>
-
-    <p class="subtitle">
-      Connecting businesses, entrepreneurs, and customers through trusted referrals, exclusive deals, and smart rewards.
-    </p>
-
-    <!-- Highlights Grid -->
-    <div class="cards-grid">
-      <div class="card">
-        <div class="card-icon">🤝</div>
-        <div class="card-title">Trusted Referrals</div>
-        <div class="card-desc">Expand your business network through structured member-to-member referral slips.</div>
-      </div>
-      <div class="card">
-        <div class="card-icon">🏷️</div>
-        <div class="card-title">Exclusive Deals</div>
-        <div class="card-desc">Discover verified vouchers and high-value offers curated by local business owners.</div>
-      </div>
-      <div class="card">
-        <div class="card-icon">🪙</div>
-        <div class="card-title">BizzCoins Rewards</div>
-        <div class="card-desc">Earn points and coins with every interaction, redeemable directly across merchants.</div>
+      <div class="nav-actions">
+        <a href="#download-app" class="btn btn-primary">
+          Get the App
+        </a>
+        <button class="mobile-menu-btn" id="mobileMenuToggle" aria-label="Open navigation" aria-controls="mobileDrawer" aria-expanded="false">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </div>
+  </header>
 
-    <!-- Mobile CTA -->
-    <div class="app-cta">
-      <h3>Available on Mobile</h3>
-      <p>Download the BizzDeal app on Android and iOS to start connecting and saving today.</p>
+  <!-- Mobile Drawer -->
+  <nav class="mobile-drawer" id="mobileDrawer" aria-label="Mobile navigation" hidden>
+    <a href="#dual-network" class="mobile-nav-link" onclick="closeMobileMenu()">Network</a>
+    <a href="#features" class="mobile-nav-link" onclick="closeMobileMenu()">Core Pillars</a>
+    <a href="#community-chat" class="mobile-nav-link" onclick="closeMobileMenu()">Built-in Chat & Community</a>
+    <a href="#how-it-works" class="mobile-nav-link" onclick="closeMobileMenu()">How It Works</a>
+    <a href="#faqs" class="mobile-nav-link" onclick="closeMobileMenu()">FAQs</a>
+    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <a href="#download-app" class="btn btn-primary" style="width: 100%;" onclick="closeMobileMenu()">Get Android App</a>
     </div>
+  </nav>
+
+  <main id="main-content">
+    <!-- ============================================================
+         HERO SECTION
+         ============================================================ -->
+    <section class="hero-section">
+      <div class="container hero-grid">
+        <!-- Hero Left Content -->
+        <div class="hero-text-col">
+          <div class="hero-badge">
+            <span class="badge-dot"></span>
+            <span>Early Access • Founded in Srikakulam & Growing</span>
+          </div>
+
+          <h1 class="hero-title">
+            <span class="hero-title-intro">Connect, Collaborate<br>&amp; Grow</span>
+            <span class="hero-title-location">with Srikakulam's</span>
+            <span class="gradient-text-blue">Local Business &amp;<br>Deals Network</span>
+          </h1>
+
+          <p class="hero-desc">
+            BizzDeal bridges the gap between ambitious local entrepreneurs and smart shoppers. Advertise with Featured Stores, promote products with Bizz Videos using your existing social media links, exchange formal referral slips, and earn BizzCoins rewards.
+          </p>
+
+          <div class="hero-cta-group">
+            <a href="#dual-network" class="btn btn-primary btn-lg" onclick="activateTab('business')">
+              Join as Business <svg class="ui-icon" aria-hidden="true"><use href="#i-arrow"></use></svg>
+            </a>
+            <a href="#dual-network" class="btn btn-ghost btn-lg" onclick="activateTab('shopper')">
+              Explore Local Deals
+            </a>
+          </div>
+
+
+        </div>
+
+        <!-- A conceptual illustration of local commerce, not an app interface. -->
+        <div class="hero-visual">
+          <svg class="network-art" viewBox="0 0 540 520" role="img" aria-labelledby="network-art-title network-art-desc">
+            <title id="network-art-title">Your local network. Greater possibilities.</title>
+            <desc id="network-art-desc">An illustrated neighborhood store connects verified businesses, local shoppers, referrals, and BizzCoins rewards through BizzDeal.</desc>
+            <defs>
+              <pattern id="network-dots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#dce2d9"/></pattern>
+              <filter id="network-shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#233f5e" flood-opacity=".07"/></filter>
+            </defs>
+            <circle cx="278" cy="252" r="219" fill="#f0f2e9"/>
+            <circle cx="278" cy="252" r="219" fill="url(#network-dots)"/>
+            <circle cx="278" cy="252" r="175" fill="none" stroke="#d9e0d3" stroke-dasharray="4 7"/>
+            <circle cx="278" cy="252" r="122" fill="none" stroke="#d9e0d3"/>
+            <path d="M133 134C207 134 184 220 244 220M390 120C343 120 356 200 318 220M387 378C354 378 363 290 318 290M128 369C186 369 173 288 245 288" fill="none" stroke="#a8bba4" stroke-width="1.6" stroke-dasharray="5 5"/>
+            <g fill="#81a67a" stroke="#fcfbf8" stroke-width="5"><circle cx="175" cy="188" r="6"/><circle cx="360" cy="163" r="6"/><circle cx="171" cy="320" r="6"/><circle cx="363" cy="337" r="6"/></g>
+            <g transform="translate(44 81) rotate(-6 82 46)" filter="url(#network-shadow)">
+              <rect width="180" height="89" rx="13" fill="white" stroke="#e0e5df"/>
+              <rect x="15" y="17" width="38" height="38" rx="10" fill="#edf3fe"/>
+              <use href="#i-briefcase" x="23" y="25" width="22" height="22" fill="none" stroke="#1763e8" stroke-width="1.6"/>
+              <text x="64" y="32" font-size="11" font-weight="600" fill="#233c54">Local businesses</text>
+              <text x="64" y="49" font-size="9" fill="#687789">Connect &amp; grow</text>
+              <circle cx="22" cy="70" r="3" fill="#6c9961"/><text x="32" y="73" font-size="8" fill="#526d4e">Admin-verified community</text>
+            </g>
+            <g transform="translate(358 64) rotate(8 65 55)" filter="url(#network-shadow)">
+              <rect width="128" height="115" rx="13" fill="#fcf0d9" stroke="#ecdfc8"/>
+              <circle cx="64" cy="35" r="18" fill="#f8df9f"/>
+              <use href="#i-coin" x="52" y="23" width="24" height="24" fill="none" stroke="#9c7528" stroke-width="1.6"/>
+              <text x="64" y="75" text-anchor="middle" font-size="13" font-weight="600" fill="#655024">BizzCoins</text>
+              <text x="64" y="92" text-anchor="middle" font-size="9" fill="#877046">Local shopping, rewarded</text>
+            </g>
+            <g transform="translate(172 188)" filter="url(#network-shadow)">
+              <rect width="209" height="161" rx="18" fill="#1763e8"/>
+              <path d="M22 134h164" stroke="#5490ee"/>
+              <rect x="65" y="56" width="81" height="60" rx="3" fill="#ecf3ff"/>
+              <path d="m64 42-8 23h99l-8-23Z" fill="#c9dcff"/>
+              <path d="m76 42-4 23h16l2-23Zm29 0v23h16l-2-23Zm29 0 4 23h17l-8-23Z" fill="white"/>
+              <path d="M56 65a8 8 0 0 0 16 0 8 8 0 0 0 16 0 8.5 8.5 0 0 0 17 0 8 8 0 0 0 16 0 8.5 8.5 0 0 0 17 0 8.5 8.5 0 0 0 17 0" fill="#c9dcff"/>
+              <rect x="79" y="83" width="25" height="33" rx="2" fill="#8db7f5"/>
+              <rect x="115" y="83" width="20" height="20" rx="2" fill="#b1cef9"/>
+              <path d="M125 83v20m-10-10h20" stroke="#ecf3ff" stroke-width="2"/>
+              <text x="104.5" y="24" text-anchor="middle" font-size="9" letter-spacing="2" fill="#d8e7ff">GROWING TOGETHER</text>
+              <text x="104.5" y="150" text-anchor="middle" font-size="11" font-weight="500" fill="white">Your neighborhood. Connected.</text>
+              <circle cx="192" cy="9" r="18" fill="#d9ebbd" stroke="#fcfbf8" stroke-width="4"/>
+              <path d="m185 9 5 5 9-10" fill="none" stroke="#4c7142" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <g transform="translate(25 350) rotate(5 91 45)" filter="url(#network-shadow)">
+              <rect width="183" height="92" rx="13" fill="white" stroke="#e0e5df"/>
+              <rect x="15" y="17" width="38" height="38" rx="10" fill="#f3edf8"/>
+              <use href="#i-receipt" x="23" y="25" width="22" height="22" fill="none" stroke="#8a69ac" stroke-width="1.6"/>
+              <text x="64" y="33" font-size="11" font-weight="600" fill="#233c54">Real connections</text>
+              <text x="64" y="50" font-size="9" fill="#687789">Meaningful referrals</text>
+              <path d="M17 70h104m9 0h34" stroke="#e7ecf0" stroke-width="4" stroke-linecap="round"/>
+            </g>
+            <g transform="translate(341 362) rotate(-6 84 44)" filter="url(#network-shadow)">
+              <rect width="174" height="87" rx="13" fill="white" stroke="#e0e5df"/>
+              <rect x="15" y="19" width="42" height="42" rx="21" fill="#eaf2df"/>
+              <use href="#i-bag" x="25" y="29" width="22" height="22" fill="none" stroke="#698251" stroke-width="1.6"/>
+              <text x="68" y="36" font-size="11" font-weight="600" fill="#233c54">Shop local.</text>
+              <text x="68" y="53" font-size="11" font-weight="600" fill="#233c54">Discover more.</text>
+              <text x="68" y="69" font-size="8" fill="#687789">Deals around the corner</text>
+            </g>
+            <g fill="#8ca980"><path d="m284 64 2 7 7 2-7 2-2 7-2-7-7-2 7-2Z"/><path d="m478 267 2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="96" cy="245" r="4"/></g>
+            <g transform="translate(208 469)"><use href="#i-pin" width="15" height="15" fill="none" stroke="#69806a" stroke-width="1.7"/><text x="21" y="12" font-size="10" fill="#69806a">Rooted in Srikakulam</text></g>
+          </svg>
+          <p class="hero-visual-caption"><svg class="ui-icon" aria-hidden="true"><use href="#i-users"></use></svg> A stronger local economy starts with us.</p>
+        </div>
+      </div>
+      <div class="container">
+          <!-- Network highlights -->
+          <div class="hero-highlights">
+            <div class="highlight-item">
+              <div class="highlight-val gold">100 Pts</div>
+              <div class="highlight-lbl">Signup bonus for every new customer</div>
+            </div>
+            <div class="highlight-item">
+              <div class="highlight-val green">75 Pts</div>
+              <div class="highlight-lbl">Reward per successful referral</div>
+            </div>
+            <div class="highlight-item">
+              <div class="highlight-val cyan">Formal Slips</div>
+              <div class="highlight-lbl">In-house & out-house referral exchange</div>
+            </div>
+            <div class="highlight-item">
+              <div class="highlight-val">100%</div>
+              <div class="highlight-lbl">Admin-verified local businesses</div>
+            </div>
+          </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         DUAL PERSPECTIVE SECTION (BUSINESSES VS SHOPPERS)
+         ============================================================ -->
+    <section class="dual-section" id="dual-network">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-eyebrow">Two Sides of One Thriving Network</div>
+          <h2 class="section-title">Designed for Founders, Built for Customers</h2>
+          <p class="section-subtitle">
+            Whether you are scaling your local enterprise or hunting for the best neighborhood savings, BizzDeal gives you dedicated tools built around trust.
+          </p>
+        </div>
+
+        <!-- Segmented Tab Switcher -->
+        <div class="tab-switch-wrapper">
+          <div class="tab-switch-container" role="tablist" aria-label="Explore BizzDeal for your needs">
+            <button class="tab-btn active" id="btnTabBusiness" role="tab" aria-selected="true" aria-controls="tabContentBusiness" onclick="activateTab('business')">
+              <svg class="ui-icon" aria-hidden="true"><use href="#i-briefcase"></use></svg> For Business Owners & Entrepreneurs
+            </button>
+            <button class="tab-btn" id="btnTabShopper" role="tab" aria-selected="false" aria-controls="tabContentShopper" tabindex="-1" onclick="activateTab('shopper')">
+              <svg class="ui-icon" aria-hidden="true"><use href="#i-bag"></use></svg> For Everyday Shoppers & Customers
+            </button>
+          </div>
+        </div>
+
+        <!-- Business Panel -->
+        <div class="tab-content active" id="tabContentBusiness" role="tabpanel" aria-labelledby="btnTabBusiness" tabindex="0">
+          <div class="dual-cards-grid">
+            <!-- Benefit 1: Featured Store Advertising -->
+            <div class="benefit-card amber">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-star"></use></svg></div>
+              <h3 class="benefit-title">Featured Store Advertising</h3>
+              <p class="benefit-text">
+                Advertise your business right at the top of the BizzDeal app. Gain maximum visibility with verified promotional banners curated by admin to drive footfall to your physical store.
+              </p>
+            </div>
+
+            <!-- Benefit 2: Bizz Videos (Social Media Links) -->
+            <div class="benefit-card rose">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-video"></use></svg></div>
+              <h3 class="benefit-title">Bizz Videos via Social Links</h3>
+              <p class="benefit-text">
+                Promote your store and products effortlessly. Simply paste links to your existing Instagram reels and YouTube videos—no separate video shooting or heavy file uploads needed.
+              </p>
+            </div>
+
+            <!-- Benefit 3: Formal Referral Slips -->
+            <div class="benefit-card">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-receipt"></use></svg></div>
+              <h3 class="benefit-title">Formal Referral Slips</h3>
+              <p class="benefit-text">
+                Move past casual chat recommendations. Exchange formal in-house and out-house referral slips with member-to-member accountability and tracked closure status.
+              </p>
+            </div>
+
+            <!-- Benefit 4: Spotlight 1-on-1 Meetings -->
+            <div class="benefit-card purple">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-users"></use></svg></div>
+              <h3 class="benefit-title">Spotlight 1-on-1 Meetings</h3>
+              <p class="benefit-text">
+                Schedule focused 1-on-1 networking sessions with fellow business owners. Pitch your services, understand complementary offerings, and build strong mutual referral pipelines.
+              </p>
+            </div>
+
+            <!-- Benefit 5: Appreciation & Revenue Logs -->
+            <div class="benefit-card emerald">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-chart"></use></svg></div>
+              <h3 class="benefit-title">Appreciation & Revenue Logs</h3>
+              <p class="benefit-text">
+                Record total business generated and thank members for closed deals. Build a verified reputation in the community backed by real economic contribution.
+              </p>
+            </div>
+
+            <!-- Benefit 6: Curated Deal Vouchers -->
+            <div class="benefit-card">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-ticket"></use></svg></div>
+              <h3 class="benefit-title">Curated Deal Vouchers</h3>
+              <p class="benefit-text">
+                Create targeted, time-limited vouchers for footfall generation. Control voucher limits, expiry dates, and verify customer redemption securely via QR code.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shoppers Panel -->
+        <div class="tab-content" id="tabContentShopper" role="tabpanel" aria-labelledby="btnTabShopper" tabindex="0" hidden>
+          <div class="dual-cards-grid">
+            <div class="benefit-card emerald">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-coin"></use></svg></div>
+              <h3 class="benefit-title">100 BizzCoins Signup Bonus</h3>
+              <p class="benefit-text">
+                Every customer gets a head start with 100 BizzCoins credited immediately upon registration, ready to use on partner deals and savings.
+              </p>
+            </div>
+
+            <div class="benefit-card amber">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-gift"></use></svg></div>
+              <h3 class="benefit-title">Exclusive Local Deals</h3>
+              <p class="benefit-text">
+                Access genuine discounts on restaurants, clinics, electronics, fashion, and home repairs curated directly by local Srikakulam merchants.
+              </p>
+            </div>
+
+            <div class="benefit-card rose">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-video"></use></svg></div>
+              <h3 class="benefit-title">Watch Bizz Video Reels</h3>
+              <p class="benefit-text">
+                Browse real video tours and product reels linked directly from merchant social pages to preview store ambiance, dishes, and collections before visiting.
+              </p>
+            </div>
+
+            <div class="benefit-card">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-coin"></use></svg></div>
+              <h3 class="benefit-title">BizzCoins on Every Purchase</h3>
+              <p class="benefit-text">
+                Earn reward coins whenever you redeem vouchers or shop at participating stores. Accumulate balance and redeem coins directly on future bills.
+              </p>
+            </div>
+
+            <div class="benefit-card purple">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-search"></use></svg></div>
+              <h3 class="benefit-title">PIN-Code & Category Search</h3>
+              <p class="benefit-text">
+                Find exactly what you need in your neighborhood. Filter by category, location, or ratings to discover reliable local service providers.
+              </p>
+            </div>
+
+            <div class="benefit-card emerald">
+              <div class="benefit-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-chart"></use></svg></div>
+              <h3 class="benefit-title">Transparent Savings Tracker</h3>
+              <p class="benefit-text">
+                Your BizzDeal wallet keeps a detailed log of every rupee saved through vouchers and coins, showing your cumulative household savings.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         CORE PLATFORM PILLARS (FEATURES GRID)
+         ============================================================ -->
+    <section class="features-section" id="features">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-eyebrow">One Connected Platform</div>
+          <h2 class="section-title">The 6 Pillars That Power BizzDeal</h2>
+          <p class="section-subtitle">
+            Everything you need to build trusted connections, promote your business, and make local commerce more rewarding.
+          </p>
+        </div>
+
+        <div class="features-grid">
+          <!-- Pillar 1: Formal Referral Engine -->
+          <div class="feature-box">
+            <div class="feature-top">
+              <div class="feature-icon-circle"><svg class="ui-icon" aria-hidden="true"><use href="#i-receipt"></use></svg></div>
+              <span class="feature-badge">Networking</span>
+            </div>
+            <h3 class="feature-name">Structured Referral Engine</h3>
+            <p class="feature-desc">
+              Send and receive formalized in-house and out-house referral slips. Each slip tracks contact details, urgency level, and conversion milestones with recorded revenue appreciation.
+            </p>
+            <div class="feature-highlight-bar">
+              <span class="icon">✓</span> Formal slip records with status lifecycle
+            </div>
+          </div>
+
+          <!-- Pillar 2: Featured Store Advertising -->
+          <div class="feature-box">
+            <div class="feature-top">
+              <div class="feature-icon-circle" style="background: rgba(245,158,11,0.12); color:#916119;"><svg class="ui-icon" aria-hidden="true"><use href="#i-star"></use></svg></div>
+              <span class="feature-badge" style="color: var(--amber-400); background: rgba(245,158,11,0.1);">Advertising</span>
+            </div>
+            <h3 class="feature-name">Featured Store Advertising</h3>
+            <p class="feature-desc">
+              Promote your business with prime spotlight placement. Admin-curated featured spots ensure top visibility for your store, brand stories, and flagship offers to local shoppers.
+            </p>
+            <div class="feature-highlight-bar">
+              <span class="icon">✓</span> High-visibility discovery banners
+            </div>
+          </div>
+
+          <!-- Pillar 3: Bizz Videos via Social Links -->
+          <div class="feature-box">
+            <div class="feature-top">
+              <div class="feature-icon-circle" style="background: rgba(251,113,133,0.12); color:#af4f68;"><svg class="ui-icon" aria-hidden="true"><use href="#i-video"></use></svg></div>
+              <span class="feature-badge" style="color: var(--rose-400); background: rgba(251,113,133,0.1);">Media Promo</span>
+            </div>
+            <h3 class="feature-name">Bizz Videos via Social Links</h3>
+            <p class="feature-desc">
+              Promote your store and products effortlessly. Re-use your existing Instagram reels and YouTube videos by simply pasting links, giving shoppers a rich visual preview.
+            </p>
+            <div class="feature-highlight-bar">
+              <span class="icon">✓</span> Re-use existing Instagram & YouTube videos
+            </div>
+          </div>
+
+          <!-- Pillar 4: Dynamic Vouchers & Deals -->
+          <div class="feature-box">
+            <div class="feature-top">
+              <div class="feature-icon-circle" style="background: rgba(16,185,129,0.12); color:#257459;"><svg class="ui-icon" aria-hidden="true"><use href="#i-ticket"></use></svg></div>
+              <span class="feature-badge" style="color: var(--emerald-400); background: rgba(16,185,129,0.1);">Commerce</span>
+            </div>
+            <h3 class="feature-name">Dynamic Vouchers & Deals</h3>
+            <p class="feature-desc">
+              Merchants create customized discount vouchers with built-in fraud prevention. Each issued voucher has a unique code and requires merchant verification at redemption.
+            </p>
+            <div class="feature-highlight-bar">
+              <span class="icon">✓</span> Anti-tamper single redemption check
+            </div>
+          </div>
+
+          <!-- Pillar 5: BizzCoins Digital Wallet -->
+          <div class="feature-box">
+            <div class="feature-top">
+              <div class="feature-icon-circle" style="background: rgba(245,158,11,0.12); color:#916119;"><svg class="ui-icon" aria-hidden="true"><use href="#i-coin"></use></svg></div>
+              <span class="feature-badge" style="color: var(--amber-400); background: rgba(245,158,11,0.1);">Rewards</span>
+            </div>
+            <h3 class="feature-name">BizzCoins Digital Wallet</h3>
+            <p class="feature-desc">
+              Integrated reward ledger with transparent point mechanics. Customers earn 100 points on signup, members earn 75 points per referral, redeemable across registered merchants.
+            </p>
+            <div class="feature-highlight-bar">
+              <span class="icon">✓</span> Immutable double-entry wallet history
+            </div>
+          </div>
+
+          <!-- Pillar 6: Spotlight Meetings & Chapter Collaboration -->
+          <div class="feature-box">
+            <div class="feature-top">
+              <div class="feature-icon-circle" style="background: rgba(139,92,246,0.12); color:#7554ac;"><svg class="ui-icon" aria-hidden="true"><use href="#i-users"></use></svg></div>
+              <span class="feature-badge" style="color: var(--purple-400); background: rgba(139,92,246,0.1);">Spotlight</span>
+            </div>
+            <h3 class="feature-name">Spotlight 1-on-1 Meetings</h3>
+            <p class="feature-desc">
+              Foster strategic alliances between entrepreneurs. Built-in meeting scheduler with agenda setting, confirmation reminders, and attendance logs.
+            </p>
+            <div class="feature-highlight-bar">
+              <span class="icon">✓</span> Member-to-member partnership sessions
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         BUILT-IN CHAT & COMMUNITY GROUP
+         ============================================================ -->
+    <section class="community-section" id="community-chat">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-eyebrow">Better Together</div>
+          <h2 class="section-title">Built-In Direct Chat & Community Group</h2>
+          <p class="section-subtitle">
+            Keep all your business interactions, deals, and partnerships organized inside one secure platform — without relying on external channels.
+          </p>
+        </div>
+
+        <div class="community-grid">
+          <!-- Card 1: Direct 1-on-1 Chat -->
+          <div class="community-card">
+            <div class="community-card-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-chat"></use></svg></div>
+            <h3 class="community-card-title">1-on-1 Direct Member Chat</h3>
+            <p class="community-card-desc">
+              Connect instantly with fellow verified entrepreneurs and administrators. Send service quotes, product snapshots, location pins, and voice notes directly without intermediary fees.
+            </p>
+            <ul class="community-perks-list">
+              <li><span class="dot"></span> Realtime WebSocket-powered instant messaging</li>
+              <li><span class="dot"></span> Photo sharing & service quotation exchanges</li>
+              <li><span class="dot"></span> Voice memos for quick explanations on the go</li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Exclusive Member Community Group -->
+          <div class="community-card green">
+            <div class="community-card-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-users"></use></svg></div>
+            <h3 class="community-card-title">Verified Member Community Group</h3>
+            <p class="community-card-desc">
+              An exclusive, admin-vetted community hub specifically for Srikakulam entrepreneurs. Share chapter updates, post mutual business requirements, and celebrate closed deals.
+            </p>
+            <ul class="community-perks-list">
+              <li><span class="dot"></span> Only verified business owners can participate</li>
+              <li><span class="dot"></span> Post commercial inquiries & find trusted local vendors</li>
+              <li><span class="dot"></span> Celebrate member milestones & closed collaborations</li>
+            </ul>
+          </div>
+
+          <!-- Card 3: Referral Slips & Spotlight Meets -->
+          <div class="community-card amber">
+            <div class="community-card-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-users"></use></svg></div>
+            <h3 class="community-card-title">From Chat to Closed Revenue</h3>
+            <p class="community-card-desc">
+              Seamlessly convert conversations into formal In-House or Out-House referral slips. Schedule 1-on-1 spotlight meetings with automated calendar reminders and attendance tracking.
+            </p>
+            <ul class="community-perks-list">
+              <li><span class="dot"></span> Instant conversion from chat to official referral slip</li>
+              <li><span class="dot"></span> Built-in meeting scheduler with agenda logs</li>
+              <li><span class="dot"></span> Transparent revenue appreciation tracking</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         HOW IT WORKS (STEP-BY-STEP FLOW)
+         ============================================================ -->
+    <section class="steps-section" id="how-it-works">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-eyebrow">Clear Process</div>
+          <h2 class="section-title">How BizzDeal Works</h2>
+          <p class="section-subtitle">
+            A simple, transparent 3-step workflow for both business founders and shoppers.
+          </p>
+        </div>
+
+        <div class="steps-split">
+          <!-- Flow 1: Members -->
+          <div class="steps-column">
+            <div class="steps-col-head">
+              <span class="col-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-briefcase"></use></svg></span>
+              <h3 class="col-title">For Business Members</h3>
+            </div>
+            <div class="step-list">
+              <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-details">
+                  <h4>Register & Verify Business</h4>
+                  <p>Create your member profile, list your services, add category tags, and submit details for quick admin onboarding.</p>
+                </div>
+              </div>
+
+              <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-details">
+                  <h4>Advertise & Promote via Bizz Videos</h4>
+                  <p>Apply for Featured Store placement and paste your existing Instagram & YouTube video links to showcase store ambience and products.</p>
+                </div>
+              </div>
+
+              <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-details">
+                  <h4>Exchange Slips & Close Deals</h4>
+                  <p>Exchange formal in-house and out-house referral slips, close transactions, and record mutual appreciation revenue.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flow 2: Customers -->
+          <div class="steps-column">
+            <div class="steps-col-head">
+              <span class="col-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-bag"></use></svg></span>
+              <h3 class="col-title">For Everyday Shoppers</h3>
+            </div>
+            <div class="step-list">
+              <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-details">
+                  <h4>Install & Collect 100 Welcome Coins</h4>
+                  <p>Download the Android app from Google Play, sign up in seconds, and automatically receive 100 BizzCoins in your digital rewards wallet.</p>
+                </div>
+              </div>
+
+              <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-details">
+                  <h4>Explore Featured Stores & Bizz Videos</h4>
+                  <p>Watch short video tours of local boutiques, clinics, and restaurants, and discover verified vouchers in Srikakulam.</p>
+                </div>
+              </div>
+
+              <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-details">
+                  <h4>Redeem at Checkout & Track Savings</h4>
+                  <p>Present voucher codes at payment, enjoy instant discounts, accumulate BizzCoins, and monitor lifetime savings.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         LOCAL CATEGORIES & SRIKAKULAM SHOWCASE
+         ============================================================ -->
+    <section class="categories-section">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-eyebrow">Local Commerce</div>
+          <h2 class="section-title">Serving Essential Local Industries</h2>
+          <p class="section-subtitle">
+            From essential retail to specialized trade and healthcare, explore active business categories in your district.
+          </p>
+        </div>
+
+        <div class="categories-chips">
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-dining"></use></svg></span> Dining & Cafes</div>
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-bolt"></use></svg></span> Electricals & Hardware</div>
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-health"></use></svg></span> Clinics & Healthcare</div>
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-shirt"></use></svg></span> Fashion & Retail</div>
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-building"></use></svg></span> Construction & Interiors</div>
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-car"></use></svg></span> Automobile & Repairs</div>
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-learn"></use></svg></span> Education & Coaching</div>
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-scales"></use></svg></span> Professional Services</div>
+          <div class="category-chip"><span class="emoji"><svg class="ui-icon" aria-hidden="true"><use href="#i-camera"></use></svg></span> Photography & Media</div>
+        </div>
+
+        <div class="local-trust-card">
+          <div class="trust-text">
+            <h3>Supporting Local Entrepreneurs in Srikakulam</h3>
+            <p>We are actively onboarding founding businesses and service providers across Andhra Pradesh. Keep your revenue circulating in the local economy.</p>
+          </div>
+          <a href="#download-app" class="btn btn-emerald" style="flex-shrink: 0;">
+            Join the Network
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         APP DOWNLOAD (GOOGLE PLAY ONLY, NO PORTAL)
+         ============================================================ -->
+    <% const storeUrl = (typeof playStoreUrl !== 'undefined' && playStoreUrl) ? playStoreUrl : 'https://play.google.com/store/apps/details?id=com.bizzdeal.app'; %>
+    <section class="download-section" id="download-app">
+      <div class="container">
+        <div class="download-card">
+          <div class="download-content">
+            <div class="section-eyebrow">
+              Android App Experience
+            </div>
+            <h2>Carry BizzDeal Everywhere on Android</h2>
+            <p>
+              Receive real-time referral slip alerts, watch Bizz Videos, advertise your store, chat with fellow members and admin on the move, participate in the member community group, and track your BizzCoins ledger 24/7.
+            </p>
+
+            <div class="download-buttons">
+              <a href="<%= storeUrl %>" target="_blank" rel="noopener noreferrer" class="store-badge" id="btn-playstore-download">
+                <span class="store-icon"><svg class="ui-icon" aria-hidden="true"><use href="#i-play"></use></svg></span>
+                <span>
+                  <span class="store-text-sub">Available on</span>
+                  <span class="store-text-main">Google Play Store</span>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <div class="download-emblem" aria-label="Scan to download BizzDeal app">
+            <div class="download-emblem-mark" title="Scan to open Play Store link">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=<%= encodeURIComponent(storeUrl) %>" alt="Scan QR code to download BizzDeal from Google Play Store" class="download-qr-img" loading="lazy" width="118" height="118">
+            </div>
+            <strong>Scan to Download App</strong>
+            <p>Point your phone camera at the QR code to install BizzDeal on Android.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FREQUENTLY ASKED QUESTIONS (FAQ)
+         ============================================================ -->
+    <section class="faq-section" id="faqs">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-eyebrow">Clear Answers</div>
+          <h2 class="section-title">Frequently Asked Questions</h2>
+          <p class="section-subtitle">
+            Everything you need to know about BizzDeal's referral engine, Featured Stores, Bizz Videos, voucher system, and community rules.
+          </p>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <button class="faq-question" id="faq-question-1" aria-expanded="false" aria-controls="faq-answer-1" onclick="toggleFaq(this)">
+              <span>How do Featured Stores and Bizz Videos help advertise my business?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-1" role="region" aria-labelledby="faq-question-1" hidden>
+              <strong>Featured Stores</strong> receive prime spotlight banner placement across the app to advertise your store and flagship offers to all local shoppers. With <strong>Bizz Videos</strong>, you can easily promote your store and products by simply pasting links to your already uploaded social media videos (Instagram reels, YouTube, etc.) without having to shoot or upload heavy files again.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" id="faq-question-2" aria-expanded="false" aria-controls="faq-answer-2" onclick="toggleFaq(this)">
+              <span>What is BizzDeal and how does it benefit my business?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-2" role="region" aria-labelledby="faq-question-2" hidden>
+              BizzDeal is a dedicated local commerce and referral exchange platform. It allows verified local business owners to pass structured referral slips, track closed revenue appreciation, publish exclusive vouchers, and connect with verified business members through built-in real-time chat, community groups, and rewards.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" id="faq-question-3" aria-expanded="false" aria-controls="faq-answer-3" onclick="toggleFaq(this)">
+              <span>What is the difference between In-House and Out-House referrals?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-3" role="region" aria-labelledby="faq-question-3" hidden>
+              An <strong>In-House referral</strong> is when a business member personally uses or buys services directly from another member. An <strong>Out-House referral</strong> is when a member introduces an external client or friend to a fellow member's business. Both slips track conversion and recorded appreciation value.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" id="faq-question-4" aria-expanded="false" aria-controls="faq-answer-4" onclick="toggleFaq(this)">
+              <span>How do BizzCoins work and how are they earned?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-4" role="region" aria-labelledby="faq-question-4" hidden>
+              BizzCoins are internal loyalty points. New customers receive <strong>100 BizzCoins</strong> instantly upon signup. Members receive <strong>75 BizzCoins</strong> when their referral leads to successful collaboration. BizzCoins can be redeemed at participating partner merchants to reduce purchase bills.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" id="faq-question-5" aria-expanded="false" aria-controls="faq-answer-5" onclick="toggleFaq(this)">
+              <span>How does built-in chat and the community group work?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-5" role="region" aria-labelledby="faq-question-5" hidden>
+              BizzDeal features a native, real-time messaging system. You can chat one-on-one between verified members and with platform administrators, share quotes, photos, and voice notes. Verified members also gain access to a private Srikakulam community group to network, share requirements, and collaborate.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" id="faq-question-6" aria-expanded="false" aria-controls="faq-answer-6" onclick="toggleFaq(this)">
+              <span>How does voucher redemption work for store owners?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-6" role="region" aria-labelledby="faq-question-6" hidden>
+              When a customer visits your store, they show their digital voucher. The merchant enters or scans the unique voucher code to mark it as redeemed in real-time. This prevents coupon duplication and updates customer savings automatically.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" id="faq-question-7" aria-expanded="false" aria-controls="faq-answer-7" onclick="toggleFaq(this)">
+              <span>Which locations does BizzDeal currently cover?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-7" role="region" aria-labelledby="faq-question-7" hidden>
+              BizzDeal is currently established in Srikakulam, Andhra Pradesh, with foundational chapters expanding across neighboring districts. Any entrepreneur with a verified local enterprise can apply for membership.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <dialog class="download-dialog" id="downloadInfo" aria-labelledby="downloadInfoTitle" aria-describedby="downloadInfoDescription">
+      <div class="section-eyebrow">Early Access</div>
+      <h2 id="downloadInfoTitle">Join BizzDeal on Android</h2>
+      <p id="downloadInfoDescription">BizzDeal is currently in early distribution for Srikakulam members. Contact our team for the early onboarding Android app.</p>
+      <div class="dialog-actions">
+        <a href="mailto:support@bizzdeal.in" class="btn btn-primary">Contact support <svg class="ui-icon" aria-hidden="true"><use href="#i-arrow"></use></svg></a>
+        <form method="dialog"><button class="btn btn-ghost">Close</button></form>
+      </div>
+    </dialog>
   </main>
 
-  <footer>
-    &copy; <%= new Date().getFullYear() %> BizzDeal. All rights reserved.
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Col 1: Brand Info -->
+        <div class="footer-brand">
+          <div class="brand-wrap">
+            <img src="/assets/icon-only1.png" alt="BizzDeal Icon" class="brand-logo-icon" style="height: 40px;">
+            <img src="/assets/logo-text.png" alt="BizzDeal" class="brand-logo-text" style="height: 38px;">
+          </div>
+          <p>
+            Srikakulam's trusted platform for structured business referrals, built-in community chat, Featured Store advertising, Bizz Videos, and rewards.
+          </p>
+          <div class="footer-slogan">
+            Your Success Is Our Deal
+          </div>
+        </div>
+
+        <!-- Col 2: Platform Links -->
+        <div class="footer-col">
+          <h4>Platform</h4>
+          <ul class="footer-links">
+            <li><a href="#dual-network" onclick="activateTab('business')">Featured Stores & Ads</a></li>
+            <li><a href="#dual-network" onclick="activateTab('business')">Bizz Videos via Social Links</a></li>
+            <li><a href="#features">Core Pillars</a></li>
+            <li><a href="#community-chat">Built-in Chat & Community</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 3: Ecosystem -->
+        <div class="footer-col">
+          <h4>Ecosystem</h4>
+          <ul class="footer-links">
+            <li><a href="/bizzdeal/api">Service Health Status</a></li>
+            <li><a href="#download-app">Android App on Google Play</a></li>
+            <li><a href="#faqs">Frequently Asked Questions</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 4: Regional Hub & Support -->
+        <div class="footer-col">
+          <h4>Regional Hub</h4>
+          <ul class="footer-links">
+            <li><span style="color: var(--text-muted);"><svg class="ui-icon" aria-hidden="true"><use href="#i-pin"></use></svg> Srikakulam, Andhra Pradesh</span></li>
+            <li><span style="color: var(--text-muted);"><svg class="ui-icon" aria-hidden="true"><use href="#i-clock"></use></svg> Mon - Sat, 9:00 AM - 7:00 PM</span></li>
+            <li><a href="mailto:support@bizzdeal.in">support@bizzdeal.in</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          &copy; <%= new Date().getFullYear() %> BizzDeal Technologies. All rights reserved.
+        </div>
+        <div>
+          Built with pride in Srikakulam, Andhra Pradesh, India.
+        </div>
+      </div>
+    </div>
   </footer>
+
+  <!-- ============================================================
+       INTERACTIVE JAVASCRIPT
+       ============================================================ -->
+  <script>
+    function activateTab(tabType) {
+      ['business', 'shopper'].forEach(type => {
+        const suffix = type === 'business' ? 'Business' : 'Shopper';
+        const button = document.getElementById('btnTab' + suffix);
+        const panel = document.getElementById('tabContent' + suffix);
+        const selected = type === tabType;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+        panel.classList.toggle('active', selected);
+        panel.hidden = !selected;
+      });
+    }
+
+    const audienceTabs = [...document.querySelectorAll('[role="tab"]')];
+    audienceTabs.forEach((tab, index) => {
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1 - index;
+        activateTab(nextIndex === 0 ? 'business' : 'shopper');
+        audienceTabs[nextIndex].focus();
+      });
+    });
+
+    function toggleFaq(button) {
+      const shouldOpen = button.getAttribute('aria-expanded') !== 'true';
+      document.querySelectorAll('.faq-question').forEach(question => {
+        const open = question === button && shouldOpen;
+        question.setAttribute('aria-expanded', String(open));
+        question.parentElement.classList.toggle('open', open);
+        document.getElementById(question.getAttribute('aria-controls')).hidden = !open;
+      });
+    }
+
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const mobileDrawer = document.getElementById('mobileDrawer');
+    const desktopBreakpoint = window.matchMedia('(min-width: 1101px)');
+
+    function closeMobileMenu(returnFocus = false) {
+      mobileDrawer.hidden = true;
+      mobileMenuToggle.setAttribute('aria-expanded', 'false');
+      mobileMenuToggle.setAttribute('aria-label', 'Open navigation');
+      document.body.classList.remove('menu-open');
+      if (returnFocus) mobileMenuToggle.focus();
+    }
+
+    mobileMenuToggle.addEventListener('click', () => {
+      if (!mobileDrawer.hidden) return closeMobileMenu(true);
+      mobileDrawer.hidden = false;
+      mobileMenuToggle.setAttribute('aria-expanded', 'true');
+      mobileMenuToggle.setAttribute('aria-label', 'Close navigation');
+      document.body.classList.add('menu-open');
+      mobileDrawer.querySelector('a').focus();
+    });
+
+    document.addEventListener('keydown', event => {
+      if (mobileDrawer.hidden) return;
+      if (event.key === 'Escape') closeMobileMenu(true);
+      if (event.key === 'Tab') {
+        const lastLink = mobileDrawer.querySelector('.btn');
+        if (event.shiftKey && document.activeElement === mobileMenuToggle) {
+          event.preventDefault();
+          lastLink.focus();
+        } else if (!event.shiftKey && document.activeElement === lastLink) {
+          event.preventDefault();
+          mobileMenuToggle.focus();
+        }
+      }
+    });
+    desktopBreakpoint.addEventListener('change', event => {
+      if (event.matches) closeMobileMenu();
+    });
+
+    function openDownloadInfo() {
+      document.getElementById('downloadInfo').showModal();
+    }
+  </script>
 </body>
 
 </html>
