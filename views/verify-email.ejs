@@ -37,28 +37,30 @@
       margin: 20px;
     }
 
-    .logo {
-      max-width: 180px;
-      margin-bottom: 30px;
-    }
-
     .icon-container {
       width: 80px;
       height: 80px;
       border-radius: 50%;
-      margin: 0 auto 24px;
+      margin: 0 auto 16px;
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
       background: #FFFFFF;
+      padding: 6px;
+      box-sizing: border-box;
     }
 
     .icon-container img {
       width: 100%;
       height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
+      object-fit: contain;
+    }
+
+    .logo {
+      max-width: 180px;
+      display: block;
+      margin: 0 auto 28px;
     }
 
     .status-badge {
@@ -99,11 +101,11 @@
 
 <body>
   <div class="container">
-    <img src="/assets/logo-text.png" alt="BizzDeal" class="logo">
-
     <div class="icon-container">
-      <img src="/assets/icon-only.png" alt="BizzDeal Icon">
+      <img src="/assets/icon-only1.png" alt="BizzDeal Icon">
     </div>
+
+    <img src="/assets/logo-text.png" alt="BizzDeal" class="logo">
 
     <% if (success) { %>
       <div class="status-badge success">Verification Successful</div>
