@@ -17,6 +17,7 @@ import {
   CreateFeaturedRequestDto,
   RejectFeaturedRequestDto,
   QueryFeaturedRequestDto,
+  AdminUpdateFeaturedRequestDto,
 } from './schemas/featured-business.schema';
 import {
   UserRole,
@@ -433,7 +434,64 @@ export class FeaturedBusinessService {
   }
 
   /**
-   * Admin rejects request with reason
+   * Member or Admin updates banner image only
+   */
+  async updateBanner(
+    id: string,
+    user: User,
+    bannerFile?: Express.Multer.File,
+  ): Promise<FeaturedBusinessRequest> {
+    if (!bannerFile) {
+      throw new BadRequestException('Please provide a banner image file.');
+    }
+
+    const request = await this.findById(id);
+
+    if (
+      user.role !== UserRole.ADMIN &&
+      request.business?.owner_id !== user.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to update the banner for this request.',
+      );
+    }
+
+    // Clean up stale banner file
+    if (request.banner_id) {
+      await this.mediaService.deleteFileById(request.banner_id);
+    }
+
+    const media = await this.mediaService.saveFile(
+      bannerFile,
+      user.id,
+      MediaPurpose.BUSINESS_BANNER,
+    );
+
+    request.banner_id = media.id;
+    await this.featuredRequestRepo.save(request);
+
+    return this.findById(request.id);
+  }
+
+  /**
+   * Helper to recalculate business.is_featured based on currently active approved requests
+   */
+  async recalculateBusinessFeaturedStatus(businessId: string): Promise<void> {
+    const now = new Date();
+    const activeLiveRequest = await this.featuredRequestRepo
+      .createQueryBuilder('req')
+      .where('req.business_id = :businessId', { businessId })
+      .andWhere('req.status = :status', { status: FeaturedRequestStatus.APPROVED })
+      .andWhere('req.start_date <= :now AND req.end_date >= :now', { now })
+      .getOne();
+
+    await this.businessRepo.update(businessId, {
+      is_featured: !!activeLiveRequest,
+    });
+  }
+
+  /**
+   * Admin rejects request with reason (can reject pending or approved)
    */
   async rejectRequest(
     id: string,
@@ -441,12 +499,17 @@ export class FeaturedBusinessService {
     adminUser: User,
   ): Promise<FeaturedBusinessRequest> {
     const request = await this.findById(id);
+    const wasApproved = request.status === FeaturedRequestStatus.APPROVED;
 
     request.status = FeaturedRequestStatus.REJECTED;
     request.rejection_reason = dto.reason;
     request.approved_by_id = adminUser.id;
 
     const saved = await this.featuredRequestRepo.save(request);
+
+    if (wasApproved) {
+      await this.recalculateBusinessFeaturedStatus(saved.business_id);
+    }
 
     // Notify member
     await this.notifyMemberStatus(saved, 'REJECTED', dto.reason);
@@ -455,7 +518,7 @@ export class FeaturedBusinessService {
   }
 
   /**
-   * Member cancels their pending request
+   * Member or Admin cancels their pending or approved request
    */
   async cancelRequest(id: string, user: User): Promise<FeaturedBusinessRequest> {
     const request = await this.findById(id);
@@ -469,14 +532,139 @@ export class FeaturedBusinessService {
       );
     }
 
-    if (request.status !== FeaturedRequestStatus.PENDING) {
+    if (
+      request.status !== FeaturedRequestStatus.PENDING &&
+      request.status !== FeaturedRequestStatus.APPROVED
+    ) {
       throw new BadRequestException(
-        'Only pending requests can be cancelled.',
+        'Only pending or approved requests can be cancelled.',
       );
     }
 
+    const wasApproved = request.status === FeaturedRequestStatus.APPROVED;
     request.status = FeaturedRequestStatus.CANCELLED;
-    return this.featuredRequestRepo.save(request);
+    const saved = await this.featuredRequestRepo.save(request);
+
+    if (wasApproved) {
+      await this.recalculateBusinessFeaturedStatus(saved.business_id);
+    }
+
+    try {
+      this.appEventsGateway.emitToUser(
+        request.business?.owner_id || user.id,
+        'FEATURED_REQUEST_STATUS_UPDATED',
+        {
+          request_id: request.id,
+          business_id: request.business_id,
+          title: request.title,
+          status: FeaturedRequestStatus.CANCELLED,
+        },
+      );
+    } catch (err) {
+      this.logger.warn(`Failed to emit cancel event: ${err}`);
+    }
+
+    return this.findById(saved.id);
+  }
+
+  /**
+   * Admin updates an existing featured request (dates, title, description, banner, status)
+   */
+  async adminUpdateRequest(
+    id: string,
+    dto: AdminUpdateFeaturedRequestDto,
+    adminUser: User,
+    bannerFile?: Express.Multer.File,
+  ): Promise<FeaturedBusinessRequest> {
+    const request = await this.findById(id);
+
+    let startDate = request.start_date;
+    let endDate = request.end_date;
+
+    if (dto.start_date) {
+      startDate = new Date(dto.start_date);
+    }
+    if (dto.end_date) {
+      endDate = new Date(dto.end_date);
+    }
+
+    if (endDate <= startDate) {
+      throw new BadRequestException('End date must be strictly after start date.');
+    }
+
+    const targetStatus = dto.status || request.status;
+
+    // Check conflict if target status is APPROVED
+    if (targetStatus === FeaturedRequestStatus.APPROVED) {
+      const conflict = await this.findConflictingApprovedRequest(
+        request.category_id,
+        startDate,
+        endDate,
+        request.id,
+      );
+
+      if (conflict) {
+        throw new BadRequestException(
+          `Cannot update: Another business ("${conflict.business?.name || 'Partner'}") is already approved in this category between ${new Date(conflict.start_date).toLocaleDateString()} and ${new Date(conflict.end_date).toLocaleDateString()}.`,
+        );
+      }
+    }
+
+    if (dto.title) {
+      request.title = dto.title;
+    }
+    if (dto.description) {
+      request.description = dto.description;
+    }
+
+    request.start_date = startDate;
+    request.end_date = endDate;
+
+    if (dto.status) {
+      request.status = dto.status;
+      if (dto.status === FeaturedRequestStatus.APPROVED) {
+        request.approved_by_id = adminUser.id;
+        request.approved_at = new Date();
+        request.rejection_reason = null;
+      }
+    }
+
+    if (dto.rejection_reason !== undefined) {
+      request.rejection_reason = dto.rejection_reason;
+    }
+
+    if (bannerFile) {
+      if (request.banner_id) {
+        await this.mediaService.deleteFileById(request.banner_id);
+      }
+      const media = await this.mediaService.saveFile(
+        bannerFile,
+        adminUser.id,
+        MediaPurpose.BUSINESS_BANNER,
+      );
+      request.banner_id = media.id;
+    }
+
+    const saved = await this.featuredRequestRepo.save(request);
+    await this.recalculateBusinessFeaturedStatus(saved.business_id);
+
+    try {
+      this.appEventsGateway.emitToUser(
+        request.business?.owner_id || adminUser.id,
+        'FEATURED_REQUEST_STATUS_UPDATED',
+        {
+          request_id: saved.id,
+          business_id: saved.business_id,
+          title: saved.title,
+          status: saved.status,
+          reason: saved.rejection_reason,
+        },
+      );
+    } catch (err) {
+      this.logger.warn(`Failed to emit update event: ${err}`);
+    }
+
+    return this.findById(saved.id);
   }
 
   private async notifyMemberStatus(

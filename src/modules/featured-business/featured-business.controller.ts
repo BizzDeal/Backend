@@ -36,6 +36,8 @@ import {
   RejectFeaturedRequestDto,
   queryFeaturedRequestSchema,
   QueryFeaturedRequestDto,
+  adminUpdateFeaturedRequestSchema,
+  AdminUpdateFeaturedRequestDto,
 } from './schemas/featured-business.schema';
 
 @ApiTags('Featured Business Requests')
@@ -219,8 +221,9 @@ export class FeaturedBusinessController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Cancel Pending Featured Business Request',
-    description: 'Allows a member to cancel their pending featured business request.',
+    summary: 'Cancel Featured Business Request',
+    description:
+      'Allows a member or admin to cancel a pending or approved featured business request.',
   })
   @ApiParam({
     name: 'id',
@@ -236,5 +239,76 @@ export class FeaturedBusinessController {
     @CurrentUser() user: User,
   ) {
     return this.featuredBusinessService.cancelRequest(id, user);
+  }
+
+  @Put(':id/banner')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MEMBER, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @UseInterceptors(
+    FileInterceptor('banner', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Update Featured Business Banner Image Only',
+    description:
+      'Uploads a replacement banner image for an existing featured business request (pending or approved) without modifying dates or details.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'UUID of the featured business request',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Banner image updated successfully.',
+  })
+  async updateBanner(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @UploadedFile() bannerFile?: Express.Multer.File,
+  ) {
+    return this.featuredBusinessService.updateBanner(id, user, bannerFile);
+  }
+
+  @Put('admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @UseInterceptors(
+    FileInterceptor('banner', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Admin: Update Featured Business Request',
+    description:
+      'Allows admin to update details, dates, banner, or status of an existing featured business request.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'UUID of the featured business request to update',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured request updated successfully.',
+  })
+  async adminUpdateRequest(
+    @Param('id') id: string,
+    @CurrentUser() adminUser: User,
+    @Body(new ZodValidationPipe(adminUpdateFeaturedRequestSchema))
+    dto: AdminUpdateFeaturedRequestDto,
+    @UploadedFile() bannerFile?: Express.Multer.File,
+  ) {
+    return this.featuredBusinessService.adminUpdateRequest(
+      id,
+      dto,
+      adminUser,
+      bannerFile,
+    );
   }
 }

@@ -119,3 +119,93 @@ export class QueryFeaturedRequestDto {
   })
   business_id?: string;
 }
+
+export const adminUpdateFeaturedRequestSchema = z
+  .object({
+    title: z.string().min(3, { message: 'Title must be at least 3 characters' }).optional(),
+    description: z.string().min(10, { message: 'Description must be at least 10 characters' }).optional(),
+    start_date: z.preprocess((val) => {
+      if (!val) return undefined;
+      if (typeof val === 'string' || val instanceof Date) return new Date(val);
+      return val;
+    }, z.date().optional()),
+    end_date: z.preprocess((val) => {
+      if (!val) return undefined;
+      if (typeof val === 'string' || val instanceof Date) return new Date(val);
+      return val;
+    }, z.date().optional()),
+    status: z.nativeEnum(FeaturedRequestStatus).optional(),
+    rejection_reason: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.start_date && data.end_date) {
+        return data.end_date > data.start_date;
+      }
+      return true;
+    },
+    {
+      message: 'End date must be strictly after start date',
+      path: ['end_date'],
+    },
+  );
+
+export class AdminUpdateFeaturedRequestDto {
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Updated title of the featured business showcase',
+    example: 'Special Festive Showcase - Extended',
+  })
+  title?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Updated description of the featured showcase',
+  })
+  description?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: 'Updated start date and time',
+    example: '2026-09-10T10:00:00.000Z',
+  })
+  start_date?: Date | string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: 'Updated end date and time',
+    example: '2026-09-25T22:00:00.000Z',
+  })
+  end_date?: Date | string;
+
+  @ApiPropertyOptional({
+    enum: FeaturedRequestStatus,
+    description: 'Updated request status',
+    example: FeaturedRequestStatus.APPROVED,
+  })
+  status?: FeaturedRequestStatus;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Reason if status is rejected or cancelled',
+  })
+  rejection_reason?: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'New promotional banner image file',
+  })
+  banner?: Express.Multer.File;
+}
+
+export class UploadBannerDto {
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Promotional banner image file for featured showcase (16:9)',
+  })
+  banner: Express.Multer.File;
+}

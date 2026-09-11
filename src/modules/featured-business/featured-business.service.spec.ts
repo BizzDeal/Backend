@@ -58,6 +58,7 @@ describe('FeaturedBusinessService', () => {
 
     mediaService = {
       saveFile: jest.fn().mockResolvedValue({ id: 'media-banner-1' }),
+      deleteFileById: jest.fn().mockResolvedValue(undefined),
     };
 
     notificationsService = {
