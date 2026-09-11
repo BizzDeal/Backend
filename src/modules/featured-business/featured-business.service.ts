@@ -55,6 +55,7 @@ export class FeaturedBusinessService {
     startDate?: Date,
     endDate?: Date,
     excludeRequestId?: string,
+    excludeBusinessId?: string,
   ): Promise<FeaturedBusinessRequest | null> {
     const now = new Date();
     const qb = this.featuredRequestRepo
@@ -65,6 +66,10 @@ export class FeaturedBusinessService {
 
     if (excludeRequestId) {
       qb.andWhere('req.id != :excludeId', { excludeId: excludeRequestId });
+    }
+
+    if (excludeBusinessId) {
+      qb.andWhere('req.business_id != :excludeBizId', { excludeBizId: excludeBusinessId });
     }
 
     if (startDate && endDate) {
@@ -202,22 +207,8 @@ export class FeaturedBusinessService {
 
     // If member has an approved request, showcase dates are strictly locked
     if (existingApproved && !isAdmin) {
-      const existingStart = new Date(existingApproved.start_date).getTime();
-      const existingEnd = new Date(existingApproved.end_date).getTime();
-      const newStart = startDate.getTime();
-      const newEnd = endDate.getTime();
-
-      // Allow 10-minute tolerance for clock differences and HTML5 datetime-local minute-level truncation
-      const isStartModified = Math.abs(newStart - existingStart) > 10 * 60 * 1000;
-      const isEndModified = Math.abs(newEnd - existingEnd) > 10 * 60 * 1000;
-
-      if (isStartModified || isEndModified) {
-        throw new BadRequestException(
-          'Showcase dates cannot be modified once a featured request has been approved. You can cancel your current showcase if you wish to reschedule for different dates.',
-        );
-      }
-
       // Member can update title, description, and promotional banner
+      // Showcase dates remain strictly locked to the approved dates and are never modified
       const approvedUpdate: Partial<FeaturedBusinessRequest> = {
         title: dto.title,
         description: dto.description,
@@ -258,12 +249,13 @@ export class FeaturedBusinessService {
       order: { created_at: 'DESC' },
     });
 
-    // Check single featured per category live rule
+    // Check single featured per category live rule (excluding current business's own requests)
     const conflictingApproved = await this.findConflictingApprovedRequest(
       business.category_id,
       startDate,
       endDate,
       existingPending?.id,
+      businessId,
     );
 
     if (conflictingApproved) {
@@ -458,6 +450,7 @@ export class FeaturedBusinessService {
       request.start_date,
       request.end_date,
       request.id,
+      request.business_id,
     );
 
     if (conflictingApproved) {
@@ -729,6 +722,7 @@ export class FeaturedBusinessService {
         startDate,
         endDate,
         request.id,
+        request.business_id,
       );
 
       if (conflict) {

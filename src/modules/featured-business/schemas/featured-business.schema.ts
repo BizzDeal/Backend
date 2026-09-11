@@ -17,17 +17,6 @@ export const createFeaturedRequestSchema = z
     business_id: z.string().uuid().optional(),
   })
   .refine(
-    (data) => {
-      // Past dates not allowed: start_date must not be in the past (allowing 5 min tolerance)
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      return data.start_date >= fiveMinutesAgo;
-    },
-    {
-      message: 'Start date cannot be in the past',
-      path: ['start_date'],
-    },
-  )
-  .refine(
     (data) => data.end_date > data.start_date,
     {
       message: 'End date must be strictly after start date',
