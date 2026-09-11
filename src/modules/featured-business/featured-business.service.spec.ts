@@ -45,11 +45,13 @@ describe('FeaturedBusinessService', () => {
       find: jest.fn(),
       create: jest.fn((dto) => ({ id: 'req-new', ...dto })),
       save: jest.fn((entity) => Promise.resolve({ id: entity.id || 'req-saved', ...entity })),
+      query: jest.fn().mockResolvedValue([]),
     };
 
     businessRepo = {
       findOne: jest.fn(),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
+      query: jest.fn().mockResolvedValue([]),
     };
 
     categoryRepo = {

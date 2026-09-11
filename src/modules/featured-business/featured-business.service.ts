@@ -100,6 +100,7 @@ export class FeaturedBusinessService {
       end_date: Date;
     } | null;
   }> {
+    await this.syncExpiredRequests();
     const live = await this.findConflictingApprovedRequest(categoryId);
     if (!live) {
       return { is_live: false, live_request: null };
@@ -277,6 +278,7 @@ export class FeaturedBusinessService {
    * Get member's own requests
    */
   async getMyRequests(user: User): Promise<FeaturedBusinessRequest[]> {
+    await this.syncExpiredRequests();
     const businesses = await this.businessRepo.find({
       where: { owner_id: user.id },
     });
@@ -343,6 +345,7 @@ export class FeaturedBusinessService {
    * Admin list all requests with filters
    */
   async findAll(query: QueryFeaturedRequestDto): Promise<FeaturedBusinessRequest[]> {
+    await this.syncExpiredRequests();
     const qb = this.featuredRequestRepo
       .createQueryBuilder('req')
       .leftJoinAndSelect('req.business', 'business')
@@ -497,6 +500,49 @@ export class FeaturedBusinessService {
     await this.businessRepo.update(businessId, {
       is_featured: !!activeLiveRequest,
     });
+  }
+
+  /**
+   * Automatically transition expired approved requests to EXPIRED
+   * and update business.is_featured flags
+   */
+  async syncExpiredRequests(): Promise<void> {
+    try {
+      const now = new Date();
+      // 1. Mark expired approved requests as EXPIRED
+      await this.featuredRequestRepo.query(
+        `UPDATE "featured_business_requests"
+         SET "status" = 'EXPIRED'
+         WHERE "status" = 'APPROVED' AND "end_date" < $1`,
+        [now],
+      );
+
+      // 2. Clear is_featured for businesses with no active approved live request
+      await this.featuredRequestRepo.query(
+        `UPDATE "business_profiles"
+         SET "is_featured" = false
+         WHERE "is_featured" = true
+           AND "id" NOT IN (
+             SELECT "business_id" FROM "featured_business_requests"
+             WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1
+           )`,
+        [now],
+      );
+
+      // 3. Ensure is_featured is true for businesses with an active approved live request
+      await this.featuredRequestRepo.query(
+        `UPDATE "business_profiles"
+         SET "is_featured" = true
+         WHERE "is_featured" = false
+           AND "id" IN (
+             SELECT "business_id" FROM "featured_business_requests"
+             WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1
+           )`,
+        [now],
+      );
+    } catch (err) {
+      this.logger.warn(`Failed to sync expired featured requests: ${err}`);
+    }
   }
 
   /**

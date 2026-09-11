@@ -618,10 +618,57 @@ export class BusinessesService {
     };
   }
 
+  /**
+   * Sync expired featured requests and update is_featured flags across businesses
+   */
+  async syncExpiredFeaturedBusinesses(): Promise<void> {
+    try {
+      const now = new Date();
+      // 1. Mark expired approved requests as EXPIRED
+      await this.businessRepository.query(
+        `UPDATE "featured_business_requests"
+         SET "status" = 'EXPIRED'
+         WHERE "status" = 'APPROVED' AND "end_date" < $1`,
+        [now],
+      );
+
+      // 2. Clear is_featured for businesses with no active approved live request
+      await this.businessRepository.query(
+        `UPDATE "business_profiles"
+         SET "is_featured" = false
+         WHERE "is_featured" = true
+           AND "id" NOT IN (
+             SELECT "business_id" FROM "featured_business_requests"
+             WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1
+           )`,
+        [now],
+      );
+
+      // 3. Ensure is_featured is true for businesses with an active approved live request
+      await this.businessRepository.query(
+        `UPDATE "business_profiles"
+         SET "is_featured" = true
+         WHERE "is_featured" = false
+           AND "id" IN (
+             SELECT "business_id" FROM "featured_business_requests"
+             WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1
+           )`,
+        [now],
+      );
+    } catch (err) {
+      this.logger.warn(`Failed to sync expired featured businesses: ${err}`);
+    }
+  }
+
   async findFeatured(
     query: BusinessQueryDto = {},
     currentUser?: { id: string; role: UserRole },
   ) {
+    const now = new Date();
+
+    // Synchronize expired status so database state and queries are strictly up-to-date
+    await this.syncExpiredFeaturedBusinesses();
+
     const qb = this.businessRepository.createQueryBuilder('business');
     qb.leftJoinAndSelect('business.category', 'category');
     qb.leftJoinAndSelect('business.owner', 'owner');
@@ -641,6 +688,18 @@ export class BusinessesService {
         },
       );
     }
+
+    // STRICT DATE ENFORCEMENT:
+    // Only return businesses that currently have an APPROVED featured request within its active date window
+    qb.innerJoin(
+      'featured_business_requests',
+      'featured_req',
+      'featured_req.business_id = business.id AND featured_req.status = :approvedStatus AND featured_req.start_date <= :now AND featured_req.end_date >= :now',
+      {
+        approvedStatus: 'APPROVED',
+        now,
+      },
+    );
 
     qb.andWhere('business.is_featured = :isFeatured', {
       isFeatured: true,
@@ -674,6 +733,28 @@ export class BusinessesService {
     qb.take(settings.home_feed_limit);
 
     const items = await qb.getMany();
+
+    // Attach active promotional banner from featured request if business banner_id is not set
+    try {
+      const activeRequests = await this.businessRepository.query(
+        `SELECT "business_id", "banner_id" FROM "featured_business_requests"
+         WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1 AND "banner_id" IS NOT NULL`,
+        [now],
+      );
+      const bannerMap = new Map<string, string>();
+      activeRequests.forEach((r: { business_id: string; banner_id: string }) => {
+        bannerMap.set(r.business_id, r.banner_id);
+      });
+
+      items.forEach((b) => {
+        if (!b.banner_id && bannerMap.has(b.id)) {
+          b.banner_id = bannerMap.get(b.id)!;
+        }
+      });
+    } catch {
+      // Fallback gracefully to default business banner
+    }
+
     const enriched = await this.enrichBusinessesWithMediaAndCategory(items);
 
     return {
