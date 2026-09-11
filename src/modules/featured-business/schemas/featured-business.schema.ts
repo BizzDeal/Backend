@@ -7,17 +7,22 @@ export const createFeaturedRequestSchema = z
     title: z.string().min(3, { message: 'Title must be at least 3 characters' }),
     description: z.string().min(10, { message: 'Description must be at least 10 characters' }),
     start_date: z.preprocess((val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
       if (typeof val === 'string' || val instanceof Date) return new Date(val);
       return val;
-    }, z.date()),
+    }, z.date().optional()),
     end_date: z.preprocess((val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
       if (typeof val === 'string' || val instanceof Date) return new Date(val);
       return val;
-    }, z.date()),
-    business_id: z.string().uuid().optional(),
+    }, z.date().optional()),
+    business_id: z.preprocess(
+      (val) => val === '' || val === null ? undefined : val,
+      z.string().uuid().optional(),
+    ),
   })
   .refine(
-    (data) => data.end_date > data.start_date,
+    (data) => !data.start_date || !data.end_date || data.end_date > data.start_date,
     {
       message: 'End date must be strictly after start date',
       path: ['end_date'],
@@ -39,21 +44,21 @@ export class CreateFeaturedRequestDto {
   })
   description: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     format: 'date-time',
-    description: 'Start date and time for featured status (past dates not allowed)',
+    description: 'Required for new or pending requests. Omit when editing an approved request; its dates are preserved.',
     example: '2026-09-10T10:00:00.000Z',
   })
-  start_date: Date | string;
+  start_date?: Date | string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     format: 'date-time',
-    description: 'End date and time for featured status (must be after start_date)',
+    description: 'Required for new or pending requests, and must be after start_date. Omit when editing an approved request; its dates are preserved.',
     example: '2026-09-20T22:00:00.000Z',
   })
-  end_date: Date | string;
+  end_date?: Date | string;
 
   @ApiPropertyOptional({
     type: String,
@@ -67,7 +72,7 @@ export class CreateFeaturedRequestDto {
     format: 'binary',
     description: 'Promotional banner image file for featured showcase',
   })
-  banner?: any;
+  banner?: Express.Multer.File;
 }
 
 export const rejectFeaturedRequestSchema = z.object({

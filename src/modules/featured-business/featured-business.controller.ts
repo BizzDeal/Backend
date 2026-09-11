@@ -20,6 +20,7 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { FeaturedBusinessService } from './featured-business.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -57,10 +58,11 @@ export class FeaturedBusinessController {
     }),
   )
   @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateFeaturedRequestDto })
   @ApiOperation({
     summary: 'Submit or Update a Featured Business Request',
     description:
-      'Submits a request for a business to be featured in its category for a defined date range. Only one live featured business is permitted per category. Past dates are strictly not allowed.',
+      'Creates or updates a featured request. Members can edit the title, description, and banner of an approved request without changing its approved dates or status. Omit dates for approved edits. New and pending requests require future dates and an available category slot. Featured banner updates never replace the business profile banner.',
   })
   @ApiResponse({
     status: 201,

@@ -182,20 +182,6 @@ export class FeaturedBusinessService {
 
     await this.syncExpiredRequests();
 
-    const startDate = new Date(dto.start_date);
-    const endDate = new Date(dto.end_date);
-
-    // Save banner image if provided
-    let bannerId: string | null = null;
-    if (bannerFile) {
-      const media = await this.mediaService.saveFile(
-        bannerFile,
-        user.id,
-        MediaPurpose.FEATURED_BUSINESS_BANNER,
-      );
-      bannerId = media.id;
-    }
-
     // Check if business already has an approved request
     const existingApproved = await this.featuredRequestRepo.findOne({
       where: {
@@ -213,22 +199,28 @@ export class FeaturedBusinessService {
         title: dto.title,
         description: dto.description,
       };
-      if (bannerId) {
-        const oldBannerId = existingApproved.banner_id;
-        approvedUpdate.banner_id = bannerId;
-        if (oldBannerId && oldBannerId !== bannerId) {
-          try {
-            await this.mediaService.deleteFileById(oldBannerId);
-          } catch (err) {
-            this.logger.warn(`Failed to delete stale banner file (${oldBannerId}): ${err instanceof Error ? err.message : err}`);
-          }
-        }
+      if (bannerFile) {
+        const media = await this.mediaService.saveFile(
+          bannerFile,
+          user.id,
+          MediaPurpose.FEATURED_BUSINESS_BANNER,
+        );
+        approvedUpdate.banner_id = media.id;
       }
 
       // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
       await this.featuredRequestRepo.update(existingApproved.id, approvedUpdate);
+      if (bannerFile) {
+        await this.deleteUnusedBanner(existingApproved.banner_id);
+      }
       return this.findById(existingApproved.id);
     }
+
+    if (!dto.start_date || !dto.end_date) {
+      throw new BadRequestException('Start date and end date are required.');
+    }
+    const startDate = new Date(dto.start_date);
+    const endDate = new Date(dto.end_date);
 
     // Validate past dates (allowing 5 minute clock tolerance)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -284,6 +276,16 @@ export class FeaturedBusinessService {
       throw new BadRequestException(reasonMsg);
     }
 
+    let bannerId: string | null = null;
+    if (bannerFile) {
+      const media = await this.mediaService.saveFile(
+        bannerFile,
+        user.id,
+        MediaPurpose.FEATURED_BUSINESS_BANNER,
+      );
+      bannerId = media.id;
+    }
+
     let saved: FeaturedBusinessRequest;
     if (existingPending) {
       const pendingUpdate: Partial<FeaturedBusinessRequest> = {
@@ -302,8 +304,10 @@ export class FeaturedBusinessService {
       }
       // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
       await this.featuredRequestRepo.update(existingPending.id, pendingUpdate);
+      if (bannerFile) {
+        await this.deleteUnusedBanner(existingPending.banner_id);
+      }
       saved = existingPending;
-      saved.id = existingPending.id;
     } else {
       const req = this.featuredRequestRepo.create({
         business_id: businessId,
@@ -532,17 +536,33 @@ export class FeaturedBusinessService {
     await this.featuredRequestRepo.update(request.id, { banner_id: media.id });
 
     // Clean up stale banner file after updating reference in request
-    if (oldBannerId && oldBannerId !== media.id) {
-      try {
-        await this.mediaService.deleteFileById(oldBannerId);
-      } catch (err) {
-        this.logger.warn(
-          `Failed to delete stale banner file (${oldBannerId}): ${err instanceof Error ? err.message : err}`,
-        );
-      }
-    }
+    await this.deleteUnusedBanner(oldBannerId);
 
     return this.findById(request.id);
+  }
+
+  private async deleteUnusedBanner(bannerId: string | null): Promise<void> {
+    if (!bannerId) return;
+
+    try {
+      // Older records may share an image with a business or another request.
+      // Deleting that media would clear their banner references via ON DELETE SET NULL.
+      const usedByBusiness = await this.businessRepo.exists({
+        where: { banner_id: bannerId },
+      });
+      if (usedByBusiness) return;
+
+      const usedByRequest = await this.featuredRequestRepo.exists({
+        where: { banner_id: bannerId },
+      });
+      if (usedByRequest) return;
+
+      await this.mediaService.deleteFileById(bannerId);
+    } catch (err) {
+      this.logger.warn(
+        `Failed to clean up banner (${bannerId}): ${err instanceof Error ? err.message : err}`,
+      );
+    }
   }
 
   /**
@@ -773,15 +793,7 @@ export class FeaturedBusinessService {
     const saved = { ...request, ...adminUpdate };
     await this.recalculateBusinessFeaturedStatus(saved.business_id);
 
-    if (oldBannerId && oldBannerId !== adminUpdate.banner_id) {
-      try {
-        await this.mediaService.deleteFileById(oldBannerId);
-      } catch (err) {
-        this.logger.warn(
-          `Failed to delete stale banner file (${oldBannerId}): ${err instanceof Error ? err.message : err}`,
-        );
-      }
-    }
+    await this.deleteUnusedBanner(oldBannerId);
 
     try {
       this.appEventsGateway.emitToUser(
