@@ -734,33 +734,40 @@ export class BusinessesService {
 
     const items = await qb.getMany();
 
-    // Attach active promotional banner from featured request for featured showcase display
+    // Query active promotional banner from featured request for featured showcase display only
+    const featuredBannerMap = new Map<string, string>();
     try {
       const activeRequests = await this.businessRepository.query(
-        `SELECT "business_id", "banner_id" FROM "featured_business_requests"
-         WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1 AND "banner_id" IS NOT NULL`,
+        `SELECT req."business_id", mf."file_url"
+         FROM "featured_business_requests" req
+         JOIN "media_files" mf ON req."banner_id" = mf."id"
+         WHERE req."status" = 'APPROVED'
+           AND req."start_date" <= $1
+           AND req."end_date" >= $1
+           AND req."banner_id" IS NOT NULL`,
         [now],
       );
-      const bannerMap = new Map<string, string>();
-      activeRequests.forEach((r: { business_id: string; banner_id: string }) => {
-        bannerMap.set(r.business_id, r.banner_id);
-      });
-
-      items.forEach((b) => {
-        if (bannerMap.has(b.id)) {
-          b.banner_id = bannerMap.get(b.id)!;
-        }
+      activeRequests.forEach((r: { business_id: string; file_url: string }) => {
+        featuredBannerMap.set(r.business_id, r.file_url);
       });
     } catch {
-      // Fallback gracefully to default business banner
+      // Fallback gracefully
     }
 
+    // Enrich items while keeping their authentic store banner_id completely untouched
     const enriched = await this.enrichBusinessesWithMediaAndCategory(items);
+
+    // Attach featured_banner_url separately; store banner_url remains strictly the store's own banner
+    const data = enriched.map((b) => ({
+      ...b,
+      featured_banner_url: featuredBannerMap.get(b.id) || null,
+      featuredBannerUrl: featuredBannerMap.get(b.id) || null,
+    }));
 
     return {
       success: true,
       message: 'Featured businesses fetched successfully',
-      data: enriched,
+      data,
     };
   }
 
