@@ -456,10 +456,7 @@ export class FeaturedBusinessService {
       );
     }
 
-    // Clean up stale banner file
-    if (request.banner_id) {
-      await this.mediaService.deleteFileById(request.banner_id);
-    }
+    const oldBannerId = request.banner_id;
 
     const media = await this.mediaService.saveFile(
       bannerFile,
@@ -468,7 +465,19 @@ export class FeaturedBusinessService {
     );
 
     request.banner_id = media.id;
+    request.banner = media;
     await this.featuredRequestRepo.save(request);
+
+    // Clean up stale banner file after updating reference in request
+    if (oldBannerId && oldBannerId !== media.id) {
+      try {
+        await this.mediaService.deleteFileById(oldBannerId);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to delete stale banner file (${oldBannerId}): ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
 
     return this.findById(request.id);
   }
@@ -633,20 +642,30 @@ export class FeaturedBusinessService {
       request.rejection_reason = dto.rejection_reason;
     }
 
+    const oldBannerId = bannerFile ? request.banner_id : null;
+
     if (bannerFile) {
-      if (request.banner_id) {
-        await this.mediaService.deleteFileById(request.banner_id);
-      }
       const media = await this.mediaService.saveFile(
         bannerFile,
         adminUser.id,
         MediaPurpose.BUSINESS_BANNER,
       );
       request.banner_id = media.id;
+      request.banner = media;
     }
 
     const saved = await this.featuredRequestRepo.save(request);
     await this.recalculateBusinessFeaturedStatus(saved.business_id);
+
+    if (oldBannerId && oldBannerId !== request.banner_id) {
+      try {
+        await this.mediaService.deleteFileById(oldBannerId);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to delete stale banner file (${oldBannerId}): ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
 
     try {
       this.appEventsGateway.emitToUser(
