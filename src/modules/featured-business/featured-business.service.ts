@@ -180,8 +180,6 @@ export class FeaturedBusinessService {
       );
     }
 
-    await this.syncExpiredRequests();
-
     // Check if business already has an approved request
     const existingApproved = await this.featuredRequestRepo.findOne({
       where: {
@@ -215,6 +213,8 @@ export class FeaturedBusinessService {
       }
       return this.findById(existingApproved.id);
     }
+
+    await this.syncExpiredRequests();
 
     if (!dto.start_date || !dto.end_date) {
       throw new BadRequestException('Start date and end date are required.');
