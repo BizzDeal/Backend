@@ -210,6 +210,84 @@ describe('FeaturedBusinessService', () => {
       expect(result.id).toEqual('req-new-id');
       expect(featuredRequestRepo.create).toHaveBeenCalled();
     });
+
+    it('should throw BadRequestException if user attempts to modify dates on an approved request', async () => {
+      businessRepo.findOne.mockResolvedValue(mockBusiness);
+
+      const approvedStart = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+      const approvedEnd = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000);
+
+      const existingApproved = {
+        id: 'req-approved-1',
+        business_id: mockBusiness.id,
+        category_id: mockBusiness.category_id,
+        title: 'Approved Showcase',
+        description: 'Approved description',
+        start_date: approvedStart,
+        end_date: approvedEnd,
+        status: FeaturedRequestStatus.APPROVED,
+      };
+
+      featuredRequestRepo.findOne.mockResolvedValue(existingApproved);
+
+      // Attempt to change start date
+      const alteredStart = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+
+      await expect(
+        service.createRequest(
+          {
+            title: 'Updated Title',
+            description: 'Updated Description',
+            start_date: alteredStart,
+            end_date: approvedEnd,
+          },
+          mockUser,
+        ),
+      ).rejects.toThrow('Showcase dates cannot be modified once a featured request has been approved');
+    });
+
+    it('should allow updating showcase title and description on an approved request when dates are unchanged', async () => {
+      businessRepo.findOne.mockResolvedValue(mockBusiness);
+
+      const approvedStart = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+      const approvedEnd = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000);
+
+      const existingApproved = {
+        id: 'req-approved-1',
+        business_id: mockBusiness.id,
+        category_id: mockBusiness.category_id,
+        title: 'Original Title',
+        description: 'Original Description',
+        start_date: approvedStart,
+        end_date: approvedEnd,
+        status: FeaturedRequestStatus.APPROVED,
+      };
+
+      featuredRequestRepo.findOne.mockResolvedValue(existingApproved);
+      featuredRequestRepo.save.mockImplementation((req: any) => Promise.resolve(req));
+      jest.spyOn(service, 'findById').mockImplementation((id: string) =>
+        Promise.resolve({ ...existingApproved, title: 'Updated Title' } as any),
+      );
+
+      const result = await service.createRequest(
+        {
+          title: 'Updated Title',
+          description: 'Updated Description',
+          start_date: approvedStart,
+          end_date: approvedEnd,
+        },
+        mockUser,
+      );
+
+      expect(result.title).toEqual('Updated Title');
+      expect(featuredRequestRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'req-approved-1',
+          title: 'Updated Title',
+          description: 'Updated Description',
+        }),
+      );
+    });
   });
 
   describe('approveRequest', () => {

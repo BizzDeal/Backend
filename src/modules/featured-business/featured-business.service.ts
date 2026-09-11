@@ -178,43 +178,7 @@ export class FeaturedBusinessService {
     const startDate = new Date(dto.start_date);
     const endDate = new Date(dto.end_date);
 
-    // Validate past dates (allowing 5 minute clock tolerance)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    if (startDate < fiveMinutesAgo) {
-      throw new BadRequestException('Start date cannot be in the past.');
-    }
-
-    if (endDate <= startDate) {
-      throw new BadRequestException('End date must be after start date.');
-    }
-
-    // Check single featured per category live rule:
-    // If a featured request is live in this category, cannot submit a new request
-    const conflictingApproved = await this.findConflictingApprovedRequest(
-      business.category_id,
-      startDate,
-      endDate,
-    );
-
-    if (conflictingApproved) {
-      const isCurrentlyLive =
-        conflictingApproved.start_date <= new Date() &&
-        conflictingApproved.end_date >= new Date();
-
-      const reasonMsg = isCurrentlyLive
-        ? `A featured business is currently active in this category until ${new Date(
-            conflictingApproved.end_date,
-          ).toLocaleDateString()}. New requests cannot be submitted while one is live.`
-        : `Another business in this category is already approved to be featured between ${new Date(
-            conflictingApproved.start_date,
-          ).toLocaleDateString()} and ${new Date(
-            conflictingApproved.end_date,
-          ).toLocaleDateString()}. Only one featured business per category is allowed.`;
-
-      throw new BadRequestException(reasonMsg);
-    }
-
-    // Save banner image
+    // Save banner image if provided
     let bannerId: string | null = null;
     if (bannerFile) {
       const media = await this.mediaService.saveFile(
@@ -225,13 +189,103 @@ export class FeaturedBusinessService {
       bannerId = media.id;
     }
 
-    // If member already has a pending request, update it
+    // Check if business already has an approved request
+    const existingApproved = await this.featuredRequestRepo.findOne({
+      where: {
+        business_id: businessId,
+        status: FeaturedRequestStatus.APPROVED,
+      },
+      order: { created_at: 'DESC' },
+    });
+
+    // If member has an approved request, showcase dates are strictly locked
+    if (existingApproved && !isAdmin) {
+      const existingStart = new Date(existingApproved.start_date).getTime();
+      const existingEnd = new Date(existingApproved.end_date).getTime();
+      const newStart = startDate.getTime();
+      const newEnd = endDate.getTime();
+
+      // Allow 60-second clock tolerance for UI roundtrips
+      const isStartModified = Math.abs(newStart - existingStart) > 60 * 1000;
+      const isEndModified = Math.abs(newEnd - existingEnd) > 60 * 1000;
+
+      if (isStartModified || isEndModified) {
+        throw new BadRequestException(
+          'Showcase dates cannot be modified once a featured request has been approved. You can cancel your current showcase if you wish to reschedule for different dates.',
+        );
+      }
+
+      // Member can update title, description, and promotional banner
+      existingApproved.title = dto.title;
+      existingApproved.description = dto.description;
+      if (bannerId) {
+        const oldBannerId = existingApproved.banner_id;
+        existingApproved.banner_id = bannerId;
+        if (oldBannerId && oldBannerId !== bannerId) {
+          try {
+            await this.mediaService.deleteFileById(oldBannerId);
+          } catch (err) {
+            this.logger.warn(`Failed to delete stale banner file (${oldBannerId}): ${err instanceof Error ? err.message : err}`);
+          }
+        }
+      }
+
+      const saved = await this.featuredRequestRepo.save(existingApproved);
+      return this.findById(saved.id);
+    }
+
+    // Validate past dates (allowing 5 minute clock tolerance)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (startDate < fiveMinutesAgo) {
+      throw new BadRequestException('Start date cannot be in the past.');
+    }
+
+    if (endDate <= startDate) {
+      throw new BadRequestException('End date must be after start date.');
+    }
+
+    // If member already has a pending request, check for conflicts excluding it
     const existingPending = await this.featuredRequestRepo.findOne({
       where: {
         business_id: businessId,
         status: FeaturedRequestStatus.PENDING,
       },
+      order: { created_at: 'DESC' },
     });
+
+    // Check single featured per category live rule
+    const conflictingApproved = await this.findConflictingApprovedRequest(
+      business.category_id,
+      startDate,
+      endDate,
+      existingPending?.id,
+    );
+
+    if (conflictingApproved) {
+      const isCurrentlyLive =
+        conflictingApproved.start_date <= new Date() &&
+        conflictingApproved.end_date >= new Date();
+
+      const confBizName = conflictingApproved.business?.name || 'Another store';
+
+      const reasonMsg = conflictingApproved.business_id === businessId
+        ? `Your business is already approved to be featured in this category from ${new Date(
+            conflictingApproved.start_date,
+          ).toLocaleDateString()} to ${new Date(
+            conflictingApproved.end_date,
+          ).toLocaleDateString()}. Dates cannot be modified once approved. To choose different dates, please cancel your active showcase.`
+        : isCurrentlyLive
+        ? `The featured spot in this category is currently occupied by "${confBizName}" until ${new Date(
+            conflictingApproved.end_date,
+          ).toLocaleDateString()}. New requests cannot be submitted while a showcase is live.`
+        : `The featured spot in this category is already booked by "${confBizName}" between ${new Date(
+            conflictingApproved.start_date,
+          ).toLocaleDateString()} and ${new Date(
+            conflictingApproved.end_date,
+          ).toLocaleDateString()}. Only one featured business per category is allowed.`;
+
+      throw new BadRequestException(reasonMsg);
+    }
 
     let saved: FeaturedBusinessRequest;
     if (existingPending) {
