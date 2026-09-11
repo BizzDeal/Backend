@@ -175,6 +175,8 @@ export class FeaturedBusinessService {
       );
     }
 
+    await this.syncExpiredRequests();
+
     const startDate = new Date(dto.start_date);
     const endDate = new Date(dto.end_date);
 
@@ -205,9 +207,9 @@ export class FeaturedBusinessService {
       const newStart = startDate.getTime();
       const newEnd = endDate.getTime();
 
-      // Allow 60-second clock tolerance for UI roundtrips
-      const isStartModified = Math.abs(newStart - existingStart) > 60 * 1000;
-      const isEndModified = Math.abs(newEnd - existingEnd) > 60 * 1000;
+      // Allow 10-minute tolerance for clock differences and HTML5 datetime-local minute-level truncation
+      const isStartModified = Math.abs(newStart - existingStart) > 10 * 60 * 1000;
+      const isEndModified = Math.abs(newEnd - existingEnd) > 10 * 60 * 1000;
 
       if (isStartModified || isEndModified) {
         throw new BadRequestException(
