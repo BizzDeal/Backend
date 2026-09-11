@@ -218,11 +218,13 @@ export class FeaturedBusinessService {
       }
 
       // Member can update title, description, and promotional banner
-      existingApproved.title = dto.title;
-      existingApproved.description = dto.description;
+      const approvedUpdate: Partial<FeaturedBusinessRequest> = {
+        title: dto.title,
+        description: dto.description,
+      };
       if (bannerId) {
         const oldBannerId = existingApproved.banner_id;
-        existingApproved.banner_id = bannerId;
+        approvedUpdate.banner_id = bannerId;
         if (oldBannerId && oldBannerId !== bannerId) {
           try {
             await this.mediaService.deleteFileById(oldBannerId);
@@ -232,8 +234,9 @@ export class FeaturedBusinessService {
         }
       }
 
-      const saved = await this.featuredRequestRepo.save(existingApproved);
-      return this.findById(saved.id);
+      // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
+      await this.featuredRequestRepo.update(existingApproved.id, approvedUpdate);
+      return this.findById(existingApproved.id);
     }
 
     // Validate past dates (allowing 5 minute clock tolerance)
@@ -291,19 +294,24 @@ export class FeaturedBusinessService {
 
     let saved: FeaturedBusinessRequest;
     if (existingPending) {
-      existingPending.title = dto.title;
-      existingPending.description = dto.description;
-      existingPending.start_date = startDate;
-      existingPending.end_date = endDate;
+      const pendingUpdate: Partial<FeaturedBusinessRequest> = {
+        title: dto.title,
+        description: dto.description,
+        start_date: startDate,
+        end_date: endDate,
+      };
       if (bannerId) {
-        existingPending.banner_id = bannerId;
+        pendingUpdate.banner_id = bannerId;
       }
       if (isAdmin) {
-        existingPending.status = FeaturedRequestStatus.APPROVED;
-        existingPending.approved_by_id = user.id;
-        existingPending.approved_at = new Date();
+        pendingUpdate.status = FeaturedRequestStatus.APPROVED;
+        pendingUpdate.approved_by_id = user.id;
+        pendingUpdate.approved_at = new Date();
       }
-      saved = await this.featuredRequestRepo.save(existingPending);
+      // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
+      await this.featuredRequestRepo.update(existingPending.id, pendingUpdate);
+      saved = existingPending;
+      saved.id = existingPending.id;
     } else {
       const req = this.featuredRequestRepo.create({
         business_id: businessId,
@@ -473,12 +481,16 @@ export class FeaturedBusinessService {
       throw new BadRequestException(errorMsg);
     }
 
-    request.status = FeaturedRequestStatus.APPROVED;
-    request.approved_by_id = adminUser.id;
-    request.approved_at = new Date();
-    request.rejection_reason = null;
+    // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
+    const approvedAt = new Date();
+    await this.featuredRequestRepo.update(request.id, {
+      status: FeaturedRequestStatus.APPROVED,
+      approved_by_id: adminUser.id,
+      approved_at: approvedAt,
+      rejection_reason: null,
+    });
 
-    const saved = await this.featuredRequestRepo.save(request);
+    const saved = { ...request, status: FeaturedRequestStatus.APPROVED, approved_by_id: adminUser.id, approved_at: approvedAt, rejection_reason: null };
 
     // If currently live in date range, set business is_featured = true
     const now = new Date();
@@ -523,9 +535,8 @@ export class FeaturedBusinessService {
       MediaPurpose.FEATURED_BUSINESS_BANNER,
     );
 
-    request.banner_id = media.id;
-    request.banner = media;
-    await this.featuredRequestRepo.save(request);
+    // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
+    await this.featuredRequestRepo.update(request.id, { banner_id: media.id });
 
     // Clean up stale banner file after updating reference in request
     if (oldBannerId && oldBannerId !== media.id) {
@@ -612,11 +623,14 @@ export class FeaturedBusinessService {
     const request = await this.findById(id);
     const wasApproved = request.status === FeaturedRequestStatus.APPROVED;
 
-    request.status = FeaturedRequestStatus.REJECTED;
-    request.rejection_reason = dto.reason;
-    request.approved_by_id = adminUser.id;
+    // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
+    await this.featuredRequestRepo.update(request.id, {
+      status: FeaturedRequestStatus.REJECTED,
+      rejection_reason: dto.reason,
+      approved_by_id: adminUser.id,
+    });
 
-    const saved = await this.featuredRequestRepo.save(request);
+    const saved = { ...request, status: FeaturedRequestStatus.REJECTED, rejection_reason: dto.reason, approved_by_id: adminUser.id };
 
     if (wasApproved) {
       await this.recalculateBusinessFeaturedStatus(saved.business_id);
@@ -653,8 +667,11 @@ export class FeaturedBusinessService {
     }
 
     const wasApproved = request.status === FeaturedRequestStatus.APPROVED;
-    request.status = FeaturedRequestStatus.CANCELLED;
-    const saved = await this.featuredRequestRepo.save(request);
+    // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
+    await this.featuredRequestRepo.update(request.id, {
+      status: FeaturedRequestStatus.CANCELLED,
+    });
+    const saved = { ...request, status: FeaturedRequestStatus.CANCELLED as FeaturedRequestStatus };
 
     if (wasApproved) {
       await this.recalculateBusinessFeaturedStatus(saved.business_id);
@@ -721,27 +738,30 @@ export class FeaturedBusinessService {
       }
     }
 
+    // Build targeted update payload to prevent TypeORM from cascade-persisting loaded relations
+    const adminUpdate: Partial<FeaturedBusinessRequest> = {
+      start_date: startDate,
+      end_date: endDate,
+    };
+
     if (dto.title) {
-      request.title = dto.title;
+      adminUpdate.title = dto.title;
     }
     if (dto.description) {
-      request.description = dto.description;
+      adminUpdate.description = dto.description;
     }
 
-    request.start_date = startDate;
-    request.end_date = endDate;
-
     if (dto.status) {
-      request.status = dto.status;
+      adminUpdate.status = dto.status;
       if (dto.status === FeaturedRequestStatus.APPROVED) {
-        request.approved_by_id = adminUser.id;
-        request.approved_at = new Date();
-        request.rejection_reason = null;
+        adminUpdate.approved_by_id = adminUser.id;
+        adminUpdate.approved_at = new Date();
+        adminUpdate.rejection_reason = null;
       }
     }
 
     if (dto.rejection_reason !== undefined) {
-      request.rejection_reason = dto.rejection_reason;
+      adminUpdate.rejection_reason = dto.rejection_reason;
     }
 
     const oldBannerId = bannerFile ? request.banner_id : null;
@@ -752,14 +772,14 @@ export class FeaturedBusinessService {
         adminUser.id,
         MediaPurpose.FEATURED_BUSINESS_BANNER,
       );
-      request.banner_id = media.id;
-      request.banner = media;
+      adminUpdate.banner_id = media.id;
     }
 
-    const saved = await this.featuredRequestRepo.save(request);
+    await this.featuredRequestRepo.update(request.id, adminUpdate);
+    const saved = { ...request, ...adminUpdate };
     await this.recalculateBusinessFeaturedStatus(saved.business_id);
 
-    if (oldBannerId && oldBannerId !== request.banner_id) {
+    if (oldBannerId && oldBannerId !== adminUpdate.banner_id) {
       try {
         await this.mediaService.deleteFileById(oldBannerId);
       } catch (err) {
