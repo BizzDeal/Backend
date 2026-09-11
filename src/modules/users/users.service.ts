@@ -714,25 +714,18 @@ export class UsersService {
     const mediaFiles = await this.mediaRepository.find({
       where: {
         uploaded_by_id: user.id,
-        purpose: In([
-          MediaPurpose.PROFILE_PIC,
-          MediaPurpose.BUSINESS_BANNER,
-        ]),
+        purpose: MediaPurpose.PROFILE_PIC,
       },
     });
 
     let profile_pic_url: string | null = null;
-    let business_banner_url: string | null = null;
-
-    mediaFiles.forEach((m) => {
-      if (m.purpose === MediaPurpose.PROFILE_PIC) {
-        profile_pic_url = m.file_url;
-      } else if (m.purpose === MediaPurpose.BUSINESS_BANNER) {
-        business_banner_url = m.file_url;
-      }
-    });
+    if (mediaFiles.length > 0) {
+      profile_pic_url = mediaFiles[0].file_url;
+    }
 
     let business: BusinessProfile | null = null;
+    let business_banner_url: string | null = null;
+    let featured_banner_url: string | null = null;
     let primary_business_name: string | null = null;
     let primary_business_id: string | null = null;
     let primary_business_category_name: string | null = null;
@@ -743,12 +736,36 @@ export class UsersService {
     if (user.role === UserRole.MEMBER) {
       business = await this.businessRepository.findOne({
         where: { owner_id: user.id },
+        relations: { banner: true },
       });
-      if (business?.banner_id && !business_banner_url) {
+
+      if (business?.banner?.file_url) {
+        business_banner_url = business.banner.file_url;
+      } else if (business?.banner_id) {
         const bannerFile = await this.mediaRepository.findOne({
           where: { id: business.banner_id },
         });
         if (bannerFile) business_banner_url = bannerFile.file_url;
+      }
+
+      // Query active approved featured request banner for member's business
+      if (business?.id) {
+        const now = new Date();
+        const activeReqs = await this.businessRepository.query(
+          `SELECT req."id", mf."file_url" FROM "featured_business_requests" req
+           LEFT JOIN "media_files" mf ON req."banner_id" = mf."id"
+           WHERE req."business_id" = $1
+             AND req."status" = 'APPROVED'
+             AND req."start_date" <= $2
+             AND req."end_date" >= $2
+             AND req."banner_id" IS NOT NULL
+           ORDER BY req."created_at" DESC
+           LIMIT 1`,
+          [business.id, now],
+        );
+        if (activeReqs.length > 0 && activeReqs[0].file_url) {
+          featured_banner_url = activeReqs[0].file_url;
+        }
       }
     } else if (user.role === UserRole.CUSTOMER && user.profile?.primary_business_id) {
       const pb = await this.businessRepository.findOne({
@@ -796,6 +813,8 @@ export class UsersService {
         user.role === UserRole.MEMBER ? business?.gst_number || null : undefined,
       business_banner_url:
         user.role === UserRole.MEMBER ? business_banner_url : undefined,
+      featured_banner_url:
+        user.role === UserRole.MEMBER ? featured_banner_url : undefined,
       business_address:
         user.role === UserRole.MEMBER ? business?.address || null : undefined,
       business_state_id:

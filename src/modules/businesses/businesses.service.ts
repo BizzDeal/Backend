@@ -734,7 +734,7 @@ export class BusinessesService {
 
     const items = await qb.getMany();
 
-    // Attach active promotional banner from featured request if business banner_id is not set
+    // Attach active promotional banner from featured request for featured showcase display
     try {
       const activeRequests = await this.businessRepository.query(
         `SELECT "business_id", "banner_id" FROM "featured_business_requests"
@@ -747,7 +747,7 @@ export class BusinessesService {
       });
 
       items.forEach((b) => {
-        if (!b.banner_id && bannerMap.has(b.id)) {
+        if (bannerMap.has(b.id)) {
           b.banner_id = bannerMap.get(b.id)!;
         }
       });

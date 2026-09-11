@@ -220,7 +220,7 @@ export class FeaturedBusinessService {
       const media = await this.mediaService.saveFile(
         bannerFile,
         user.id,
-        MediaPurpose.BUSINESS_BANNER,
+        MediaPurpose.FEATURED_BUSINESS_BANNER,
       );
       bannerId = media.id;
     }
@@ -464,7 +464,7 @@ export class FeaturedBusinessService {
     const media = await this.mediaService.saveFile(
       bannerFile,
       user.id,
-      MediaPurpose.BUSINESS_BANNER,
+      MediaPurpose.FEATURED_BUSINESS_BANNER,
     );
 
     request.banner_id = media.id;
@@ -694,7 +694,7 @@ export class FeaturedBusinessService {
       const media = await this.mediaService.saveFile(
         bannerFile,
         adminUser.id,
-        MediaPurpose.BUSINESS_BANNER,
+        MediaPurpose.FEATURED_BUSINESS_BANNER,
       );
       request.banner_id = media.id;
       request.banner = media;
