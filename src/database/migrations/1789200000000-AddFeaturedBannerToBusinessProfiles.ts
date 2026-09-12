@@ -31,15 +31,6 @@ export class AddFeaturedBannerToBusinessProfiles1789200000000 implements Migrati
       ) req
       WHERE b."id" = req."business_id"
     `);
-
-    // Safely update media_files purpose now that FEATURED_BUSINESS_BANNER enum is committed
-    await queryRunner.query(`
-      UPDATE "media_files"
-      SET "purpose" = 'FEATURED_BUSINESS_BANNER'
-      WHERE "id" IN (
-        SELECT "banner_id" FROM "featured_business_requests" WHERE "banner_id" IS NOT NULL
-      )
-    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
