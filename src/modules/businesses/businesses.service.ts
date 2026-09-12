@@ -259,6 +259,35 @@ export class BusinessesService {
   private async enrichBusinessesWithMediaAndCategory(businesses: BusinessProfile[]) {
     if (businesses.length === 0) return [];
 
+    // For businesses with is_featured = true that lack a featured_banner_id,
+    // look up promotional banner from their latest approved featured_business_request
+    const missingFeaturedBiz = businesses.filter((b) => b.is_featured && !b.featured_banner_id);
+    if (missingFeaturedBiz.length > 0) {
+      const bizIds = missingFeaturedBiz.map((b) => b.id);
+      try {
+        const activeRequests = await this.businessRepository.query(
+          `SELECT DISTINCT ON ("business_id") "business_id", "banner_id"
+           FROM "featured_business_requests"
+           WHERE "business_id" = ANY($1) AND "status" = 'APPROVED' AND "banner_id" IS NOT NULL
+           ORDER BY "business_id", "created_at" DESC`,
+          [bizIds],
+        );
+        for (const req of activeRequests) {
+          if (req.banner_id) {
+            const biz = businesses.find((b) => b.id === req.business_id);
+            if (biz) {
+              biz.featured_banner_id = req.banner_id;
+              this.businessRepository
+                .update({ id: req.business_id }, { featured_banner_id: req.banner_id })
+                .catch((err) => this.logger.warn(`Failed to backfill featured_banner_id: ${err}`));
+            }
+          }
+        }
+      } catch (err) {
+        this.logger.warn(`Error resolving featured banners from requests: ${err}`);
+      }
+    }
+
     const mediaIds = businesses
       .flatMap((b) => [b.banner_id, b.featured_banner_id])
       .filter((id): id is string => !!id);
@@ -314,7 +343,7 @@ export class BusinessesService {
       const { ...biz } = b;
       const categoryName = b.category ? b.category.name : 'General';
       const phone = b.owner ? (b.owner.phone || '') : '';
-      const whatsapp = b.owner?.profile?.whatsapp || phone || '';
+      const whatsapp = b.owner?.profile?.whatsapp || '';
       const owner_name = b.owner?.profile?.full_name || '';
       const owner_email = b.owner ? (b.owner.email || '') : '';
       const state_name = b.state ? b.state.name : null;
@@ -661,6 +690,20 @@ export class BusinessesService {
          WHERE b."id" = req."business_id"
            AND (b."is_featured" = false OR b."featured_banner_id" IS DISTINCT FROM req."banner_id")`,
         [now],
+      );
+
+      // 4. Backfill featured_banner_id for any featured business with an approved request
+      await this.businessRepository.query(
+        `UPDATE "business_profiles" b
+         SET "featured_banner_id" = req."banner_id"
+         FROM (
+           SELECT DISTINCT ON ("business_id") "business_id", "banner_id"
+           FROM "featured_business_requests"
+           WHERE "status" = 'APPROVED' AND "banner_id" IS NOT NULL
+           ORDER BY "business_id", "created_at" DESC
+         ) req
+         WHERE b."id" = req."business_id"
+           AND b."featured_banner_id" IS NULL`,
       );
     } catch (err) {
       this.logger.warn(`Failed to sync expired featured businesses: ${err}`);

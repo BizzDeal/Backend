@@ -667,6 +667,20 @@ export class FeaturedBusinessService implements OnApplicationBootstrap, OnModule
            AND (b."is_featured" = false OR b."featured_banner_id" IS DISTINCT FROM req."banner_id")`,
         [now],
       );
+
+      // 4. Backfill featured_banner_id for any featured business with an approved request
+      await this.featuredRequestRepo.query(
+        `UPDATE "business_profiles" b
+         SET "featured_banner_id" = req."banner_id"
+         FROM (
+           SELECT DISTINCT ON ("business_id") "business_id", "banner_id"
+           FROM "featured_business_requests"
+           WHERE "status" = 'APPROVED' AND "banner_id" IS NOT NULL
+           ORDER BY "business_id", "created_at" DESC
+         ) req
+         WHERE b."id" = req."business_id"
+           AND b."featured_banner_id" IS NULL`,
+      );
     } catch (err) {
       this.logger.warn(`Failed to sync expired featured requests: ${err}`);
     }
