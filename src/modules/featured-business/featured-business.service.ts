@@ -4,6 +4,8 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  OnApplicationBootstrap,
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -29,8 +31,9 @@ import {
 import { User } from '../users/entities/user.entity';
 
 @Injectable()
-export class FeaturedBusinessService {
+export class FeaturedBusinessService implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(FeaturedBusinessService.name);
+  private syncTimer: NodeJS.Timeout | null = null;
 
   constructor(
     @InjectRepository(FeaturedBusinessRequest)
@@ -45,6 +48,27 @@ export class FeaturedBusinessService {
     private readonly notificationsService: NotificationsService,
     private readonly appEventsGateway: AppEventsGateway,
   ) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    // Initial sync on server boot
+    await this.syncExpiredRequests();
+    // Schedule periodic background sync every 2 minutes
+    this.syncTimer = setInterval(() => {
+      this.syncExpiredRequests().catch((err) =>
+        this.logger.warn(`Background featured sync failed: ${err}`),
+      );
+    }, 2 * 60 * 1000);
+    if (this.syncTimer && typeof this.syncTimer.unref === 'function') {
+      this.syncTimer.unref();
+    }
+  }
+
+  onModuleDestroy(): void {
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+      this.syncTimer = null;
+    }
+  }
 
   /**
    * Check if a category currently has an active, live featured business,
@@ -209,6 +233,12 @@ export class FeaturedBusinessService {
       // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
       await this.featuredRequestRepo.update(existingApproved.id, approvedUpdate);
       if (bannerFile) {
+        const now = new Date();
+        if (existingApproved.start_date <= now && existingApproved.end_date >= now) {
+          await this.businessRepo.update(existingApproved.business_id, {
+            featured_banner_id: approvedUpdate.banner_id,
+          });
+        }
         await this.deleteUnusedBanner(existingApproved.banner_id);
       }
       return this.findById(existingApproved.id);
@@ -489,10 +519,13 @@ export class FeaturedBusinessService {
 
     const saved = { ...request, status: FeaturedRequestStatus.APPROVED, approved_by_id: adminUser.id, approved_at: approvedAt, rejection_reason: null };
 
-    // If currently live in date range, set business is_featured = true
+    // If currently live in date range, set business is_featured = true and assign featured_banner_id
     const now = new Date();
     if (saved.start_date <= now && saved.end_date >= now) {
-      await this.businessRepo.update(saved.business_id, { is_featured: true });
+      await this.businessRepo.update(saved.business_id, {
+        is_featured: true,
+        featured_banner_id: saved.banner_id || null,
+      });
     }
 
     // Notify member
@@ -535,6 +568,14 @@ export class FeaturedBusinessService {
     // Use update() instead of save() to prevent TypeORM from cascade-persisting loaded relations
     await this.featuredRequestRepo.update(request.id, { banner_id: media.id });
 
+    // If request is currently approved and live, update business_profiles.featured_banner_id
+    const now = new Date();
+    if (request.status === FeaturedRequestStatus.APPROVED && request.start_date <= now && request.end_date >= now) {
+      await this.businessRepo.update(request.business_id, {
+        featured_banner_id: media.id,
+      });
+    }
+
     // Clean up stale banner file after updating reference in request
     await this.deleteUnusedBanner(oldBannerId);
 
@@ -548,7 +589,7 @@ export class FeaturedBusinessService {
       // Older records may share an image with a business or another request.
       // Deleting that media would clear their banner references via ON DELETE SET NULL.
       const usedByBusiness = await this.businessRepo.exists({
-        where: { banner_id: bannerId },
+        where: [{ banner_id: bannerId }, { featured_banner_id: bannerId }],
       });
       if (usedByBusiness) return;
 
@@ -579,6 +620,7 @@ export class FeaturedBusinessService {
 
     await this.businessRepo.update(businessId, {
       is_featured: !!activeLiveRequest,
+      featured_banner_id: activeLiveRequest?.banner_id || null,
     });
   }
 
@@ -597,10 +639,11 @@ export class FeaturedBusinessService {
         [now],
       );
 
-      // 2. Clear is_featured for businesses with no active approved live request
+      // 2. Clear is_featured and featured_banner_id for businesses with no active approved live request
       await this.featuredRequestRepo.query(
         `UPDATE "business_profiles"
-         SET "is_featured" = false
+         SET "is_featured" = false,
+             "featured_banner_id" = NULL
          WHERE "is_featured" = true
            AND "id" NOT IN (
              SELECT "business_id" FROM "featured_business_requests"
@@ -609,15 +652,19 @@ export class FeaturedBusinessService {
         [now],
       );
 
-      // 3. Ensure is_featured is true for businesses with an active approved live request
+      // 3. Ensure is_featured is true and featured_banner_id is set for active approved live requests
       await this.featuredRequestRepo.query(
-        `UPDATE "business_profiles"
-         SET "is_featured" = true
-         WHERE "is_featured" = false
-           AND "id" IN (
-             SELECT "business_id" FROM "featured_business_requests"
-             WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1
-           )`,
+        `UPDATE "business_profiles" b
+         SET "is_featured" = true,
+             "featured_banner_id" = req."banner_id"
+         FROM (
+           SELECT DISTINCT ON ("business_id") "business_id", "banner_id"
+           FROM "featured_business_requests"
+           WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1
+           ORDER BY "business_id", "created_at" DESC
+         ) req
+         WHERE b."id" = req."business_id"
+           AND (b."is_featured" = false OR b."featured_banner_id" IS DISTINCT FROM req."banner_id")`,
         [now],
       );
     } catch (err) {

@@ -260,7 +260,7 @@ export class BusinessesService {
     if (businesses.length === 0) return [];
 
     const mediaIds = businesses
-      .flatMap((b) => [b.banner_id])
+      .flatMap((b) => [b.banner_id, b.featured_banner_id])
       .filter((id): id is string => !!id);
 
     const mediaMap = new Map<string, string>();
@@ -351,6 +351,8 @@ export class BusinessesService {
         profile_pic_url: profilePicMap.get(b.owner_id) || null,
         banner_url: b.banner_id ? mediaMap.get(b.banner_id) || null : null,
         bannerUrl: b.banner_id ? mediaMap.get(b.banner_id) || null : null,
+        featured_banner_url: b.featured_banner_id ? mediaMap.get(b.featured_banner_id) || null : null,
+        featuredBannerUrl: b.featured_banner_id ? mediaMap.get(b.featured_banner_id) || null : null,
       };
     });
   }
@@ -632,10 +634,11 @@ export class BusinessesService {
         [now],
       );
 
-      // 2. Clear is_featured for businesses with no active approved live request
+      // 2. Clear is_featured and featured_banner_id for businesses with no active approved live request
       await this.businessRepository.query(
         `UPDATE "business_profiles"
-         SET "is_featured" = false
+         SET "is_featured" = false,
+             "featured_banner_id" = NULL
          WHERE "is_featured" = true
            AND "id" NOT IN (
              SELECT "business_id" FROM "featured_business_requests"
@@ -644,15 +647,19 @@ export class BusinessesService {
         [now],
       );
 
-      // 3. Ensure is_featured is true for businesses with an active approved live request
+      // 3. Ensure is_featured is true and featured_banner_id is set for active approved live requests
       await this.businessRepository.query(
-        `UPDATE "business_profiles"
-         SET "is_featured" = true
-         WHERE "is_featured" = false
-           AND "id" IN (
-             SELECT "business_id" FROM "featured_business_requests"
-             WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1
-           )`,
+        `UPDATE "business_profiles" b
+         SET "is_featured" = true,
+             "featured_banner_id" = req."banner_id"
+         FROM (
+           SELECT DISTINCT ON ("business_id") "business_id", "banner_id"
+           FROM "featured_business_requests"
+           WHERE "status" = 'APPROVED' AND "start_date" <= $1 AND "end_date" >= $1
+           ORDER BY "business_id", "created_at" DESC
+         ) req
+         WHERE b."id" = req."business_id"
+           AND (b."is_featured" = false OR b."featured_banner_id" IS DISTINCT FROM req."banner_id")`,
         [now],
       );
     } catch (err) {
@@ -664,8 +671,6 @@ export class BusinessesService {
     query: BusinessQueryDto = {},
     currentUser?: { id: string; role: UserRole },
   ) {
-    const now = new Date();
-
     // Synchronize expired status so database state and queries are strictly up-to-date
     await this.syncExpiredFeaturedBusinesses();
 
@@ -689,18 +694,7 @@ export class BusinessesService {
       );
     }
 
-    // STRICT DATE ENFORCEMENT:
-    // Only return businesses that currently have an APPROVED featured request within its active date window
-    qb.innerJoin(
-      'featured_business_requests',
-      'featured_req',
-      'featured_req.business_id = business.id AND featured_req.status = :approvedStatus AND featured_req.start_date <= :now AND featured_req.end_date >= :now',
-      {
-        approvedStatus: 'APPROVED',
-        now,
-      },
-    );
-
+    // Direct is_featured check maintained by background sync / cron job
     qb.andWhere('business.is_featured = :isFeatured', {
       isFeatured: true,
     });
@@ -733,36 +727,7 @@ export class BusinessesService {
     qb.take(settings.home_feed_limit);
 
     const items = await qb.getMany();
-
-    // Query active promotional banner from featured request for featured showcase display only
-    const featuredBannerMap = new Map<string, string>();
-    try {
-      const activeRequests = await this.businessRepository.query(
-        `SELECT req."business_id", mf."file_url"
-         FROM "featured_business_requests" req
-         JOIN "media_files" mf ON req."banner_id" = mf."id"
-         WHERE req."status" = 'APPROVED'
-           AND req."start_date" <= $1
-           AND req."end_date" >= $1
-           AND req."banner_id" IS NOT NULL`,
-        [now],
-      );
-      activeRequests.forEach((r: { business_id: string; file_url: string }) => {
-        featuredBannerMap.set(r.business_id, r.file_url);
-      });
-    } catch {
-      // Fallback gracefully
-    }
-
-    // Enrich items while keeping their authentic store banner_id completely untouched
-    const enriched = await this.enrichBusinessesWithMediaAndCategory(items);
-
-    // Attach featured_banner_url separately; store banner_url remains strictly the store's own banner
-    const data = enriched.map((b) => ({
-      ...b,
-      featured_banner_url: featuredBannerMap.get(b.id) || null,
-      featuredBannerUrl: featuredBannerMap.get(b.id) || null,
-    }));
+    const data = await this.enrichBusinessesWithMediaAndCategory(items);
 
     return {
       success: true,

@@ -736,7 +736,7 @@ export class UsersService {
     if (user.role === UserRole.MEMBER) {
       business = await this.businessRepository.findOne({
         where: { owner_id: user.id },
-        relations: { banner: true },
+        relations: { banner: true, featured_banner: true },
       });
 
       if (business?.banner?.file_url) {
@@ -748,23 +748,14 @@ export class UsersService {
         if (bannerFile) business_banner_url = bannerFile.file_url;
       }
 
-      // Query active approved featured request banner for member's business
-      if (business?.id) {
-        const now = new Date();
-        const activeReqs = await this.businessRepository.query(
-          `SELECT req."id", mf."file_url" FROM "featured_business_requests" req
-           LEFT JOIN "media_files" mf ON req."banner_id" = mf."id"
-           WHERE req."business_id" = $1
-             AND req."status" = 'APPROVED'
-             AND req."start_date" <= $2
-             AND req."end_date" >= $2
-             AND req."banner_id" IS NOT NULL
-           ORDER BY req."created_at" DESC
-           LIMIT 1`,
-          [business.id, now],
-        );
-        if (activeReqs.length > 0 && activeReqs[0].file_url) {
-          featured_banner_url = activeReqs[0].file_url;
+      if (business?.is_featured) {
+        if (business.featured_banner?.file_url) {
+          featured_banner_url = business.featured_banner.file_url;
+        } else if (business.featured_banner_id) {
+          const featFile = await this.mediaRepository.findOne({
+            where: { id: business.featured_banner_id },
+          });
+          if (featFile) featured_banner_url = featFile.file_url;
         }
       }
     } else if (user.role === UserRole.CUSTOMER && user.profile?.primary_business_id) {
@@ -1040,7 +1031,9 @@ export class UsersService {
           if (business.banner_id) {
             const oldBannerId = business.banner_id;
             businessUpdate.banner_id = null;
-            await this.mediaService.deleteFileById(oldBannerId);
+            if (oldBannerId !== business.featured_banner_id) {
+              await this.mediaService.deleteFileById(oldBannerId);
+            }
           }
         } else if (files?.business_banner?.[0]) {
           const bannerMedia = await this.mediaService.replaceUserFile(

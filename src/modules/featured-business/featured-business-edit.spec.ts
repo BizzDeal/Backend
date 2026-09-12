@@ -42,8 +42,13 @@ describe('Featured business edits', () => {
       approved_at: new Date(Date.now() - 172800000), approved_by_id: admin.id,
     });
     businessRepo.findOne.mockResolvedValue(business);
-    businessRepo.exists.mockImplementation(({ where }: { where: { banner_id: string } }) =>
-      Promise.resolve(business.banner_id === where.banner_id));
+    businessRepo.exists.mockImplementation(({ where }: any) => {
+      const clauses = Array.isArray(where) ? where : [where];
+      return Promise.resolve(clauses.some((c: any) =>
+        (c.banner_id !== undefined && business.banner_id === c.banner_id) ||
+        (c.featured_banner_id !== undefined && (business as any).featured_banner_id === c.featured_banner_id)
+      ));
+    });
     requestRepo.findOne.mockImplementation(({ where }: {
       where: { status?: FeaturedRequestStatus; id?: string };
     }) => Promise.resolve(!where.status || where.status === request.status ? { ...request } : null));
@@ -81,7 +86,9 @@ describe('Featured business edits', () => {
       end_date: original.end_date, status: original.status, approved_at: original.approved_at,
       approved_by_id: original.approved_by_id, banner_id: 'new-featured-banner' });
     expect(business.banner_id).toBe('business-banner');
-    expect(businessRepo.update).not.toHaveBeenCalled();
+    expect(businessRepo.update).toHaveBeenCalledWith('business', {
+      featured_banner_id: 'new-featured-banner',
+    });
     expect(media.saveFile).toHaveBeenCalledWith(file, member.id, MediaPurpose.FEATURED_BUSINESS_BANNER);
     expect(media.deleteFileById).toHaveBeenCalledWith('featured-banner');
   });
